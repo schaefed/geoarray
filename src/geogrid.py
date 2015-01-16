@@ -138,6 +138,9 @@ def GeoGrid(fname=None,
 
 
 class _GeoGridBase(object):
+
+    __opclass__ = np.ndarray
+    
     __arithmetic_operators__ = (
         "add","sub","mul","div","floordiv",
         "truediv","mod","divmod","pow","lshift",
@@ -157,8 +160,8 @@ class _GeoGridBase(object):
         if op != "divmod"
     ]
         
-    def __init__(self,):
-        self.__opclass = np.ndarray
+    def __init__(self,reader):
+        self.__dict__["_reader"] = reader
         self.__setOperators(
             self.__copy_operators__,
             self.__copyOperatorsFactory
@@ -178,7 +181,7 @@ class _GeoGridBase(object):
             setattr(self.__class__, op, factory(op))            
 
     def __comparisonOperatorsFactory(self,opname):
-        f = getattr(self.__opclass,opname)
+        f = getattr(self.__opclass__,opname)
         def operator(grid,other):
             return GeoGrid(
                 data  = f(grid[:],self.__operator_prepare(other)),
@@ -188,7 +191,7 @@ class _GeoGridBase(object):
         return operator
         
     def __copyOperatorsFactory(self,opname):
-        f = getattr(self.__opclass,opname)
+        f = getattr(self.__opclass__,opname)
         def operator(grid,other):
             return GeoGrid(
                 data = f(grid[:],self.__operator_prepare(other)),
@@ -197,7 +200,7 @@ class _GeoGridBase(object):
         return operator
 
     def __inplaceOperatorsFactory(self,opname):
-        f = getattr(self.__opclass,opname)            
+        f = getattr(self.__opclass__,opname)            
         def operator(grid,other):
             grid[:] = f(grid[:],self.__operator_prepare(other))
             return grid
@@ -216,7 +219,29 @@ class _GeoGridBase(object):
             data = array,
             **obj.getDefinition()
         )
+
+    def __setattr__(self,name,value):
+        setattr(self._reader,name,value)
         
+    def __getattr__(self,name):
+        try:
+            return getattr(self._reader,name)
+        except AttributeError:
+            raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
+        
+    def __getitem__(self,slc):
+        return self._reader.__getitem__(slc)
+
+    def __setitem__(self,slc,value):
+        self._reader.__setitem__(slc,value)
+
+    def __repr__(self):
+        return self[:].__repr__()
+
+    def __str__(self):
+        return self[:].__str__()
+
+    
 class _GeoGrid(_GeoGridBase):
     """
     This class serves as a backend for the different reader classes which
@@ -229,33 +254,30 @@ class _GeoGrid(_GeoGridBase):
     """
     def __init__(self, reader):
         # ensure initialization despite of the overwritten __setattr__
-        self.__dict__["_reader"] = reader
-        super(_GeoGrid,self).__init__()
+        # self.__dict__["_reader"] = reader
+        # setattr(self.__class__,"_reader",reader)
+        super(_GeoGrid,self).__init__(reader)
        
-    def __setattr__(self,name,value):
-        setattr(self._reader,name,value)
+    # def __setattr__(self,name,value):
+    #     setattr(self._reader,name,value)
         
-    def __getattr__(self,name):
-        try:
-            return getattr(self._reader,name)
-        except AttributeError:
-            raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
+    # def __getattr__(self,name):
+    #     try:
+    #         return getattr(self._reader,name)
+    #     except AttributeError:
+    #         raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
         
-    def __getitem__(self,slc):
-        # if isinstance(slc,_GeoGrid):
-        #     slc = slc._squeeze()
-        #     print slc.shape
-        #     slc = slc._squeeze()
-        return self._reader.__getitem__(slc)
+    # def __getitem__(self,slc):
+    #     return self._reader.__getitem__(slc)
 
-    def __setitem__(self,slc,value):
-        self._reader.__setitem__(slc,value)
+    # def __setitem__(self,slc,value):
+    #     self._reader.__setitem__(slc,value)
 
-    def __repr__(self):
-        return self[:].__repr__()
+    # def __repr__(self):
+    #     return self[:].__repr__()
 
-    def __str__(self):
-        return self[:].__str__()
+    # def __str__(self):
+    #     return self[:].__str__()
         
     def getCoordinates(self):
         """
