@@ -29,8 +29,8 @@ class TestGeoGrid(unittest.TestCase):
         rpcvalue = -2222
         checkgrid = self.grid.copy()
         checkgrid.nodata_value = rpcvalue
-        nodatapos1 = np.where(checkgrid[:] == rpcvalue)
-        nodatapos2 = np.where(self.grid[:] == self.grid.nodata_value)
+        nodatapos1 = np.where(checkgrid == rpcvalue)
+        nodatapos2 = np.where(self.grid == self.grid.nodata_value)
         for pos1,pos2 in zip(nodatapos1,nodatapos2):
             self.assertEqual(np.sum(pos1-pos2),0)
         self.assertEqual(checkgrid.nodata_value, rpcvalue)
@@ -40,14 +40,14 @@ class TestGeoGrid(unittest.TestCase):
         checkgrid = self.grid.copy()
         checkgrid.dtype = rpctype
         self.assertEqual(checkgrid.dtype,rpctype)
-        self.assertEqual(checkgrid[:].dtype,rpctype)
+        self.assertEqual(checkgrid.dtype,rpctype)
         
     def test_addCells(self):
         padgrid = self.grid.addCells(1,1,1,1)
         self.assertEqual(np.sum(padgrid[1:-1,1:-1] - self.grid[:]),0)
 
         padgrid = self.grid.addCells(0,0,0,0)
-        self.assertEqual(np.sum(padgrid[:] - self.grid[:]),0)
+        self.assertEqual(np.sum(padgrid - self.grid[:]),0)
         
     def test_enlargeGrid(self):
         newbbox = {"xmin" : self.grid.bbox["xmin"] - 2.5 * self.grid.cellsize,
@@ -69,9 +69,9 @@ class TestGeoGrid(unittest.TestCase):
 
     def test_removeCells(self):
         rmgrid = self.grid.removeCells(1,1,1,1)
-        self.assertEqual(np.sum(rmgrid[:] - self.grid[1:-1,1:-1]) , 0)
+        self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
         rmgrid = self.grid.removeCells(0,0,0,0)
-        self.assertEqual(np.sum(rmgrid[:] - self.grid[:]) , 0)
+        self.assertEqual(np.sum(rmgrid - self.grid) , 0)
 
         
     def test_trimGrid(self):
@@ -96,8 +96,8 @@ class TestGeoGrid(unittest.TestCase):
         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner - self.grid.cellsize)
         
     def test_copy(self):
-        self.assertEqual(np.mean(self.grid.copy()[:] - self.grid[:]),0)
-        self.assertEqual(np.mean(self.grid.copy(False)[:]
+        self.assertEqual(np.mean(self.grid.copy() - self.grid),0)
+        self.assertEqual(np.mean(self.grid.copy(False)
                                  + (self.grid.nodata_value*-1)),0)
 
     def test_write(self):
@@ -105,7 +105,7 @@ class TestGeoGrid(unittest.TestCase):
         for fname in fnames:
             self.grid.write(fname)
             checkgrid = GeoGrid(fname,proj_params=PROJ_PARAMS)
-            self.assertTrue(np.all(checkgrid[:] == self.grid[:]))
+            self.assertTrue(np.all(checkgrid == self.grid))
             self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
 
             

@@ -107,7 +107,6 @@ def GeoGrid(fname=None,
             dtype=None, data=None, nodata_value=None,        
             proj_params=None):
 
-    
     kwargs = {k:v for k,v in locals().iteritems() if v != None} 
     # An existing file will be read -> only dtype and proj_params
     # are accpted as arguments
@@ -122,11 +121,12 @@ def GeoGrid(fname=None,
         # data is given
         if "data" in kwargs:
             nbands,nrows,ncols = data.shape if data.ndim == 3 else (1,)+data.shape
+            dtype = kwargs.pop("dtype")
             del kwargs["nbands"], kwargs["ncols"], kwargs["nrows"]
             return _GeoGrid(
                 _DummyGrid(
                     nbands=nbands, nrows=nrows, ncols=ncols,
-                    dtype=kwargs.pop("dtype",data.dtype),
+                    dtype=dtype if dtype != None else data.dtype,
                     **kwargs)
             )
             
@@ -136,16 +136,8 @@ def GeoGrid(fname=None,
         else:
             raise TypeError("Insufficient arguments given!")
 
-operators = ["add", "mul"]
-
-# def operatorFactory(target,opname):
-#     def operator(this,other):
-#         f = getattr(target,opname)
-#         return f(this[:],other)
-#     return operator
 
 class _GeoGridBase(object):
-    
     __arithmetic_operators__ = (
         "add","sub","mul","div","floordiv",
         "truediv","mod","divmod","pow","lshift",
@@ -153,8 +145,7 @@ class _GeoGridBase(object):
     )
     __comparison_operators = (
         "__eq__","__ne__","__lt__","__gt__","__le__","__ge__"
-    )
-    
+    )    
     __copy_operators__ = [
         "__{:}__".format(op) for op in __arithmetic_operators__
     ] + [
@@ -165,57 +156,67 @@ class _GeoGridBase(object):
         "__i{:}__".format(op) for op in __arithmetic_operators__
         if op != "divmod"
     ]
-    
-    
+        
     def __init__(self,):
         self.__opclass = np.ndarray
-        self.__setOperator(
+        self.__setOperators(
             self.__copy_operators__,
             self.__copyOperatorsFactory
         )
-        self.__setOperator(
+        self.__setOperators(
             self.__inplace_operators__,
             self.__inplaceOperatorsFactory
         )
-        self.__setOperator(
+        self.__setOperators(
             self.__comparison_operators,
             self.__comparisonOperatorsFactory
         )
 
-        
-    def __setOperator(self,operators,factory):
+    
+    def __setOperators(self,operators,factory):
         for op in operators:
             setattr(self.__class__, op, factory(op))            
 
     def __comparisonOperatorsFactory(self,opname):
+        f = getattr(self.__opclass,opname)
         def operator(grid,other):
-            f = getattr(self.__opclass,opname)
-            kwargs =  grid.getDefinition()
-            del kwargs["dtype"]
             return GeoGrid(
-                data  = f(grid[:],other),
+                data  = f(grid[:],self.__operator_prepare(other)),
                 dtype = np.bool,
-                **kwargs
+                **grid.getDefinition(("dtype",))
             )
         return operator
         
     def __copyOperatorsFactory(self,opname):
+        f = getattr(self.__opclass,opname)
         def operator(grid,other):
-            f = getattr(self.__opclass,opname)
             return GeoGrid(
-                data = f(grid[:],other),
+                data = f(grid[:],self.__operator_prepare(other)),
                 **grid.getDefinition()
             )
         return operator
 
     def __inplaceOperatorsFactory(self,opname):
+        f = getattr(self.__opclass,opname)            
         def operator(grid,other):
-            f = getattr(self.__opclass,opname)            
-            grid[:] = f(grid[:],other)
+            grid[:] = f(grid[:],self.__operator_prepare(other))
             return grid
         return operator
-        
 
+    def __operator_prepare(self,obj):
+        if isinstance(obj,_GeoGrid):
+            return obj[:]
+        return obj
+    
+    def __array__(obj,dtype=None):
+        return obj[:]
+
+    def __array_wrap__(obj,array,context=None):
+        return GeoGrid(
+            data = array,
+            **obj.getDefinition()
+        )
+        
 class _GeoGrid(_GeoGridBase):
     """
     This class serves as a backend for the different reader classes which
@@ -241,7 +242,9 @@ class _GeoGrid(_GeoGridBase):
             raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
         
     def __getitem__(self,slc):
-        # if type(slc) == _GeoGrid:
+        # if isinstance(slc,_GeoGrid):
+        #     slc = slc._squeeze()
+        #     print slc.shape
         #     slc = slc._squeeze()
         return self._reader.__getitem__(slc)
 
@@ -271,37 +274,46 @@ class _GeoGrid(_GeoGridBase):
                       self.cellsize)
         return y,x
         
-    def getDefinition(self):
+    def getDefinition(self,exclude=None):
         """
         Input:
-            None
+            exclude: list/tuple
         Output:
-            {"xllcorner" : Numeric, "yllcorner" : Numeric, "cellsize" : Numeric
-            {"nodata_value" : Numeric, "nrows" : Numeric, "ncols": Numeric}
+            {"xllcorner" : int/float, "yllcorner" : int/float, "cellsize" : int/float
+            {"nodata_value" : int/float, "nrows" : int/float, "ncols": int/float}
         Purpose:
-            Returns the basic definition of the instance
+            Returns the basic definition of the instance. The values given in
+            the optional exclude argument will not be part of the definition
+            dict
         Note:
             The output of this method is sufficient to create a new
             albeit empty GeoGrid instance.
         """
-        return {"yllcorner":self.yllcorner,
-                "xllcorner":self.xllcorner,
-                "cellsize":self.cellsize,
-                "nbands":self.nbands,
-                "nrows":self.nrows,
-                "ncols":self.ncols,
-                "dtype":self.dtype,
-                "nodata_value":self.nodata_value,
-                "proj_params":self.proj_params}
-
+        if not exclude:
+            exclude = ()
+            
+        out = {"yllcorner":self.yllcorner,
+               "xllcorner":self.xllcorner,
+               "cellsize":self.cellsize,
+               "nbands":self.nbands,
+               "nrows":self.nrows,
+               "ncols":self.ncols,
+               "dtype":self.dtype,
+               "nodata_value":self.nodata_value,
+               "proj_params":self.proj_params}
+        
+        for k in exclude:
+            del out[k]
+        return out
+    
     def getIdxCoordinates(self,y_idx,x_idx):
         """
         Input:
-            y_idx:  Numeric
-            x_idx:  Numeric
+            y_idx:  int/float
+            x_idx:  int/float
         Output:
-            y_coor: Numeric
-            x_coor: Numeric
+            y_coor: int/float
+            x_coor: int/float
         Purpose:
             Returns the coordinates of the cell definied by the input indices.
             Works as the reverse of getCoordinateIdx.
@@ -316,11 +328,11 @@ class _GeoGrid(_GeoGridBase):
     def getCoordinateIdx(self,y_coor,x_coor):
         """
         Input:
-            y_coor: Numeric
-            x_coor: Numeric
+            y_coor: int/float
+            x_coor: int/float
         Output:
-            y_idx:  Numeric
-            x_idx:  Numeric
+            y_idx:  int/float
+            x_idx:  int/float
         Purpose:
             Returns the indices of the cell in which the cooridnates fall        
         """
@@ -464,8 +476,8 @@ class _GeoGrid(_GeoGridBase):
     def shrinkGrid(self,bbox):
         """
         Input:
-            bbox: {"ymin": Numeric,ymax": Numeric,
-                   "xmin": Numeric,"xmax": Numeric}
+            bbox: {"ymin": int/float,ymax": int/float,
+                   "xmin": int/float,"xmax": int/float}
         Output:
             GeoGrid
         Purpose:
@@ -601,8 +613,8 @@ class _GeoGrid(_GeoGridBase):
         Input:
             None
         Output:
-            {"ymin": Numeric, "ymax": Numeric,
-            "xmin": Numeric, "xmax": Numeric}
+            {"ymin": int/float, "ymax": int/float,
+            "xmin": int/float, "xmax": int/float}
         Purpose:
             Returns the bounding box of the GeoGrid Instance.
         Note:
@@ -623,15 +635,33 @@ class _GeoGrid(_GeoGridBase):
     
 if __name__== "__main__":
     grid = GeoGrid(nrows=100,ncols=150)
-    grid.getDefinition()
-    print grid.shape
+
+    # f = lambda x,y: GeoGrid(nrows=x,ncols=y)
+    # print f(100,100)
     
-    print grid[grid < 0].shape
+    
+    # testgrid = grid.copy()
+    # print np.transpose(testgrid)
+    # print (grid - testgrid - 5) < 0
+    # print np.sum(grid)
+    # print np.exp(grid)
+    # x = np.exp(grid)
+    # print grid.yllcorner
+    # print x.yllcorner
+    # print grid.shape
+ #   print type(grid<0)
+    print "hier"
+    print grid.shape
+    print (grid<0).shape
+    print grid[grid < 0].shape #= -999
+#    print grid.shape
+    # print grid[grid < 0].shape
     # x = np.sum((grid[:] < 100))
     # print x
     # print id(grid) == id(grid_new)
-    # for k in dir(grid):
-    #     print k
+#     for k in dir(grid[:]):
+# #        if k.startswith("__"):
+#         print k
     # print grid.nrows
     # print grid + 5
     pass
