@@ -509,22 +509,6 @@ class _GeoGrid(NumpyMemberBase):
         self.yllcorner -= dy
         self.xllcorner -= dx
 
-    # def copy(self,data=True):
-    #     """
-    #     Input:
-    #         optional: boolean
-    #     Output:
-    #         GeoGrid
-    #     Purpose:
-    #         returns an exact copy of the grid. If data is
-    #         set to False, an empty grid, i.e. without a
-    #         prefilled data is returned
-    #     """
-    #     kwargs = self.getDefinition()
-    #     if data:
-    #         kwargs["data"] = self._data
-    #     return _GeoGrid(_DummyGrid(**kwargs))
-
 
     def __copy__(self):
         return _GeoGrid(
@@ -562,10 +546,10 @@ class _GeoGrid(NumpyMemberBase):
 
     
 if __name__== "__main__":
-    pass
-    # import copy
     
-    # grid = GeoGrid(nrows=100,ncols=150)
+    grid = GeoGrid(nrows=100,ncols=150)
+    slc =  grid[3:-10,10:40]
+    
     # # grid += 5
     # print grid + 5
     # # grid -= 5
