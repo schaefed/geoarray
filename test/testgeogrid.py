@@ -50,19 +50,21 @@ class TestGeoGrid(unittest.TestCase):
         self.assertEqual(np.sum(padgrid[:] - self.grid),0)
         
     def test_enlargeGrid(self):
-        newbbox = {"xmin" : self.grid.bbox["xmin"] - 2.5 * self.grid.cellsize,
-                   "ymin" : self.grid.bbox["ymin"] -  .7 * self.grid.cellsize,
-                   "xmax" : self.grid.bbox["xmax"] +  .1 * self.grid.cellsize,
-                   "ymax" : self.grid.bbox["ymax"] + 6.1 * self.grid.cellsize,}
+        bbox = self.grid.getBbox()
+        newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
         enlrgrid = self.grid.enlargeGrid(newbbox)
         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
     def test_shrinkGrid(self):
-        newbbox = {"xmin" : self.grid.bbox["xmin"] + 2.5 * self.grid.cellsize,
-                   "ymin" : self.grid.bbox["ymin"] +  .7 * self.grid.cellsize,
-                   "xmax" : self.grid.bbox["xmax"] -  .1 * self.grid.cellsize,
-                   "ymax" : self.grid.bbox["ymax"] - 6.1 * self.grid.cellsize,}
+        bbox = self.grid.getBbox()
+        newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
         shrgrid = self.grid.shrinkGrid(newbbox)
         self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)

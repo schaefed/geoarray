@@ -101,7 +101,7 @@ class FileGridBase(object):
         if self._data == None:
             self._data = self.dtype(self._readData())
         return self._squeeze()[slc]
-
+        
     def __setitem__(self,slc,value):
         if self._data == None:
             self[:]
@@ -131,11 +131,7 @@ class _DummyGrid(FileGridBase):
         out = np.empty((self.nbands,self.nrows,self.ncols),dtype=self.dtype)
         out.fill(self.nodata_value)        
         return out
-    
-    # @staticmethod
-    # def _write(*args,**kwargs):
-    #     raise ValueError
-        
+            
                 
 class _GdalGrid(FileGridBase):
     def __init__(self,fname,proj_params=None,dtype=None):
@@ -203,13 +199,12 @@ class _GridWriter(object):
             if "YES" in (metadata.get("DCAP_CREATE")):
                 return driver
             raise IOError("Datatype canot be written")            
-        raise IOError("Could not retrive datatype from filename {:}".format(fname))
+        raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
     def _proj4String(self):
         return "+{:}".format(" +".join(
             ["=".join(pp) for pp in self.fobj.proj_params.items()])
         )
-
     
     def write(self,fname):
         fext = self._fnameExtension(fname)

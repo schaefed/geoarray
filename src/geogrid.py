@@ -122,8 +122,8 @@ def GeoGrid(fname=None,
         # data is given
         if "data" in kwargs:
             nbands,nrows,ncols = data.shape if data.ndim == 3 else (1,)+data.shape
-            dtype = kwargs.pop("dtype")
-            del kwargs["nbands"], kwargs["ncols"], kwargs["nrows"]
+            dtype = kwargs.pop("dtype",None)
+#            del kwargs["nbands"], kwargs["ncols"], kwargs["nrows"]
             return _GeoGrid(
                 _DummyGrid(
                     nbands=nbands, nrows=nrows, ncols=ncols,
@@ -148,30 +148,60 @@ class _GeoGrid(NumpyMemberBase):
           istead of creating the DummyGrids here.
     """
     def __init__(self, reader):
-        # ensure initialization despite of the overwritten __setattr__
         self.__dict__["_reader"] = reader
         super(_GeoGrid,self).__init__(self,"_data")
-
-    @property
-    def _data(self):
-        return self._reader[:]
         
     def __setattr__(self,name,value):
-        if name == "data":
-            name = "_data"
         self._reader.__setattr__(name,value)
         
     def __getattr__(self,name):
         try:
             return self._reader.__getattribute__(name)
         except AttributeError:
-            raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
+            raise AttributeError("'_GeoGrid' object has no attribute '{:}'".format(name))
         
     def __getitem__(self,slc):
         return self._reader.__getitem__(slc)
 
     def __setitem__(self,slc,value):
         self._reader.__setitem__(slc,value)
+
+    def __copy__(self):
+        return _GeoGrid(
+            _DummyGrid(**self.getDefinition())
+        )
+
+    def __deepcopy__(self,memo=None):
+        kwargs = self.getDefinition()
+        kwargs["data"] = self._data
+        return _GeoGrid(_DummyGrid(**kwargs))        
+        
+    def __gridMatch(f):        
+        def decorator(self,grid,*args,**kwargs):
+            if self.cellsize != grid.cellsize:
+                raise TypeError("Grid cellsizes do not match !!")
+            dy = (self.yllcorner-grid.yllcorner)%self.cellsize
+            dx = (self.xllcorner-grid.xllcorner)%self.cellsize
+            check = (
+                (
+                    dy < sys.float_info.epsilon or
+                    dy-self.cellsize < sys.float_info.epsilon
+                    )
+                and
+                (
+                    dx < sys.float_info.epsilon or
+                    dx-self.cellsize < sys.float_info.epsilon
+                    )
+                )         
+            if not check:
+                raise TypeError("No way to match cell corners !!")
+            return f(self,grid,*args,**kwargs)
+        return decorator        
+
+        
+    @property
+    def _data(self):
+        return self._reader[:]
         
     def getCoordinates(self):
         """
@@ -252,28 +282,28 @@ class _GeoGrid(NumpyMemberBase):
         Purpose:
             Returns the indices of the cell in which the cooridnates fall        
         """
-        y_idx = int(ceil((self.bbox["ymax"] - y_coor)/float(self.cellsize))) - 1
+        y_idx = int(ceil((self.getBbox()["ymax"] - y_coor)/float(self.cellsize))) - 1
         x_idx = int(floor((x_coor - self.xllcorner)/float(self.cellsize))) 
         if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
             raise IndexError("Given Coordinates not within the grid domain!")
         return y_idx,x_idx
         
 
-    def pointInGrid(self,y_coor,x_coor):
-        """
-        Input:
-            y: Float/Integer
-            x: Float/Integer
-        Output:
-            Boolean
-        Purpose:
-            Checks if the given coordinates fall within the grid domain
-            and if the cell values of the respective cell value != nodata_value
-        """
-        try:
-            return self._data[self.getCoordinateIdx(y_coor,x_coor)] != self.nodata_value
-        except IndexError:
-            return False
+    # def pointInGrid(self,y_coor,x_coor):
+    #     """
+    #     Input:
+    #         y: Float/Integer
+    #         x: Float/Integer
+    #     Output:
+    #         Boolean
+    #     Purpose:
+    #         Checks if the given coordinates fall within the grid domain
+    #         and if the cell values of the respective cell value != nodata_value
+    #     """
+    #     try:
+    #         return self._data[self.getCoordinateIdx(y_coor,x_coor)] != self.nodata_value
+    #     except IndexError:
+    #         return False
 
     def addCells(self,top=0,left=0,bottom=0,right=0):
         """
@@ -319,9 +349,7 @@ class _GeoGrid(NumpyMemberBase):
 
         # the Ellipsis ensures that the function works with 
         # arrays with more than two dimensions
-        # print out.shape
-        out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self._data
-        
+        out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self._data        
         return out
 
     def removeCells(self,top=0,left=0,bottom=0,right=0):
@@ -372,7 +400,8 @@ class _GeoGrid(NumpyMemberBase):
     def enlargeGrid(self,bbox):
         """
         Input:
-            bbox: Dictionary with the keys "ymin","ymax","xmin","xmax"
+            bbox: {"ymin": int/float, "ymax": int/float,
+                   "xmin": int/float, "xmax": int/float}
         Output:
             GeoGrid
         Purpose:
@@ -380,59 +409,38 @@ class _GeoGrid(NumpyMemberBase):
             be part of the grid domain. Added rows/cols ar filled with
             the grid's nodata value
         """
-        
-        top    = ceil(round((bbox["ymax"] - self.bbox["ymax"])
+        self_bbox = self.getBbox()
+        top    = ceil(round((bbox["ymax"] - self_bbox["ymax"])
                             /self.cellsize,MAX_PRECISION))
-        left   = ceil(round((self.bbox["xmin"] - bbox["xmin"])
+        left   = ceil(round((self_bbox["xmin"] - bbox["xmin"])
                             /self.cellsize,MAX_PRECISION))
-        bottom = ceil(round((self.bbox["ymin"] - bbox["ymin"])
+        bottom = ceil(round((self_bbox["ymin"] - bbox["ymin"])
                             /self.cellsize,MAX_PRECISION))
-        right  = ceil(round((bbox["xmax"] - self.bbox["xmax"])
+        right  = ceil(round((bbox["xmax"] - self_bbox["xmax"])
                             /self.cellsize,MAX_PRECISION))
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))        
 
     def shrinkGrid(self,bbox):
         """
         Input:
-            bbox: {"ymin": int/float,ymax": int/float,
-                   "xmin": int/float,"xmax": int/float}
+            bbox: {"ymin": int/float, "ymax": int/float,
+                   "xmin": int/float, "xmax": int/float}
         Output:
             GeoGrid
         Purpose:
             Shrinks the grid in a way that the given bbox is still 
             within the grid domain.        
-        """        
-        top    = floor(round((self.bbox["ymax"] - bbox["ymax"])
+        """
+        self_bbox = self.getBbox()
+        top    = floor(round((self_bbox["ymax"] - bbox["ymax"])
                              /self.cellsize, MAX_PRECISION))
-        left   = floor(round((bbox["xmin"] - self.bbox["xmin"])
+        left   = floor(round((bbox["xmin"] - self_bbox["xmin"])
                              /self.cellsize, MAX_PRECISION))
-        bottom = floor(round((bbox["ymin"] - self.bbox["ymin"])
+        bottom = floor(round((bbox["ymin"] - self_bbox["ymin"])
                              /self.cellsize, MAX_PRECISION))
-        right  = floor(round((self.bbox["xmax"] - bbox["xmax"])
+        right  = floor(round((self_bbox["xmax"] - bbox["xmax"])
                              /self.cellsize, MAX_PRECISION))
         return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))        
-
-    def __gridMatch(f):        
-        def decorator(self,grid,*args,**kwargs):
-            if self.cellsize != grid.cellsize:
-                raise TypeError("Grid cellsizes do not match !!")
-            dy = (self.yllcorner-grid.yllcorner)%self.cellsize
-            dx = (self.xllcorner-grid.xllcorner)%self.cellsize
-            check = (
-                (
-                    dy < sys.float_info.epsilon or
-                    dy-self.cellsize < sys.float_info.epsilon
-                    )
-                and
-                (
-                    dx < sys.float_info.epsilon or
-                    dx-self.cellsize < sys.float_info.epsilon
-                    )
-                )         
-            if not check:
-                raise TypeError("No way to match cell corners !!")
-            return f(self,grid,*args,**kwargs)
-        return decorator        
 
     @__gridMatch
     def mergeGrid(self,grid):
@@ -445,9 +453,10 @@ class _GeoGrid(NumpyMemberBase):
         Restrictions:
             The cellsizes of the grids must be identical and cells
             in the common area must match
-        """      
+        """
+        bbox = self.getBbox()
         y_offset,x_offset = self.getCoordinateIdx(
-            grid.bbox["ymax"] - grid.cellsize, grid.bbox["xmin"])
+            bbox["ymax"] - grid.cellsize, bbox["xmin"])
         self[y_offset:y_offset+grid.nrows,x_offset:x_offset+grid.ncols]\
             = grid.data
 
@@ -459,9 +468,10 @@ class _GeoGrid(NumpyMemberBase):
         Purpose:
             Sets all values in grid to nodata_value where the
             argument contains nodata_value
-        """      
+        """
+        bbox = self.getBbox()
         y_offset,x_offset = self.getCoordinateIdx(
-            grid.bbox["ymax"] - grid.cellsize,grid.bbox["xmin"])
+            bbox["ymax"] - grid.cellsize, bbox["xmin"])
         y_idx,x_idx = np.where(grid.data == grid.nodata_value)
         self[y_idx+y_offset,x_idx+x_offset] = self.nodata_value
 
@@ -508,19 +518,8 @@ class _GeoGrid(NumpyMemberBase):
 
         self.yllcorner -= dy
         self.xllcorner -= dx
-
-
-    def __copy__(self):
-        return _GeoGrid(
-            _DummyGrid(**self.getDefinition())
-        )
-
-    def __deepcopy__(self,memo=None):
-        kwargs = self.getDefinition()
-        kwargs["data"] = self._data
-        return _GeoGrid(_DummyGrid(**kwargs))        
         
-    def _getBbox(self):
+    def getBbox(self):
         """
         Input:
             None
@@ -541,24 +540,12 @@ class _GeoGrid(NumpyMemberBase):
                 "xmin":self.xllcorner,
                 "xmax":self.xllcorner + self.ncols * self.cellsize}
     
-    bbox          = property(fget=lambda self:            self._getBbox())
-
 
     
 if __name__== "__main__":
-    
-    grid = GeoGrid(nrows=100,ncols=150)
-    slc =  grid[3:-10,10:40]
-    
-    # # grid += 5
-    # print grid + 5
-    # # grid -= 5
-    # y = grid.__copy__()
-    # print grid - y
-    # y = x + 100 #copy.deepcopy(grid)
-    # print y
-    # x += 10
-    # print x - grid
-    # print np.sum(x - grid)
-
+    grid = GeoGrid(data=np.arange(125).reshape(5,5,5))
+    # grid = GeoGrid(data=np.arange(16).reshape(4,4))
+    # print grid._data.shape
+    print grid._data[0,:,:].shape
+    # pass
     
