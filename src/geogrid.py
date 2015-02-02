@@ -135,91 +135,23 @@ def GeoGrid(fname=None,
             return _GeoGrid(_DummyGrid(**kwargs))
         else:
             raise TypeError("Insufficient arguments given!")
-
-
-class _GeoGridBase(object):
-
-    __opclass__ = np.ndarray
     
-    __arithmetic_operators__ = (
-        "add","sub","mul","div","floordiv",
-        "truediv","mod","divmod","pow","lshift",
-        "rshift","and","or","xor"
-    )
-    __comparison_operators = (
-        "__eq__","__ne__","__lt__","__gt__","__le__","__ge__"
-    )    
-    __copy_operators__ = [
-        "__{:}__".format(op) for op in __arithmetic_operators__
-    ] + [
-        "__r{:}__".format(op) for op in __arithmetic_operators__
-    ]
-    
-    __inplace_operators__ = [
-        "__i{:}__".format(op) for op in __arithmetic_operators__
-        if op != "divmod"
-    ]
-        
-    def __init__(self,reader):
+class _GeoGrid(object):
+    """
+    This class serves as a backend for the different reader classes which
+    need to derive from DataReaderBase. The idea is to sperate data state
+    logic which should be implemented in the aforementioned classes and
+    a processing logic which is found here. 
+
+    TODO: Return copies using the GeoGrid factory function 
+          istead of creating the DummyGrids here.
+    """
+    def __init__(self, reader):
+        # ensure initialization despite of the overwritten __setattr__
         self.__dict__["_reader"] = reader
-        self.__setOperators(
-            self.__copy_operators__,
-            self.__copyOperatorsFactory
-        )
-        self.__setOperators(
-            self.__inplace_operators__,
-            self.__inplaceOperatorsFactory
-        )
-        self.__setOperators(
-            self.__comparison_operators,
-            self.__comparisonOperatorsFactory
-        )
-
-    
-    def __setOperators(self,operators,factory):
-        for op in operators:
-            setattr(self.__class__, op, factory(op))            
-
-    def __comparisonOperatorsFactory(self,opname):
-        f = getattr(self.__opclass__,opname)
-        def operator(grid,other):
-            return GeoGrid(
-                data  = f(grid[:],self.__operator_prepare(other)),
-                dtype = np.bool,
-                **grid.getDefinition(("dtype",))
-            )
-        return operator
-        
-    def __copyOperatorsFactory(self,opname):
-        f = getattr(self.__opclass__,opname)
-        def operator(grid,other):
-            return GeoGrid(
-                data = f(grid[:],self.__operator_prepare(other)),
-                **grid.getDefinition()
-            )
-        return operator
-
-    def __inplaceOperatorsFactory(self,opname):
-        f = getattr(self.__opclass__,opname)            
-        def operator(grid,other):
-            grid[:] = f(grid[:],self.__operator_prepare(other))
-            return grid
-        return operator
-
-    def __operator_prepare(self,obj):
-        if isinstance(obj,_GeoGrid):
-            return obj[:]
-        return obj
-    
-    def __array__(obj,dtype=None):
-        return obj[:]
-
-    def __array_wrap__(obj,array,context=None):
-        return GeoGrid(
-            data = array,
-            **obj.getDefinition()
-        )
-
+        # setattr(self.__class__,"_reader",reader)
+        # super(_GeoGrid,self).__init__(reader)
+       
     def __setattr__(self,name,value):
         setattr(self._reader,name,value)
         
@@ -240,44 +172,6 @@ class _GeoGridBase(object):
 
     def __str__(self):
         return self[:].__str__()
-
-    
-class _GeoGrid(_GeoGridBase):
-    """
-    This class serves as a backend for the different reader classes which
-    need to derive from DataReaderBase. The idea is to sperate data state
-    logic which should be implemented in the aforementioned classes and
-    a processing logic which is found here. 
-
-    TODO: Return copies using the GeoGrid factory function 
-          istead of creating the DummyGrids here.
-    """
-    def __init__(self, reader):
-        # ensure initialization despite of the overwritten __setattr__
-        # self.__dict__["_reader"] = reader
-        # setattr(self.__class__,"_reader",reader)
-        super(_GeoGrid,self).__init__(reader)
-       
-    # def __setattr__(self,name,value):
-    #     setattr(self._reader,name,value)
-        
-    # def __getattr__(self,name):
-    #     try:
-    #         return getattr(self._reader,name)
-    #     except AttributeError:
-    #         raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
-        
-    # def __getitem__(self,slc):
-    #     return self._reader.__getitem__(slc)
-
-    # def __setitem__(self,slc,value):
-    #     self._reader.__setitem__(slc,value)
-
-    # def __repr__(self):
-    #     return self[:].__repr__()
-
-    # def __str__(self):
-    #     return self[:].__str__()
         
     def getCoordinates(self):
         """
