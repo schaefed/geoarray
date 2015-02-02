@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from math import ceil, floor
 from geogridbase import _DummyGrid, _GdalGrid
+from numpymember import NumpyMemberBase
 
 """
 This Module provides a class to work with array data within a
@@ -136,7 +137,7 @@ def GeoGrid(fname=None,
         else:
             raise TypeError("Insufficient arguments given!")
     
-class _GeoGrid(object):
+class _GeoGrid(NumpyMemberBase):
     """
     This class serves as a backend for the different reader classes which
     need to derive from DataReaderBase. The idea is to sperate data state
@@ -149,15 +150,20 @@ class _GeoGrid(object):
     def __init__(self, reader):
         # ensure initialization despite of the overwritten __setattr__
         self.__dict__["_reader"] = reader
-        # setattr(self.__class__,"_reader",reader)
-        # super(_GeoGrid,self).__init__(reader)
-       
+        super(_GeoGrid,self).__init__(self,"_data")
+
+    @property
+    def _data(self):
+        return self._reader[:]
+        
     def __setattr__(self,name,value):
-        setattr(self._reader,name,value)
+        if name == "data":
+            name = "_data"
+        self._reader.__setattr__(name,value)
         
     def __getattr__(self,name):
         try:
-            return getattr(self._reader,name)
+            return self._reader.__getattribute__(name)
         except AttributeError:
             raise AttributeError("'_GeoGrid' object has not attribute '{:}'".format(name))
         
@@ -166,12 +172,6 @@ class _GeoGrid(object):
 
     def __setitem__(self,slc,value):
         self._reader.__setitem__(slc,value)
-
-    def __repr__(self):
-        return self[:].__repr__()
-
-    def __str__(self):
-        return self[:].__str__()
         
     def getCoordinates(self):
         """
@@ -271,7 +271,7 @@ class _GeoGrid(object):
             and if the cell values of the respective cell value != nodata_value
         """
         try:
-            return self.data[self.getCoordinateIdx(y_coor,x_coor)] != self.nodata_value
+            return self._data[self.getCoordinateIdx(y_coor,x_coor)] != self.nodata_value
         except IndexError:
             return False
 
@@ -319,7 +319,9 @@ class _GeoGrid(object):
 
         # the Ellipsis ensures that the function works with 
         # arrays with more than two dimensions
-        out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self[:]
+        # print out.shape
+        out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self._data
+        
         return out
 
     def removeCells(self,top=0,left=0,bottom=0,right=0):
@@ -473,7 +475,7 @@ class _GeoGrid(object):
             Removes rows/cols containing only nodata values from the
             margins of the GeoGrid Instance
         """
-        y_idx, x_idx = np.where(self[:] != self.nodata_value)
+        y_idx, x_idx = np.where(self._data != self.nodata_value)
         try:
             return self.removeCells(
                 top=min(y_idx),bottom=self.nrows-max(y_idx)-1,
@@ -507,23 +509,33 @@ class _GeoGrid(object):
         self.yllcorner -= dy
         self.xllcorner -= dx
 
-    def copy(self,data=True):
-        """
-        Input:
-            optional: boolean
-        Output:
-            GeoGrid
-        Purpose:
-            returns an exact copy of the grid. If data is
-            set to False, an empty grid, i.e. without a
-            prefilled data is returned
-        """
-        kwargs = self.getDefinition()
-        if data:
-            kwargs["data"] = self[:]
-        return _GeoGrid(_DummyGrid(**kwargs))
+    # def copy(self,data=True):
+    #     """
+    #     Input:
+    #         optional: boolean
+    #     Output:
+    #         GeoGrid
+    #     Purpose:
+    #         returns an exact copy of the grid. If data is
+    #         set to False, an empty grid, i.e. without a
+    #         prefilled data is returned
+    #     """
+    #     kwargs = self.getDefinition()
+    #     if data:
+    #         kwargs["data"] = self._data
+    #     return _GeoGrid(_DummyGrid(**kwargs))
 
-            
+
+    def __copy__(self):
+        return _GeoGrid(
+            _DummyGrid(**self.getDefinition())
+        )
+
+    def __deepcopy__(self,memo=None):
+        kwargs = self.getDefinition()
+        kwargs["data"] = self._data
+        return _GeoGrid(_DummyGrid(**kwargs))        
+        
     def _getBbox(self):
         """
         Input:
@@ -550,34 +562,19 @@ class _GeoGrid(object):
 
     
 if __name__== "__main__":
-    grid = GeoGrid(nrows=100,ncols=150)
-
-    # f = lambda x,y: GeoGrid(nrows=x,ncols=y)
-    # print f(100,100)
-    
-    
-    # testgrid = grid.copy()
-    # print np.transpose(testgrid)
-    # print (grid - testgrid - 5) < 0
-    # print np.sum(grid)
-    # print np.exp(grid)
-    # x = np.exp(grid)
-    # print grid.yllcorner
-    # print x.yllcorner
-    # print grid.shape
- #   print type(grid<0)
-    print "hier"
-    print grid.shape
-    print (grid<0).shape
-    print grid[grid < 0].shape #= -999
-#    print grid.shape
-    # print grid[grid < 0].shape
-    # x = np.sum((grid[:] < 100))
-    # print x
-    # print id(grid) == id(grid_new)
-#     for k in dir(grid[:]):
-# #        if k.startswith("__"):
-#         print k
-    # print grid.nrows
-    # print grid + 5
     pass
+    # import copy
+    
+    # grid = GeoGrid(nrows=100,ncols=150)
+    # # grid += 5
+    # print grid + 5
+    # # grid -= 5
+    # y = grid.__copy__()
+    # print grid - y
+    # y = x + 100 #copy.deepcopy(grid)
+    # print y
+    # x += 10
+    # print x - grid
+    # print np.sum(x - grid)
+
+    

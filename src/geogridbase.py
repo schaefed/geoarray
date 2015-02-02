@@ -132,9 +132,9 @@ class _DummyGrid(FileGridBase):
         out.fill(self.nodata_value)        
         return out
     
-    @staticmethod
-    def _write(*args,**kwargs):
-        raise ValueError
+    # @staticmethod
+    # def _write(*args,**kwargs):
+    #     raise ValueError
         
                 
 class _GdalGrid(FileGridBase):
