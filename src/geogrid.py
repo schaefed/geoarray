@@ -121,12 +121,10 @@ def GeoGrid(fname=None,
     else:
         # data is given
         if "data" in kwargs:
-            nbands,nrows,ncols = data.shape if data.ndim == 3 else (1,)+data.shape
+            kwargs["nbands"], kwargs["ncols"], kwargs["nrows"] = data.shape if data.ndim == 3 else (1,)+data.shape
             dtype = kwargs.pop("dtype",None)
-#            del kwargs["nbands"], kwargs["ncols"], kwargs["nrows"]
             return _GeoGrid(
                 _DummyGrid(
-                    nbands=nbands, nrows=nrows, ncols=ncols,
                     dtype=dtype if dtype != None else data.dtype,
                     **kwargs)
             )

@@ -17,6 +17,56 @@ class TestGeoGrid(unittest.TestCase):
     def setUp(self):
         self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)
 
+
+    def test_initWithData(self):
+        data = np.arange(32).reshape(2,4,4)
+        grid = GeoGrid(data=data)
+        self.assertEqual(grid.shape, data.shape)
+
+        # given with dtype initializer
+        grid = GeoGrid(data=data, dtype=np.float32)
+        self.assertEqual(grid.shape, data.shape)
+        self.assertEqual(grid.dtype, np.float32)
+
+        # given with to be ignored shape parameters
+        grid = GeoGrid(data=data, dtype=np.float32, nbands=3, nrows=3,ncols=44)
+        self.assertEqual(grid.shape, data.shape)
+        self.assertEqual(grid.dtype, np.float32)
+
+        # given with all other parameters
+        grid = GeoGrid(data=data, dtype=np.float32, nbands=3, nrows=3,ncols=44,
+                       nodata_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
+        )
+        self.assertEqual(grid.shape, data.shape)
+        self.assertEqual(grid.dtype, np.float32)
+        self.assertEqual(grid.nodata_value,42)
+        self.assertEqual(grid.yllcorner,-15)
+        self.assertEqual(grid.xllcorner,88)
+        self.assertEqual(grid.cellsize,33.33)
+
+    def test_initWithoutData(self):
+        grid = GeoGrid(nrows=44,ncols=66)
+        self.assertEqual(grid.shape,(44,66))
+
+        grid = GeoGrid(nrows=44,ncols=66,nbands=4)
+        self.assertEqual(grid.shape,(4,44,66))
+
+        grid = GeoGrid(nrows=44,ncols=66,nbands=4,nodata_value=42)
+        self.assertEqual(grid.shape,(4,44,66))
+        self.assertTrue(np.all(grid == 42))
+
+        # given with all other parameters
+        grid = GeoGrid(nrows=44,ncols=66,nbands=4,dtype=np.float32,
+                       nodata_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
+        )        
+        self.assertEqual(grid.shape, (4,44,66))
+        self.assertEqual(grid.dtype, np.float32)
+        self.assertEqual(grid.nodata_value,42)
+        self.assertEqual(grid.yllcorner,-15)
+        self.assertEqual(grid.xllcorner,88)
+        self.assertEqual(grid.cellsize,33.33)
+
+        
     def test_typeConsistency(self):
         def check(grid):
             self.assertTrue(grid.dtype == type(grid.nodata_value))
