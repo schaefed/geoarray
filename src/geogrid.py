@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
+import sys, os
 import numpy as np
 from math import ceil, floor
 from geogridbase import _DummyGrid, _GdalGrid
@@ -102,10 +102,11 @@ History
 
 MAX_PRECISION  = 10
 
-def GeoGrid(fname=None,
-            nbands=None,nrows=None, ncols=None,
-            xllcorner=None, yllcorner=None,cellsize=None,
-            dtype=None, data=None, nodata_value=None,        
+
+def GeoGrid(fname=None,            
+            nbands=1, nrows=None, ncols=None,
+            xllcorner=0, yllcorner=0, cellsize=1,
+            dtype=np.float32, data=None, nodata_value=-9999,
             proj_params=None):
 
     kwargs = {k:v for k,v in locals().iteritems() if v != None} 
@@ -122,10 +123,9 @@ def GeoGrid(fname=None,
         # data is given
         if "data" in kwargs:
             kwargs["nbands"], kwargs["ncols"], kwargs["nrows"] = data.shape if data.ndim == 3 else (1,)+data.shape
-            dtype = kwargs.pop("dtype",None)
+            kwargs["dtype"] = kwargs.get("dtype",data.dtype)
             return _GeoGrid(
                 _DummyGrid(
-                    dtype=dtype if dtype != None else data.dtype,
                     **kwargs)
             )
             

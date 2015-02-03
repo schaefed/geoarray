@@ -16,8 +16,7 @@ PROJ_PARAMS = {
 class TestGeoGrid(unittest.TestCase):
     def setUp(self):
         self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)
-
-
+        
     def test_initWithData(self):
         data = np.arange(32).reshape(2,4,4)
         grid = GeoGrid(data=data)
