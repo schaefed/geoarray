@@ -5,11 +5,11 @@ import re, os
 import gdal, osr
 import numpy as np
 
-class _FileGridBase(object):
+class _GeoGridBase(object):
     
     """
     The File Reader/Writer Base class. All reader/writer classes NEED 
-    to inherit from _FileGridBase. Its purpose is to garantee a common 
+    to inherit from _GeoGridBase. Its purpose is to garantee a common 
     interface on which _GeoGrid depends on. It give meaningful defaults
     to the child class attributes and ensure data state consistency.
     
@@ -117,7 +117,7 @@ class _FileGridBase(object):
     dtype         = property(fget=lambda self:            self._getDataType(),
                              fset=lambda self, value:     self._setDataType(value))
     
-class _DummyGrid(_FileGridBase):
+class _DummyGrid(_GeoGridBase):
     """
         A simple dummy data class needed as reader attribute to
         _GeoGrid if data is given on initialisation
@@ -134,7 +134,7 @@ class _DummyGrid(_FileGridBase):
         return out
             
                 
-class _GdalGrid(_FileGridBase):
+class _GdalGrid(_GeoGridBase):
     def __init__(self,fname,proj_params=None,dtype=None):
         self.fobj = self._open(fname)
         trans = self.fobj.GetGeoTransform()
