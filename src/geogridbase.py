@@ -5,6 +5,20 @@ import re, os
 import gdal, osr
 import numpy as np
 
+# needs to be extended
+_DRIVER_DICT = {
+    ".tif" : "GTiff",
+    ".asc" : "AAIGrid",
+    ".bmp" : "BMP",
+    # ".gif" : "GIF",   # the driver seems not to work...
+    ".img" : "HFA",
+    ".jpg" : "JPEG",
+    # ".png" : "PNG",  
+}
+
+gdal.PushErrorHandler('CPLQuietErrorHandler')
+#gdal.UseExceptions()
+
 class _GeoGridBase(object):
     
     """
@@ -181,11 +195,6 @@ class _GdalGrid(_GeoGridBase):
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
 class _GridWriter(object):
-    # needs to be extended
-    __DRIVER_DICT = {
-        ".tif" : "GTiff",
-        ".asc" : "AAIGrid",
-    }
 
     def __init__(self,fobj):
         self.fobj = fobj
@@ -194,10 +203,10 @@ class _GridWriter(object):
         return os.path.splitext(fname)[-1].lower()
 
     def _getDriver(self,fext):
-        if fext in self.__DRIVER_DICT:
-            driver = gdal.GetDriverByName(self.__DRIVER_DICT[fext])
-            metadata = driver.GetMetadata_Dict()            
-            if "YES" in (metadata.get("DCAP_CREATE")):
+        if fext in _DRIVER_DICT:
+            driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
+            metadata = driver.GetMetadata_Dict()
+            if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
                 return driver
             raise IOError("Datatype canot be written")            
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
@@ -207,31 +216,11 @@ class _GridWriter(object):
             ["=".join(pp) for pp in self.fobj.proj_params.items()])
         )
     
-    def write(self,fname):
-        fext = self._fnameExtension(fname)
-        if  fext == ".asc":
-            self._writeAscii(fname)
-        else:
-            self._writeGdal(fname)
 
-    def _writeAscii(self,fname):
-        with open(fname,"w") as f:            
-            f.write("ncols\t{:}\n".format(self.fobj.ncols))
-            f.write("nrows\t{:}\n".format(self.fobj.nrows))
-            f.write("xllcorner\t{:}\n".format(self.fobj.xllcorner))
-            f.write("yllcorner\t{:}\n".format(self.fobj.yllcorner))
-            f.write("cellsize\t{:}\n".format(self.fobj.cellsize))
-            if self.fobj.nodata_value:
-                f.write("NODATA_value\t{:}\n".format(self.fobj.nodata_value))
-            f.write("\n".join([" ".join(map(str,line.tolist()))
-                               for line in self.fobj[:]]) + "\n")
-        
-            
-    def _writeGdal(self,fname):
-        fext = self._fnameExtension(fname)        
-        driver = self._getDriver(fext)
+    def _writeGdalMemory(self):
+        driver = gdal.GetDriverByName("MEM")
         out = driver.Create(
-            fname,self.fobj.ncols,self.fobj.nrows,self.fobj.nbands,
+            "",self.fobj.ncols,self.fobj.nrows,self.fobj.nbands,
             gdal.GetDataTypeByName(self.fobj.dtype.__name__)
         )
         out.SetGeoTransform(
@@ -247,6 +236,16 @@ class _GridWriter(object):
             band.SetNoDataValue(float(self.fobj.nodata_value)) 
             band.WriteArray(self.fobj[:])
         out.FlushCache()
+        return out
+
+    def write(self,fname):
+        memset = self._writeGdalMemory()
+        fext = self._fnameExtension(fname)        
+        outdriver = self._getDriver(fext)
+        out = outdriver.CreateCopy(fname,memset,0)
+        errormsg = gdal.GetLastErrorMsg()
+        if errormsg or not out:
+            raise IOError(errormsg)
                 
     
 if __name__ == "__main__":

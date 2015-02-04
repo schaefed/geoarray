@@ -8,8 +8,12 @@ from geogridbase import _DummyGrid, _GdalGrid
 from numpymember import NumpyMemberBase
 
 """
-This Module provides a class to work with array data within a
-geographically explicit context or to read such data from a file.
+This Module provides a wrapper class around gdal/osr. That means it can
+(or easily could) read/write all dataformats supported by gdal.
+
+The returned _GeoGrid instance mimics the behaviour of a numpy.ndarray.
+All operators work as expected and a any _GeoGrid instance can be passed
+to numpy function (np.sum,np.exp,...)
 
 Definition
 ----------
@@ -56,6 +60,8 @@ There are three different way to create a GeoGrid Object
         dtype         (np.dtype/int/float)  -> default: data.dtype
         proj_params   (dict)                -> default: None
 
+
+
 Restrictions
 ------------
     - The grid coordinate system has to be rectangular and cells to be
@@ -68,35 +74,14 @@ Restrictions
 
 Note
 ----
-    The grid as well as the cell origins are defined as the lower left
-    corner.
+    - The grid as well as the cell origins are defined as the lower left
+       corner.
 
-Implementation details
-----------------------
-    This module was designed with a strong focus on easy extensibility.
-    A tripartite structure is imposed in order to seperate the different
-    layers of logic:
-
-    1. The class _GeoGrid implents the processing logic, which is
-       independ from the underlying dataformat. 
-
-    2. The reader classes (e.g. _AsciiGrid) implement the i/o logic
-       when data is to be read from file. To be efficient, only
-       the metadata will be read unless the file's data is actually
-       accessed. 
-
-    3. The class DataReaderBase imposes a common interface to all
-       reader classes and acts as an abstraction barrier between the
-       data/input and the modification functionality. All state
-       attributes and data consitency checks are implented here.
-
-Examples
---------
    
 
 History
 -------
-    Written, DS, 2014
+    Written, DS, 2014/2015
 
 """
 

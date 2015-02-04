@@ -1,9 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest, copy
+import unittest, copy, shutil
 import numpy as np
 from geogrid import GeoGrid
+from geogridbase import _DRIVER_DICT
 
 FNAME = "dem.asc"
 PROJ_PARAMS = {
@@ -15,7 +16,15 @@ PROJ_PARAMS = {
 
 class TestGeoGrid(unittest.TestCase):
     def setUp(self):
+        self.write_path = "out"
         self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)
+
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.write_path)
+        except:
+            pass
         
     def test_initWithData(self):
         data = np.arange(32).reshape(2,4,4)
@@ -145,18 +154,47 @@ class TestGeoGrid(unittest.TestCase):
         checkgrid.snapGrid(self.grid)
         self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner + self.grid.cellsize)
         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner - self.grid.cellsize)
+
+
+    def test_numpyFunctions(self):
+        funcs = (np.exp,np.sin,np.cos,np.tan,np.arcsinh,
+                 np.around,np.rint,np.fix,
+                 np.prod,np.sum,np.cumprod,np.trapz,
+                 np.i0,np.sinc,
+                 
+        )  #np.arctanh np.gradient not working
+        compare = self.grid[:]
+        for f in funcs:
+            self.assertTrue(np.all(f(self.grid)== f(compare)))
+            
         
     def test_copy(self):
         self.assertTrue(np.all(copy.copy(self.grid) == self.grid.nodata_value))
         self.assertTrue(np.all(copy.deepcopy(self.grid) == self.grid))
 
+
+    def test_getitem(self):
+        data = self.grid[:]
+        slices = (
+            self.grid < 3,
+            self.grid == 10,
+            np.where(self.grid>6),
+            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+        )
+        for slc in slices:
+            self.assertEqual(np.sum(data[slc] - self.grid[slc]),0)
+    
     def test_write(self):
-        fnames = ("testout.tif","testout.asc")
+        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in _DRIVER_DICT)
         for fname in fnames:
-            self.grid.write(fname)
+            try:
+                self.grid.write(fname)
+            except IOError:
+                continue                
             checkgrid = GeoGrid(fname,proj_params=PROJ_PARAMS)
             self.assertTrue(np.all(checkgrid == self.grid))
             self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
-            
+
+    
 if __name__== "__main__":
     unittest.main()
