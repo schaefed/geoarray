@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
 import numpy as np
 from math import ceil, floor
 from geogridbase import _DummyGrid, _GdalGrid
@@ -90,7 +90,6 @@ History
 """
 
 MAX_PRECISION  = 10
-
 
 def GeoGrid(fname=None,            
             nbands=1, nrows=None, ncols=None,
