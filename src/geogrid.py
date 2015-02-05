@@ -6,6 +6,7 @@ import numpy as np
 from math import ceil, floor
 from geogridbase import _DummyGrid, _GdalGrid
 from numpymember import NumpyMemberBase
+from slicing import slicingBounds
 
 """
 This Module provides a wrapper class around gdal/osr. That means it can
@@ -83,6 +84,9 @@ History
 -------
     Written, DS, 2014/2015
 
+
+
+
 """
 
 MAX_PRECISION  = 10
@@ -144,6 +148,7 @@ class _GeoGrid(NumpyMemberBase):
             raise AttributeError("'_GeoGrid' object has no attribute '{:}'".format(name))
         
     def __getitem__(self,slc):
+        slicingBounds(slc,self.shape)
         return self._reader.__getitem__(slc)
 
     def __setitem__(self,slc,value):
@@ -180,10 +185,10 @@ class _GeoGrid(NumpyMemberBase):
                 raise TypeError("No way to match cell corners !!")
             return f(self,grid,*args,**kwargs)
         return decorator        
-
         
     @property
     def _data(self):
+        # without this property 'wrapper' we end up with an segmentation fault !!
         return self._reader[:]
         
     def getCoordinates(self):
@@ -523,12 +528,9 @@ class _GeoGrid(NumpyMemberBase):
                 "xmin":self.xllcorner,
                 "xmax":self.xllcorner + self.ncols * self.cellsize}
     
-
-    
+        
 if __name__== "__main__":
-    grid = GeoGrid(data=np.arange(125).reshape(5,5,5))
-    # grid = GeoGrid(data=np.arange(16).reshape(4,4))
-    # print grid._data.shape
-    print grid._data[0,:,:].shape
-    # pass
+
+    pass
+
     
