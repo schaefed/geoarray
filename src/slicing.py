@@ -16,7 +16,7 @@ def _arraySlice(slc):
         # boolean array -> min(rows with true):max(rows with true)
         return [(min(d),max(d)) for d  in np.where(slc)]
 
-def _sliceSlice(slc,shape):    
+def _sliceSlice(slc,shape):
     return slc.indices(shape)[:2]
 
 def slicingBounds(slc,shape):

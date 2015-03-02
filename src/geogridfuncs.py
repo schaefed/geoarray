@@ -97,11 +97,11 @@ def addCells(grid,top=0,left=0,bottom=0,right=0):
                                    |0|0|0|0| 
 
     """
-    top    = max(top,0)
-    left   = max(left,0) 
-    bottom = max(bottom,0)
-    right  = max(right,0)
-
+    top    = int(max(top,0))
+    left   = int(max(left,0))
+    bottom = int(max(bottom,0))
+    right  = int(max(right,0))
+    
     out = GeoGrid(
             nrows        = grid.nrows + top  + bottom,
             ncols        = grid.ncols + left + right,
@@ -143,10 +143,10 @@ def removeCells(grid,top=0,left=0,bottom=0,right=0):
 
     """
 
-    top    = max(top,0)
-    left   = max(left,0) 
-    bottom = max(bottom,0)
-    right  = max(right,0)
+    top    = int(max(top,0))
+    left   = int(max(left,0))
+    bottom = int(max(bottom,0))
+    right  = int(max(right,0))
 
     out = GeoGrid(
             nrows        = grid.nrows - top  - bottom,

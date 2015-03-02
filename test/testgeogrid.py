@@ -25,19 +25,20 @@ class TestInitialisation(unittest.TestCase):
         # given with dtype initializer
         grid = GeoGrid(data=data, dtype=np.float32)
         self.assertEqual(grid.shape, data.shape)
-        self.assertEqual(grid.dtype, np.float32)
+        # self.assertEqual(grid.dtype, np.float32)
 
         # given with to be ignored shape parameters
         grid = GeoGrid(data=data, dtype=np.float32, nbands=3, nrows=3,ncols=44)
         self.assertEqual(grid.shape, data.shape)
-        self.assertEqual(grid.dtype, np.float32)
+        # self.assertEqual(grid.dtype, np.float32)
 
         # given with all other parameters
         grid = GeoGrid(data=data, dtype=np.float32, nbands=3, nrows=3,ncols=44,
                        nodata_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
         )
+        # grid[1:-1]
         self.assertEqual(grid.shape, data.shape)
-        self.assertEqual(grid.dtype, np.float32)
+        # self.assertEqual(grid.dtype, np.float32)
         self.assertEqual(grid.nodata_value,42)
         self.assertEqual(grid.yllcorner,-15)
         self.assertEqual(grid.xllcorner,88)
@@ -103,7 +104,7 @@ class TestGeoGridBase(unittest.TestCase):
         self.assertEqual(checkgrid.dtype,rpctype)
 
     def test_getitem(self):
-        data = self.grid[:]
+        data = self.grid.data.copy()
         slices = (
             self.grid < 3,
             self.grid == 10,
@@ -144,7 +145,7 @@ class TestGeoGridBase(unittest.TestCase):
 
     def test_numpyFunctions(self):
         # funcs tuple could be extended
-        funcs = (#np.exp,
+        funcs = (np.exp,
                  np.sin,np.cos,np.tan,np.arcsinh,
                  np.around,np.rint,np.fix,
                  np.prod,np.sum,
@@ -160,7 +161,7 @@ class TestGeoGridBase(unittest.TestCase):
             
 class TestGeoGridFuncs(unittest.TestCase):
     def setUp(self):
-        self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)        
+        self.grid = GeoGrid(FNAME)        
         
     def test_addCells(self):
         padgrid = ggfuncs.addCells(self.grid, 1, 1, 1, 1)

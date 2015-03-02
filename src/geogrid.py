@@ -4,8 +4,9 @@
 import re, os
 import gdal, osr
 import numpy as np
-from numpymember import NumpyMemberBase
+from numpymember import NumpyMemberBase, COMPARISON_OPERATORS
 from slicing import slicingBounds
+# import geogridfuncs as ggfuncs
 
 # needs to be extended
 _DRIVER_DICT = {
@@ -18,6 +19,51 @@ _DRIVER_DICT = {
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 #gdal.UseExceptions()
+
+# def removeCells(grid,top=0,left=0,bottom=0,right=0):
+#     """
+#     Input:
+#         top, left, bottom, right:    Integer
+#     Output:
+#         GeoGrid
+#     Purpose:
+#         Removes the number of given cells from the 
+#         respective margin of the grid
+#     Example:
+#         top=1, left=0, bottom=1, right=2
+#         nodata_value  0
+
+#                      |0|5|8|9| 
+#                      ---------
+#                      |1|2|0|0|         |1|2|
+#                      ---------   -->   -----
+#                      |3|4|4|1|         |3|4|
+#                      ---------
+#                      |0|0|0|1| 
+
+#     """
+
+#     top    = int(max(top,0))
+#     left   = int(max(left,0))
+#     bottom = int(max(bottom,0))
+#     right  = int(max(right,0))
+
+#     out = GeoGrid(
+#             nrows        = grid.nrows - top  - bottom,
+#             ncols        = grid.ncols - left - right,
+#             xllcorner    = grid.xllcorner + left*grid.cellsize,
+#             yllcorner    = grid.yllcorner + bottom*grid.cellsize,
+#             cellsize     = grid.cellsize,
+#             data         = None,
+#             dtype        = grid.dtype,
+#             proj_params  = grid.proj_params,
+#             nodata_value = grid.nodata_value,
+#     )
+
+#     # the Ellipsis ensures that the function works with 
+#     # arrays with more than two dimensions
+#     out[:] = grid[Ellipsis, top:top+out.nrows, left:left+out.ncols]
+#     return out
 
 def GeoGrid(fname=None,            
             nbands=1, nrows=None, ncols=None,
@@ -62,6 +108,10 @@ class _GeoGridBase(NumpyMemberBase):
             proj_params=None
     ):
 
+        super(_GeoGridBase,self).__init__(
+            self,"data",
+            # hooks = {c: lambda x: x._setDataType(np.bool) for c in COMPARISON_OPERATORS}
+        )
 
         self.nbands        = nbands if nbands else 1
         self.nrows         = nrows
@@ -71,12 +121,24 @@ class _GeoGridBase(NumpyMemberBase):
         self.yllcorner     = yllcorner
         self.cellsize      = cellsize
         self.proj_params   = proj_params
-        self._nodata_value = nodata_value
-        self._data         = data
-        self.dtype         = dtype
 
+        self._nodata_value = nodata_value
+
+        self._dtype        = np.dtype(dtype).type
+        self._data         = self._initData(data)
+        self._readmask     = self._initReadMask(data)
         self._consistentTypes()
-        super(_GeoGridBase,self).__init__(self,"data")
+
+    def _initReadMask(self,data):
+        if data == None:
+            return np.zeros(self.shape, dtype=np.bool)            
+        return np.ones(self.shape,dtype=np.bool)
+
+    def _initData(self,data):
+        if data == None:
+            data = np.empty(self.shape, dtype=self.dtype)
+            data.fill(self.nodata_value)
+        return data
         
     def getDefinition(self,exclude=None):
         """
@@ -150,12 +212,11 @@ class _GeoGridBase(NumpyMemberBase):
                 "xmin":self.xllcorner,
                 "xmax":self.xllcorner + self.ncols * self.cellsize}
 
-    @property
-    def data(self):
-        return self[:] #self.__getitem__(slice(None))
+    def _getData(self):
+        return self.__getitem__(slice(None))
 
-    @data.setter
-    def data(self,value):
+    def _setData(self,value):
+        # print value.shape,self.shape
         if not value.shape == self.shape:
             raise ValueError
         self._data = value
@@ -165,26 +226,24 @@ class _GeoGridBase(NumpyMemberBase):
            Reflect dtype changes
         """
         self._nodata_value = self.dtype(self._nodata_value)
-        if self._data != None:
-            self._data = self[:].astype(self._dtype)
-       
-    def _squeeze(self):
+        self._data = self[:].astype(self._dtype)
+            
+    def _squeeze(self,data):
         """
            Squeeze the possibly 1-length first dimension for
            convinient indexing.
         """
-        if self._data != None:
-            try:
-                return np.squeeze(self._data,0)
-            except ValueError:
-                return self._data
+        try:
+            return np.squeeze(data,0)
+        except ValueError:
+            return data
         
     def __copy__(self):
         return _DummyGrid(**self.getDefinition())
         
     def __deepcopy__(self,memo=None):
         kwargs = self.getDefinition()
-        kwargs["data"] = self[:]
+        kwargs["data"] = self.data
         return _DummyGrid(**kwargs)
                 
     def _getNodataValue(self):
@@ -200,7 +259,7 @@ class _GeoGridBase(NumpyMemberBase):
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
-        self[...,self[:] == self._nodata_value] = self.dtype(value)        
+        self[...,self[:] == self._nodata_value] = self.dtype(value)
         self._nodata_value = self.dtype(value)
 
     def _getShape(self):
@@ -226,22 +285,26 @@ class _GeoGridBase(NumpyMemberBase):
         """
         self._dtype = np.dtype(value).type
         self._consistentTypes()
-        
+    
     def __getitem__(self,slc):
         """
             slicing operator invokes the data reading
             TODO: Implement a slice reading from file
         """
-        if self._data == None:
+        if not np.all(self._readmask[slc]):
             self._data = self.dtype(self._readData())
-        #slicingBounds(slc,self.shape)
-        return self._squeeze()[slc]
+            self._readmask[slc] = True
+        # (top,bottom),(left,right) = slicingBounds(slc,self.shape)[-2:]
+        # print self._data.shape
+        return self._squeeze(self._data)[slc]
+        # return self._data[slc]
         
     def __setitem__(self,slc,value):
-        if self._data == None:
-            self.__getitem__(slice(None))
+        # print self._data.shape
+        # print self._readmask.shape
         self._data[slc] = value
-
+        self._readmask[slc] = True
+        
     def write(self,fname):
         _GridWriter(self).write(fname)
         
@@ -250,7 +313,9 @@ class _GeoGridBase(NumpyMemberBase):
     shape         = property(fget=lambda self:            self._getShape())
     dtype         = property(fget=lambda self:            self._getDataType(),
                              fset=lambda self, value:     self._setDataType(value))
-
+    data          = property(fget=lambda self:            self._getData(),
+                             fset=lambda self, value:     self._setData(value))
+    
 
     
 class _DummyGrid(_GeoGridBase):
