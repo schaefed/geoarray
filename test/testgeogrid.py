@@ -4,7 +4,7 @@
 import unittest, copy, shutil
 import numpy as np
 from geogrid import GeoGrid, _DRIVER_DICT
-
+import geogridfuncs as ggfuncs
 
 FNAME = "dem.asc"
 PROJ_PARAMS = {
@@ -142,92 +142,88 @@ class TestGeoGridBase(unittest.TestCase):
         self.assertTrue(np.all(copy.deepcopy(self.grid[:]) == self.grid[:]))
 
 
-    # def test_numpyFunctions(self):
-    #     # funcs tuple could be extended
-    #     funcs = (#np.exp,
-    #              np.sin,np.cos,np.tan,np.arcsinh,
-    #              np.around,np.rint,np.fix,
-    #              np.prod,np.sum,
-    #              # np.cumprod,            # returns an array of changed shape -> does not make sense here
-    #              np.trapz,
-    #              np.i0,np.sinc,
-    #              np.arctanh, np.gradient,                
-    #     )
-    #     compare = self.grid[:]
-    #     for f in funcs:
-    #         np.testing.assert_equal(f(self.grid),f(compare))
+    def test_numpyFunctions(self):
+        # funcs tuple could be extended
+        funcs = (#np.exp,
+                 np.sin,np.cos,np.tan,np.arcsinh,
+                 np.around,np.rint,np.fix,
+                 np.prod,np.sum,
+                 # np.cumprod,            # returns an array of changed shape -> does not make sense here
+                 np.trapz,
+                 np.i0,np.sinc,
+                 np.arctanh, np.gradient,                
+        )
+        compare = self.grid[:]
+        for f in funcs:
+            np.testing.assert_equal(f(self.grid),f(compare))
             
             
-# class TestGeoGrid(unittest.TestCase):
-#     def setUp(self):
-#         self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)        
+class TestGeoGridFuncs(unittest.TestCase):
+    def setUp(self):
+        self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)        
         
-#     def test_addCells(self):
-#         padgrid = self.grid.addCells(1,1,1,1)
-#         self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
+    def test_addCells(self):
+        padgrid = ggfuncs.addCells(self.grid, 1, 1, 1, 1)
+        self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
 
-#         padgrid = self.grid.addCells(0,0,0,0)
-#         self.assertTrue(np.sum(padgrid[:] == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, 0, 0, 0, 0)
+        self.assertTrue(np.sum(padgrid[:] == self.grid))
 
-#         padgrid = self.grid.addCells(0,99,0,4000)
-#         self.assertTrue(np.sum(padgrid[...,99:-4000] == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, 0, 99, 0, 4000)
+        self.assertTrue(np.sum(padgrid[...,99:-4000] == self.grid))
 
-#         padgrid = self.grid.addCells(-1000,-4.55,0,-6765.222)
-#         self.assertTrue(np.all(padgrid == self.grid))
-
+        padgrid = ggfuncs.addCells(self.grid, -1000, -4.55, 0, -6765.222)
+        self.assertTrue(np.all(padgrid == self.grid))
         
         
-#     def test_enlargeGrid(self):
-#         bbox = self.grid.getBbox()
-#         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
-#                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
-#                    "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
-#                    "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
-#         enlrgrid = self.grid.enlargeGrid(newbbox)
-#         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
-#         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
+    def test_enlargeGrid(self):
+        bbox = self.grid.getBbox()
+        newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
+        enlrgrid = ggfuncs.enlargeGrid(self.grid,newbbox)
+        self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
+        self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
-#     def test_shrinkGrid(self):
-#         bbox = self.grid.getBbox()
-#         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
-#                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
-#                    "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
-#                    "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
-#         shrgrid = self.grid.shrinkGrid(newbbox)
-#         self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
-#         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
+    def test_shrinkGrid(self):
+        bbox = self.grid.getBbox()
+        newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
+        shrgrid = ggfuncs.shrinkGrid(self.grid,newbbox)        
+        self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
+        self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
-#     def test_removeCells(self):
-#         rmgrid = self.grid.removeCells(1,1,1,1)
-#         self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
-#         rmgrid = self.grid.removeCells(0,0,0,0)
-#         self.assertEqual(np.sum(rmgrid - self.grid) , 0)
+    def test_removeCells(self):
+        rmgrid = ggfuncs.removeCells(self.grid,1,1,1,1)
+        self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
+        rmgrid = ggfuncs.removeCells(self.grid,0,0,0,0)
+        self.assertEqual(np.sum(rmgrid - self.grid) , 0)
 
         
-#     def test_trimGrid(self):
-#         trimgrid = self.grid.trimGrid()
-#         self.assertTrue(np.any(trimgrid[0,...]  != self.grid.nodata_value))
-#         self.assertTrue(np.any(trimgrid[-1,...] != self.grid.nodata_value))
-#         self.assertTrue(np.any(trimgrid[...,0]  != self.grid.nodata_value))
-#         self.assertTrue(np.any(trimgrid[...,-1] != self.grid.nodata_value))
+    def test_trimGrid(self):
+        trimgrid = ggfuncs.trimGrid(self.grid)
+        self.assertTrue(np.any(trimgrid[0,...]  != self.grid.nodata_value))
+        self.assertTrue(np.any(trimgrid[-1,...] != self.grid.nodata_value))
+        self.assertTrue(np.any(trimgrid[...,0]  != self.grid.nodata_value))
+        self.assertTrue(np.any(trimgrid[...,-1] != self.grid.nodata_value))
 
-#     def test_snapGrid(self):
-#         checkgrid = copy.deepcopy(self.grid)
-#         checkgrid.xllcorner += 50
-#         checkgrid.yllcorner -= 75
-#         checkgrid.snapGrid(self.grid)
-#         self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner)
-#         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner)
+    def test_snapGrid(self):
+        checkgrid = copy.deepcopy(self.grid)
+        checkgrid.xllcorner += 50
+        checkgrid.yllcorner -= 75
+        ggfuncs.snapGrid(checkgrid,self.grid)
+        self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner)
+        self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner)
 
-#         checkgrid.xllcorner += (checkgrid.cellsize * .9)
-#         checkgrid.yllcorner -= (checkgrid.cellsize * .9)
-#         checkgrid.snapGrid(self.grid)
-#         self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner + self.grid.cellsize)
-#         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner - self.grid.cellsize)
+        checkgrid.xllcorner += (checkgrid.cellsize * .9)
+        checkgrid.yllcorner -= (checkgrid.cellsize * .9)
+        ggfuncs.snapGrid(checkgrid,self.grid)
+        self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner + self.grid.cellsize)
+        self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner - self.grid.cellsize)
 
 
-
-    
-    
 if __name__== "__main__":
     unittest.main()
