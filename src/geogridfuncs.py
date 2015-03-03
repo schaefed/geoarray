@@ -31,7 +31,7 @@ def _gridMatch(f):
     return decorator        
         
 def _offset(grid,other):
-    bbox = grid.getBbox()
+    bbox = grid.bbox
     return coordinateIndex(grid, bbox["ymax"] - other.cellsize, bbox["xmin"])
     
 def indexCoordinates(grid,y_idx,x_idx):
@@ -65,7 +65,7 @@ def coordinateIndex(grid,y_coor,x_coor):
     Purpose:
         Returns the indices of the cell in which the cooridnates fall        
     """
-    y_idx = int(ceil((grid.getBbox()["ymax"] - y_coor)/float(grid.cellsize))) - 1
+    y_idx = int(ceil((grid.bbox["ymax"] - y_coor)/float(grid.cellsize))) - 1
     x_idx = int(floor((x_coor - grid.xllcorner)/float(grid.cellsize))) 
     if y_idx < 0 or y_idx >= grid.nrows or x_idx < 0 or x_idx >= grid.ncols:
         raise IndexError("Given Coordinates not within the grid domain!")
@@ -179,7 +179,7 @@ def enlargeGrid(grid,bbox):
         be part of the grid domain. Added rows/cols ar filled with
         the grid's nodata value
     """
-    grid_bbox = grid.getBbox()
+    grid_bbox = grid.bbox
     top    = ceil(round((bbox["ymax"] - grid_bbox["ymax"])
                         /grid.cellsize,MAX_PRECISION))
     left   = ceil(round((grid_bbox["xmin"] - bbox["xmin"])
@@ -201,7 +201,7 @@ def shrinkGrid(grid,bbox):
         Shrinks the grid in a way that the given bbox is still 
         within the grid domain.        
     """
-    grid_bbox = grid.getBbox()
+    grid_bbox = grid.bbox
     top    = floor(round((grid_bbox["ymax"] - bbox["ymax"])
                          /grid.cellsize, MAX_PRECISION))
     left   = floor(round((bbox["xmin"] - grid_bbox["xmin"])

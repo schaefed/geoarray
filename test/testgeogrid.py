@@ -1,12 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest, copy, shutil
+import unittest, copy, shutil, os
 import numpy as np
 from geogrid import GeoGrid, _DRIVER_DICT
 import geogridfuncs as ggfuncs
 
-FNAME = "dem.asc"
+FNAME = os.path.join(os.path.split(__file__)[0],"dem.tif")
+#FNAME = "dem.asc"
+
 PROJ_PARAMS = {
     'lon_0': '148.8',   'lat_0': '0',
     'y_0'  : '3210000', 'x_0': '4321000',
@@ -69,7 +71,7 @@ class TestInitialisation(unittest.TestCase):
 
 class TestGeoGridBase(unittest.TestCase):
     def setUp(self):
-        self.grid = GeoGrid(FNAME,proj_params=PROJ_PARAMS)        
+        self.grid = GeoGrid(fname=FNAME)        
         self.write_path = "out"
 
     def tearDown(self):
@@ -178,7 +180,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         
         
     def test_enlargeGrid(self):
-        bbox = self.grid.getBbox()
+        bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
@@ -188,7 +190,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
     def test_shrinkGrid(self):
-        bbox = self.grid.getBbox()
+        bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
