@@ -28,6 +28,7 @@ INPLACE_OPERATORS = (
     "__irshift__","__iand__","__ior__","__ixor__",
 )
 
+
 class NumpyMemberBase(object):
 
     # __array_priority__ = 1
@@ -41,14 +42,17 @@ class NumpyMemberBase(object):
         obj:        instance of the childclass holding the np.ndarray object
         name:       name of the np.ndarray attribute in the childclass
         hooks:      dictionary {operator_name: function to call after operator call}
-        implement:  implements all np.ndarray methods --> not implemented right now
 
     Restrictions:
         - Performance is most likely not too good as the array view system
           of numpy is not implemented an more copies than necessary are
           created
-        - If the numpy member attribute is of type bool slicing is not working
-          correctly!
+        - Slincing an numpy.ndarray using a subclass of Numpymember with an boolean
+          data attribute yields wrong results (__getitem__ actually treats the boolean
+          as an integer array and slices it accordingly)
+        - The operators set through the __setOperators method are not overwritable
+          in the subclasses. The implemted method in the subclass won't ever be called
+          -> A solution would be to implement all these methods seperately ;-(
     """
     
     def __init__(self, obj, name, hooks=None, #implement=False
@@ -58,36 +62,26 @@ class NumpyMemberBase(object):
         self.__attr = name
         self.__ndarray = None
         self.__hooks = hooks if hooks else {}
-        # self.__implement = implement
         
         self.__setOperators(
             INPLACE_OPERATORS,
-            self.__inplaceOperators,
+            self.__inplaceOperator,
         )
 
         self.__setOperators(
             COPY_OPERATORS,
-            self.__copyOperators,
+            self.__copyOperator,
         )
 
         self.__setOperators(
             COMPARISON_OPERATORS,
-            self.__copyOperators,
+            self.__copyOperator,
             # self.__comparisonOperators,
         )
-
+                
     @property
     def __array_interface__(self):
         return self.__getArray().__array_interface__
-
-    # @property
-    # def __ndarray(self):
-    #     """
-    #         return the ndarray from the childclass
-    #     """
-    #     if self.__ndarray == None:
-    #         self.__ndarray = self.__obj.__getattribute__(self.__attr)
-    #     return self.__ndarray
         
     def __getArray(self):
         """
@@ -123,26 +117,8 @@ class NumpyMemberBase(object):
         out = copy.copy(self.__obj)
         out.__obj.__setattr__(out.__attr, array)
         return out
-
-    # def __comparisonOperators(self,opname):
-    #     """
-    #         Wrapper closure for the different comparison operators.
-    #         NOTE:
-    #         A nd.array of type np.bool will returned instead
-    #         of an instance of self.__obj.__class__.        
-    #         The reason is that slicing an np.ndarray with an
-    #         instance of self.__obj.__class__ will give strange
-    #         results. The assumption is, that the output
-    #         of these operators is mostly used as an index array.
-    #         -> Could be a good question for stack overflow...
-    #     """
-    #     f = getattr(np.ndarray,opname)            
-    #     def operator(self,other):
-    #         return f(self.__getArray(),self.__prepObject(other))
-    #     return operator
-
         
-    def __inplaceOperators(self,opname):
+    def __inplaceOperator(self,opname):
         """
             Wrapper closure for the different inplace operators.
         """
@@ -156,7 +132,7 @@ class NumpyMemberBase(object):
             return self
         return operator
             
-    def __copyOperators(self,opname):
+    def __copyOperator(self,opname):
         """
             Wrapper closure for the different copy operators.
         """
@@ -165,12 +141,11 @@ class NumpyMemberBase(object):
             out = self.__changedCopy(
                 f(self.__getArray(),
                   self.__prepObject(other))                
-            )
+            )            
             if opname in self.__hooks:
                 self.__hooks[opname](out)
             return out
         return operator
-
     
     def __repr__(self):
         return self.__getArray().__repr__()
@@ -200,7 +175,6 @@ class NumpyMemberBase(object):
             return cls.__changedCopy(array)
         return array[0]
 
-
     # def __array__(cls,dtype=None):
     #     return cls.__getArray()
         
@@ -209,30 +183,16 @@ class NumpyMemberBase(object):
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        return self.__getArray()[slc]
-        # return self.__getArray()[self.__prepObject(slc)]
-        
-    # def __getitem__(self,slc):
-    #     """
-    #         Redirect the slicing to the ndarray
-    #         attribute of self.__obj
-    #     """
-    #     sliced = self.__getArray().__getitem__(
-    #         self.__prepObject(slc)
-    #     )
-    #     if not isinstance(sliced, np.ndarray):
-    #         return sliced
-    #     return self.__changedCopy(sliced)
-
-        
+        # return self.__getArray()[slc]
+        return self.__getArray()[self.__prepObject(slc)]
+            
     def __setitem__(self,slc,value):
         """
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        self.__getArray()[slc] = value
-
-        # self.__getArray()[self.__prepObject(slc)] = value
+        # self.__getArray()[slc] = value
+        self.__getArray()[self.__prepObject(slc)] = value
  
     
     def __getslice__(self, start, stop) :
@@ -267,7 +227,6 @@ class NumpyMemberBase(object):
     #         raise AttributeError("{:} object has no attribute '{:}'".format(
     #             self.__obj, name))
 
-    # __array__ = NumpyMemberBase.__getArray().__array__
     
 if __name__== "__main__":
     pass

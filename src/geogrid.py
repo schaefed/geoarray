@@ -34,7 +34,7 @@ def GeoGrid(fname=None,
         
     # data is given
     elif "data" in kwargs:
-        kwargs["nbands"], kwargs["ncols"], kwargs["nrows"] = ((1,1) + data.shape)[-3:]
+        kwargs["nbands"], kwargs["nrows"], kwargs["ncols"] = ((1,1) + data.shape)[-3:]
         kwargs["dtype"] = data.dtype
         # return _DummyGrid(**kwargs)
         return _GeoGrid(**kwargs)
@@ -157,6 +157,10 @@ class _GeoGrid(NumpyMemberBase):
             "xmax":self.xllcorner + self.ncols * self.cellsize
         }
 
+
+    def _getMask(self):
+        return self.data == self.fill_value
+        
     def _getData(self):
         return self._data
 
@@ -173,15 +177,18 @@ class _GeoGrid(NumpyMemberBase):
         """
         self._fill_value = self.dtype(self._fill_value)
         self._data = self._data.astype(self._dtype)
-                    
+
+    def __eq__(self,other):
+        super(_GeoGrid,self).__eq__(other)
+        
     def __copy__(self):
-        return _GeoGrid(**self.header)
+        return GeoGrid(**self.header)
         
     def __deepcopy__(self,memo=None):
         kwargs = copy.deepcopy(self.header)
         kwargs["data"] = self.data
-        return _GeoGrid(**kwargs)
-                
+        return GeoGrid(**kwargs)
+        
     def _getFillValue(self):
         """
             fill_value getter
@@ -195,10 +202,12 @@ class _GeoGrid(NumpyMemberBase):
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
-        self._fill_value = self.dtype(value)
-        self.data[self.data == self.fill_value] = self._fill_value
-
-
+        # In order to create a correct mask the fill_value must
+        # be set last
+        fill_value = self.dtype(value)
+        self.data[self.mask] = fill_value
+        self._fill_value = fill_value
+        
     @property
     def shape(self):
         """
@@ -233,14 +242,17 @@ class _GeoGrid(NumpyMemberBase):
                              fset=lambda self, value:     self._setDataType(value))
     data          = property(fget=lambda self:            self._getData(),
                              fset=lambda self, value:     self._setData(value))
+    mask          = property(fget=lambda self:            self._getMask())
                         
 class _GdalGrid(_GeoGrid):
     def __init__(self,fname,dtype=None):
-        self.fobj = self._open(fname)
-        trans     = self.fobj.GetGeoTransform()
-        band      = self.fobj.GetRasterBand(1)
-        pparams   = self._proj4Params() 
-
+        self.fobj             = self._open(fname)
+        trans                 = self.fobj.GetGeoTransform()
+        band                  = self.fobj.GetRasterBand(1)
+        pparams               = self._proj4Params()
+        # the file's original fill value
+        # self._file_fill_value = band.GetNoDataValue()
+        
         super(_GdalGrid,self).__init__(
             nbands       = self.fobj.RasterCount,
             nrows        = self.fobj.RasterYSize,
@@ -311,6 +323,7 @@ class _GdalGrid(_GeoGrid):
         proj_params = filter(None,re.split("[+= ]",proj_string))
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
+        
 class _GridWriter(object):
 
     def __init__(self,fobj):

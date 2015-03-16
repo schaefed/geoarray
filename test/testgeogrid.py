@@ -27,7 +27,7 @@ class TestInitialisation(unittest.TestCase):
         
     def test_initWithData(self):
         
-        data = np.arange(32).reshape(2,4,4)
+        data = np.arange(48).reshape(2,4,6)
         grid = GeoGrid(data=data)
         self.assertEqual(grid.shape, data.shape)
 
@@ -76,7 +76,7 @@ class TestInitialisation(unittest.TestCase):
         self.assertEqual(grid.xllcorner,88)
         self.assertEqual(grid.cellsize,33.33)
     
-class TestGeoGridBase(unittest.TestCase):
+class TestGeoGrid(unittest.TestCase):
     
     def setUp(self):
         
