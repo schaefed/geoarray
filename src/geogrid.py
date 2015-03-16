@@ -195,8 +195,9 @@ class _GeoGrid(NumpyMemberBase):
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
-        self._data[self._data == self.fill_value] = self.dtype(value)
         self._fill_value = self.dtype(value)
+        self.data[self.data == self.fill_value] = self._fill_value
+
 
     @property
     def shape(self):
@@ -232,26 +233,7 @@ class _GeoGrid(NumpyMemberBase):
                              fset=lambda self, value:     self._setDataType(value))
     data          = property(fget=lambda self:            self._getData(),
                              fset=lambda self, value:     self._setData(value))
-    
-    
-# class _DummyGrid(_GeoGrid):
-#     """
-#         A simple dummy data class needed as reader attribute to
-#         _GeoGrid if data is given on initialisation
-#     """
-#     def __init__(self,*args,**kwargs):
-#         super(_DummyGrid,self).__init__(*args,**kwargs)
-        
-#     def _readData(self):
-#         """
-#             returns an array filled with nodata_values
-#         """
-#         # return self._data
-#         out = np.empty((self.nbands,self.nrows,self.ncols),dtype=self.dtype)
-#         out.fill(self.nodata_value)        
-#         return out
-            
-                
+                        
 class _GdalGrid(_GeoGrid):
     def __init__(self,fname,dtype=None):
         self.fobj = self._open(fname)
@@ -285,7 +267,7 @@ class _GdalGrid(_GeoGrid):
     def _readData(self):
         """
         Reads all data from file
-        """    
+        """
         return self.fobj.ReadAsArray()
 
     def _getData(self):
