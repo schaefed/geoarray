@@ -4,8 +4,8 @@
 import re, os, copy
 import gdal, osr
 import numpy as np
-from numpymember import NumpyMemberBase
-from slicing import slicingBounds
+from numpymember import NumpyMemberBase, COMPARISON_OPERATORS
+from slicing import slicingBounds, fullSlices
 # import geogridfuncs as ggfuncs
 
 # needs to be extended
@@ -23,29 +23,30 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 def GeoGrid(fname=None,            
             nbands=1, nrows=None, ncols=None,
             xllcorner=0, yllcorner=0, cellsize=1,
-            dtype=np.float32, data=None, nodata_value=-9999,
+            dtype=None, data=None, fill_value=-9999,
             proj_params=None):
     
     kwargs = {k:v for k,v in locals().iteritems() if v != None} 
-
     # An existing file will be read -> only dtype and proj_params
     # are accpted as arguments
     if "fname" in kwargs:
-        return _GdalGrid(kwargs["fname"])
+        return _GdalGrid(kwargs["fname"],dtype)
         
     # data is given
     elif "data" in kwargs:
-        kwargs["nbands"], kwargs["ncols"], kwargs["nrows"] = data.shape if data.ndim == 3 else (1,)+data.shape        
-        kwargs["dtype"] = kwargs.get("dtype", data.dtype)
+        kwargs["nbands"], kwargs["ncols"], kwargs["nrows"] = ((1,1) + data.shape)[-3:]
+        kwargs["dtype"] = data.dtype
         # return _DummyGrid(**kwargs)
         return _GeoGrid(**kwargs)
         
     # nrows and ncols are also good ... 
     elif ("nrows" in kwargs) and ("ncols" in kwargs):
+        kwargs["dtype"] = kwargs.get("dtype",np.float32)
         return _GeoGrid(**kwargs)
             
     raise TypeError("Insufficient arguments given!")
 
+        
 class _GeoGrid(NumpyMemberBase):
     
     """
@@ -60,13 +61,12 @@ class _GeoGrid(NumpyMemberBase):
     def __init__(self,
             nbands=None, nrows=None, ncols=None,
             xllcorner=None, yllcorner=None, cellsize=None,
-            dtype=None, data=None, nodata_value=None,
+            dtype=None, data=None, fill_value=None,
             proj_params=None
     ):
-
         super(_GeoGrid,self).__init__(
             self,"data",
-            # hooks = {c: lambda x: x._setDataType(np.bool) for c in COMPARISON_OPERATORS}
+            hooks = {c: lambda x: x._setDataType(bool) for c in COMPARISON_OPERATORS}
         )
 
         self.nbands        = nbands if nbands else 1
@@ -78,22 +78,16 @@ class _GeoGrid(NumpyMemberBase):
         self.cellsize      = cellsize
         self.proj_params   = proj_params
 
-        self._nodata_value = nodata_value
+        self._fill_value = fill_value
         self._dtype        = np.dtype(dtype).type
         self._data         = self._initData(data)
-        # self._readmask     = self._initReadMask(data)
 
         self._consistentTypes()
 
-    # def _initReadMask(self,data):
-    #     if data == None:
-    #         return np.zeros(self.shape, dtype=np.bool)            
-    #     return np.ones(self.shape,dtype=np.bool)
-
     def _initData(self,data):
         if data == None:
-            data = np.empty(self.shape, dtype=self.dtype)
-            data.fill(self.nodata_value)
+            data = np.full(self.shape,self.fill_value, dtype=self.dtype)
+            # data.fill(self.fill_value)
         return data
 
     @property
@@ -101,7 +95,7 @@ class _GeoGrid(NumpyMemberBase):
         """
         Output:
             {"xllcorner" : int/float, "yllcorner" : int/float, "cellsize" : int/float
-            {"nodata_value" : int/float, "nrows" : int/float, "ncols": int/float}
+            {"fill_value" : int/float, "nrows" : int/float, "ncols": int/float}
         Purpose:
             Returns the basic definition of the instance. The values given in
             the optional exclude argument will not be part of the definition
@@ -119,7 +113,7 @@ class _GeoGrid(NumpyMemberBase):
             "nrows":self.nrows,
             "ncols":self.ncols,
             "dtype":self.dtype,
-            "nodata_value":self.nodata_value,
+            "fill_value":self.fill_value,
             "proj_params":self.proj_params
         }
         
@@ -165,22 +159,19 @@ class _GeoGrid(NumpyMemberBase):
 
     def _getData(self):
         return self._data
-        # return self.__getitem__(slice(None))
 
     def _setData(self,value):
         if not value.shape == self.shape:
-            print value.shape, self.shape
-            # some more information would be nice...
-            raise ValueError
+            raise ValueError(
+                "could not broadcast input array from shape {:} into shape {:}"\
+                .format(value.shape,self.shape))
         self._data = value
         
     def _consistentTypes(self):
         """
            Reflect dtype changes
-           -> Handle the _data type conversion
         """
-        self._nodata_value = self.dtype(self._nodata_value)
-        # self._data = self[:].astype(self._dtype)
+        self._fill_value = self.dtype(self._fill_value)
         self._data = self._data.astype(self._dtype)
                     
     def __copy__(self):
@@ -191,21 +182,21 @@ class _GeoGrid(NumpyMemberBase):
         kwargs["data"] = self.data
         return _GeoGrid(**kwargs)
                 
-    def _getNodataValue(self):
+    def _getFillValue(self):
         """
-            nodata_value getter
+            fill_value getter
         """
-        return self._nodata_value
+        return self._fill_value
 
-    def _setNodataValue(self,value):
+    def _setFillValue(self,value):
         """
-            nodata_value setter
-            All nodata_values in the dataset will be changed accordingly.
+            fill_value setter
+            All fill_values in the dataset will be changed accordingly.
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
-        self[...,self[:] == self._nodata_value] = self.dtype(value)
-        self._nodata_value = self.dtype(value)
+        self._data[self._data == self.fill_value] = self.dtype(value)
+        self._fill_value = self.dtype(value)
 
     @property
     def shape(self):
@@ -231,20 +222,12 @@ class _GeoGrid(NumpyMemberBase):
         self._dtype = np.dtype(value).type
         self._consistentTypes()
     
-        
-    def __getitem__(self,slc):
-        # numpymember should handle that
-        return self._data[slc]
-    
-    def __setitem__(self,slc,value):
-        # numpymember should handle that
-        self._data[slc] = value
-        
+                
     def write(self,fname):
         _GridWriter(self).write(fname)
         
-    nodata_value  = property(fget=lambda self:            self._getNodataValue(),
-                             fset=lambda self, value:     self._setNodataValue(value))
+    fill_value    = property(fget=lambda self:            self._getFillValue(),
+                             fset=lambda self, value:     self._setFillValue(value))
     dtype         = property(fget=lambda self:            self._getDataType(),
                              fset=lambda self, value:     self._setDataType(value))
     data          = property(fget=lambda self:            self._getData(),
@@ -270,7 +253,7 @@ class _GeoGrid(NumpyMemberBase):
             
                 
 class _GdalGrid(_GeoGrid):
-    def __init__(self,fname):
+    def __init__(self,fname,dtype=None):
         self.fobj = self._open(fname)
         trans     = self.fobj.GetGeoTransform()
         band      = self.fobj.GetRasterBand(1)
@@ -283,9 +266,9 @@ class _GdalGrid(_GeoGrid):
             xllcorner    = trans[0],
             yllcorner    = self._yllcorner(trans[3],trans[5],self.fobj.RasterYSize),
             cellsize     = self._cellsize(trans[1],trans[5]),
-            nodata_value = band.GetNoDataValue(),
+            fill_value   = band.GetNoDataValue(),
             proj_params  = pparams if pparams else {},
-            dtype        = gdal.GetDataTypeName(band.DataType),
+            dtype        = gdal.GetDataTypeName(band.DataType) if dtype == None else dtype,            
         )
 
         self._readmask     = self._initReadMask()
@@ -300,27 +283,33 @@ class _GdalGrid(_GeoGrid):
         raise IOError("Could not open file")
         
     def _readData(self):
+        """
+        Reads all data from file
+        """    
         return self.fobj.ReadAsArray()
 
     def _getData(self):
-        return self.__getitem__(slice(None))
+        if not np.all(self._readmask):
+            # only set where mask allows it
+            self._data[~self._readmask] = self._readData()[~self._readmask]
+            self._readmask[~self._readmask] = True
+        return self._data
         
     def __getitem__(self,slc):
         """
             slicing operator invokes the data reading
             TODO: Implement a slice reading from file
         """
-        if not np.all(self._readmask[slc]):
-            # only set where mask allows it
-            self._data[:] = self.dtype(self._readData())
-            # should be removed after slice reading is implemented
-            self._readmask[:] = True
-        # (top,bottom),(left,right) = slicingBounds(slc,self.shape)[-2:]
-        return self._data[slc]
+        # if not np.all(self._readmask[slc]):
+        # slices = slicingBounds(slc,self.shape)
+        # if fullSlices(slices,self.shape):
+        #     self._getData()
+        self._getData()
+        return super(_GdalGrid,self).__getitem__(slc)
 
     def __setitem__(self,slc,value):
-        self._data[slc] = value
         self._readmask[slc] = True
+        super(_GdalGrid,self).__setitem__(slc,value)
         
     def _yllcorner(self,yulcorner,cellsize,nrows):
         if cellsize < 0:
@@ -379,7 +368,7 @@ class _GridWriter(object):
         out.SetProjection(srs.ExportToWkt())
         for n in xrange(self.fobj.nbands):
             band = out.GetRasterBand(n+1)
-            band.SetNoDataValue(float(self.fobj.nodata_value)) 
+            band.SetNoDataValue(float(self.fobj.fill_value)) 
             band.WriteArray(self.fobj[:])
         out.FlushCache()
         return out
@@ -392,4 +381,57 @@ class _GridWriter(object):
         errormsg = gdal.GetLastErrorMsg()
         if errormsg or not out:
             raise IOError(errormsg)
-            
+
+
+class InfoArray(np.ndarray):
+    def __new__(subtype, shape, dtype=float, buffer=None, offset=0,
+                strides=None, order=None, info=None):
+        obj = np.ndarray.__new__(subtype, shape, dtype, buffer, offset, strides,
+                                 order)
+        # Finally, we must return the newly created object:
+        return obj
+
+    def __array__(self,dtype):
+        print "Hallo"
+        return super(InfoArray,self).__array__(dtype)
+        
+    def __array_finalize__(self, obj):
+        if obj is None: return
+
+    def __getitem__(self,slc):
+        # print type(slc), slc.data.dtype
+        out = super(InfoArray,self).__getitem__(slc)
+        # print type(slc), slc.data.dtype
+        return out
+        
+if __name__ == "__main__":
+
+
+    test = InfoArray(shape=(500,500),dtype=np.float64)
+    data = np.arange(250000,dtype=np.float32).reshape(500,500)
+    test[:] = data
+    grid = GeoGrid(data=data,dtype=np.float32)
+    # print grid.dtype
+    mask = (grid>5).data
+    # idx = np.where(mask==True)
+    # print test[(0,0),(0,1)]
+    # mask_array = np.array(((0,0),(0,1)))
+    # print mask_array
+    # print test[mask_array]
+
+    # print test[idx].shape
+    # print test[mask].shape
+    # print test[mask.astype(int)].shape
+    print test[grid>5].shape
+    # print test[np.ones_like(data, np.int)].shape
+    # print np.all(test[(grid>5).data.astype(np.int64)] == test[grid>5])
+    # print test[grid>5]
+
+    # print test[grid>5].shape
+    
+    # print data[grid>5].shape
+    # # print grid[grid>5].shape
+
+    # assert np.all(grid[grid>5] == data[data>5])
+
+    

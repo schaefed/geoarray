@@ -86,7 +86,7 @@ def addCells(grid,top=0,left=0,bottom=0,right=0):
         margin of the grid.
     Example:
         top=1, left=0, bottom=1, right=2
-        nodata_value  0
+        fill_value  0
 
                                    |0|0|0|0| 
                                    ---------
@@ -110,7 +110,7 @@ def addCells(grid,top=0,left=0,bottom=0,right=0):
             cellsize     = grid.cellsize,
             dtype        = grid.dtype,
             data         = None,
-            nodata_value = grid.nodata_value,
+            fill_value = grid.fill_value,
             proj_params  = grid.proj_params,
     )
 
@@ -131,7 +131,7 @@ def removeCells(grid,top=0,left=0,bottom=0,right=0):
         respective margin of the grid
     Example:
         top=1, left=0, bottom=1, right=2
-        nodata_value  0
+        fill_value  0
 
                      |0|5|8|9| 
                      ---------
@@ -157,7 +157,7 @@ def removeCells(grid,top=0,left=0,bottom=0,right=0):
             data         = None,
             dtype        = grid.dtype,
             proj_params  = grid.proj_params,
-            nodata_value = grid.nodata_value,
+            fill_value = grid.fill_value,
     )
 
     # the Ellipsis ensures that the function works with 
@@ -234,12 +234,12 @@ def maskGrid(grid,other):
     Input:
         GeoGrid
     Purpose:
-        Sets all values in grid to nodata_value where the
-        argument contains nodata_value
+        Sets all values in grid to fill_value where the
+        argument contains fill_value
     """
     y_offset,x_offset = _offset(grid,other)
-    y_idx,x_idx = np.where(grid.data == grid.nodata_value)
-    grid[y_idx+y_offset,x_idx+x_offset] = grid.nodata_value
+    y_idx,x_idx = np.where(grid.data == grid.fill_value)
+    grid[y_idx+y_offset,x_idx+x_offset] = grid.fill_value
 
 def trimGrid(grid):
     """
@@ -251,7 +251,7 @@ def trimGrid(grid):
         Removes rows/cols containing only nodata values from the
         margins of the GeoGrid Instance
     """
-    y_idx, x_idx = np.where(grid != grid.nodata_value)
+    y_idx, x_idx = np.where(grid != grid.fill_value)
     try:
         return removeCells(
             grid,

@@ -5,6 +5,8 @@ import unittest, copy, shutil, os
 import numpy as np
 from geogrid import GeoGrid, _DRIVER_DICT
 import geogridfuncs as ggfuncs
+import warnings
+warnings.filterwarnings("ignore") 
 
 FNAME = os.path.join(os.path.split(__file__)[0],"dem.tif")
 #FNAME = "dem.asc"
@@ -16,10 +18,15 @@ PROJ_PARAMS = {
     'proj' : 'laea',    'ellps': 'WGS84'
 }
 
-
 class TestInitialisation(unittest.TestCase):
 
+    def test_initReadData(self):
+        checktype = np.float64
+        grid = GeoGrid(FNAME,dtype = checktype)
+        self.assertTrue(grid.dtype == checktype)
+        
     def test_initWithData(self):
+        
         data = np.arange(32).reshape(2,4,4)
         grid = GeoGrid(data=data)
         self.assertEqual(grid.shape, data.shape)
@@ -36,76 +43,84 @@ class TestInitialisation(unittest.TestCase):
 
         # given with all other parameters
         grid = GeoGrid(data=data, dtype=np.float32, nbands=3, nrows=3,ncols=44,
-                       nodata_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
+                       fill_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
         )
         # grid[1:-1]
         self.assertEqual(grid.shape, data.shape)
-        # self.assertEqual(grid.dtype, np.float32)
-        self.assertEqual(grid.nodata_value,42)
+        self.assertEqual(grid.dtype, data.dtype)
+        self.assertEqual(grid.fill_value,42)
         self.assertEqual(grid.yllcorner,-15)
         self.assertEqual(grid.xllcorner,88)
         self.assertEqual(grid.cellsize,33.33)
 
     def test_initWithoutData(self):
+        
         grid = GeoGrid(nrows=44,ncols=66)
         self.assertEqual(grid.shape,(44,66))
 
         grid = GeoGrid(nrows=44,ncols=66,nbands=4)
         self.assertEqual(grid.shape,(4,44,66))
 
-        grid = GeoGrid(nrows=44,ncols=66,nbands=4,nodata_value=42)
+        grid = GeoGrid(nrows=44,ncols=66,nbands=4,fill_value=42)
         self.assertEqual(grid.shape,(4,44,66))
         self.assertTrue(np.all(grid == 42))
 
         # given with all other parameters
         grid = GeoGrid(nrows=44,ncols=66,nbands=4,dtype=np.float32,
-                       nodata_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
+                       fill_value=42, yllcorner=-15,xllcorner=88,cellsize=33.33
         )        
         self.assertEqual(grid.shape, (4,44,66))
         self.assertEqual(grid.dtype, np.float32)
-        self.assertEqual(grid.nodata_value,42)
+        self.assertEqual(grid.fill_value,42)
         self.assertEqual(grid.yllcorner,-15)
         self.assertEqual(grid.xllcorner,88)
         self.assertEqual(grid.cellsize,33.33)
     
-
 class TestGeoGridBase(unittest.TestCase):
+    
     def setUp(self):
+        
         self.grid = GeoGrid(fname=FNAME)        
         self.write_path = "out"
 
     def tearDown(self):
+        
         try:
             shutil.rmtree(self.write_path)
         except:
             pass
         
     def test_typeConsistency(self):
+        
         def check(grid):
-            self.assertTrue(grid.dtype == type(grid.nodata_value))
+            
+            self.assertTrue(grid.dtype == type(grid.fill_value))            
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = np.int32
         check(self.grid)
         check(checkgrid)
             
     def test_setNodataValue(self):
+        
         rpcvalue = -2222
         checkgrid = copy.deepcopy(self.grid)
-        checkgrid.nodata_value = rpcvalue
+        checkgrid.fill_value = rpcvalue
         nodatapos1 = np.where(checkgrid == rpcvalue)
-        nodatapos2 = np.where(self.grid == self.grid.nodata_value)
+        nodatapos2 = np.where(self.grid == self.grid.fill_value)
         for pos1,pos2 in zip(nodatapos1,nodatapos2):
             self.assertTrue(np.all(pos1 == pos2))
-        self.assertEqual(checkgrid.nodata_value, rpcvalue)
+        self.assertEqual(checkgrid.fill_value, rpcvalue)
         
     def test_setDtype(self):
+        
         rpctype = np.float64
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = rpctype
         self.assertEqual(checkgrid.dtype,rpctype)
         self.assertEqual(checkgrid.dtype,rpctype)
-
+        
     def test_getitem(self):
+        
         data = self.grid.data.copy()
         slices = (
             self.grid < 3,
@@ -113,10 +128,18 @@ class TestGeoGridBase(unittest.TestCase):
             np.where(self.grid>6),
             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
         )
-        for slc in slices:
+        idx = np.arange(12,20)
+        self.assertTrue(np.all(self.grid[idx] == self.grid[GeoGrid(data=idx)]))
+
+        for i,slc in enumerate(slices):
+            try:
+                slc = slc.data
+            except AttributeError:
+                pass
             self.assertTrue(np.all(data[slc] == self.grid[slc]))
 
     def test_setitem(self):
+        
         slices = (
             self.grid < 3,
             self.grid == 10,
@@ -124,12 +147,27 @@ class TestGeoGridBase(unittest.TestCase):
             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
         )
         value = 11
+        slc = np.arange(12,20)
+        
+        testgrid = copy.deepcopy(self.grid)
+        testgrid[slc] = value
+        self.assertTrue(np.all(testgrid[slc] == value))
+
+        testgrid = copy.deepcopy(self.grid)
+        testgrid[GeoGrid(data=slc)] = value
+        self.assertTrue(np.all(testgrid[slc] == value))
+
         for slc in slices:
+            try:
+                slc = slc.data
+            except AttributeError:
+                pass        
             testgrid = copy.deepcopy(self.grid)
             testgrid[slc] = value
             self.assertTrue(np.all(testgrid[slc] == value))
-    
+
     def test_write(self):
+        
         fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in _DRIVER_DICT)
         for fname in fnames:
             try:
@@ -141,11 +179,12 @@ class TestGeoGridBase(unittest.TestCase):
             self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
 
     def test_copy(self):
-        self.assertTrue(np.all(copy.copy(self.grid) == self.grid.nodata_value))
+        
+        self.assertTrue(np.all(copy.copy(self.grid) == self.grid.fill_value))
         self.assertTrue(np.all(copy.deepcopy(self.grid[:]) == self.grid[:]))
 
-
     def test_numpyFunctions(self):
+        
         # funcs tuple could be extended
         funcs = (np.exp,
                  np.sin,np.cos,np.tan,np.arcsinh,
@@ -160,12 +199,27 @@ class TestGeoGridBase(unittest.TestCase):
         for f in funcs:
             np.testing.assert_equal(f(self.grid),f(compare))
             
-            
-class TestGeoGridFuncs(unittest.TestCase):
-    def setUp(self):
-        self.grid = GeoGrid(FNAME)        
+
+    def test_reading(self):
+        value          = 42
+        maxrow         = 10
+        mincol         = 100
+        checkgrid      = copy.deepcopy(self.grid)
+        idx            = (slice(0,maxrow),slice(mincol,None))
+        idx_inv        = (slice(maxrow,None),slice(0,mincol))
+        self.grid[idx] = value
+        self.grid.data  ## force to read all data !
+        self.assertTrue(np.all(self.grid[idx] == value))
+        self.assertTrue(np.all(self.grid[idx_inv] == checkgrid[idx_inv]))
         
+class TestGeoGridFuncs(unittest.TestCase):
+    
+    def setUp(self):
+        
+        self.grid = GeoGrid(FNAME)        
+
     def test_addCells(self):
+        
         padgrid = ggfuncs.addCells(self.grid, 1, 1, 1, 1)
         self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
 
@@ -180,6 +234,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         
         
     def test_enlargeGrid(self):
+        
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
@@ -190,6 +245,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
     def test_shrinkGrid(self):
+        
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
@@ -200,6 +256,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
     def test_removeCells(self):
+        
         rmgrid = ggfuncs.removeCells(self.grid,1,1,1,1)
         self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
         rmgrid = ggfuncs.removeCells(self.grid,0,0,0,0)
@@ -207,13 +264,15 @@ class TestGeoGridFuncs(unittest.TestCase):
 
         
     def test_trimGrid(self):
+        
         trimgrid = ggfuncs.trimGrid(self.grid)
-        self.assertTrue(np.any(trimgrid[0,...]  != self.grid.nodata_value))
-        self.assertTrue(np.any(trimgrid[-1,...] != self.grid.nodata_value))
-        self.assertTrue(np.any(trimgrid[...,0]  != self.grid.nodata_value))
-        self.assertTrue(np.any(trimgrid[...,-1] != self.grid.nodata_value))
+        self.assertTrue(np.any(trimgrid[0,...]  != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[-1,...] != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[...,0]  != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[...,-1] != self.grid.fill_value))
 
     def test_snapGrid(self):
+        
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.xllcorner += 50
         checkgrid.yllcorner -= 75

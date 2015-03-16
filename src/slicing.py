@@ -14,11 +14,11 @@ def _arraySlice(slc):
         return [(slc.min(axis=d),slc.max(axis=d)+1) for d in xrange(slc.ndim)]
     elif slc.dtype == np.bool:
         # boolean array -> min(rows with true):max(rows with true)
-        return [(min(d),max(d)) for d  in np.where(slc)]
+        return [(min(d),max(d)) if d.size > 0 else (0,0) for d in np.nonzero(slc) ]
 
 def _sliceSlice(slc,shape):
     return slc.indices(shape)[:2]
-
+    
 def slicingBounds(slc,shape):
     # processing
     out = []
@@ -42,3 +42,13 @@ def slicingBounds(slc,shape):
     return out
 
     
+def fullSlices(slices,shape):
+    """
+    Input:
+        slices:   slices as returned from slicingBounds
+        shape: shape/size of the object to slice
+    """
+    for slc,size in zip(slices,shape):
+        if slc[0] != 0 or slc[1] != size:
+            return False
+    return True
