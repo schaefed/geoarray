@@ -228,5 +228,3 @@ class NumpyMemberBase(object):
     #             self.__obj, name))
 
     
-if __name__== "__main__":
-    pass

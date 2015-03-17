@@ -175,7 +175,6 @@ class _GeoGrid(NumpyMemberBase):
         self._data = self._data.astype(self._dtype)
         self.yllcorner = self.dtype(self.yllcorner)
         self.xllcorner = self.dtype(self.xllcorner)
-
         
     def __eq__(self,other):
         super(_GeoGrid,self).__eq__(other)
@@ -397,35 +396,3 @@ class InfoArray(np.ndarray):
         out = super(InfoArray,self).__getitem__(slc)
         # print type(slc), slc.data.dtype
         return out
-        
-if __name__ == "__main__":
-
-
-    test = InfoArray(shape=(500,500),dtype=np.float64)
-    data = np.arange(250000,dtype=np.float32).reshape(500,500)
-    test[:] = data
-    grid = GeoGrid(data=data,dtype=np.float32)
-    # print grid.dtype
-    mask = (grid>5).data
-    # idx = np.where(mask==True)
-    # print test[(0,0),(0,1)]
-    # mask_array = np.array(((0,0),(0,1)))
-    # print mask_array
-    # print test[mask_array]
-
-    # print test[idx].shape
-    # print test[mask].shape
-    # print test[mask.astype(int)].shape
-    print test[grid>5].shape
-    # print test[np.ones_like(data, np.int)].shape
-    # print np.all(test[(grid>5).data.astype(np.int64)] == test[grid>5])
-    # print test[grid>5]
-
-    # print test[grid>5].shape
-    
-    # print data[grid>5].shape
-    # # print grid[grid>5].shape
-
-    # assert np.all(grid[grid>5] == data[data>5])
-
-    
