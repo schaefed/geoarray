@@ -6,7 +6,6 @@ import gdal, osr
 import numpy as np
 from numpymember import NumpyMemberBase, COMPARISON_OPERATORS
 from slicing import slicingBounds, fullSlices
-# import geogridfuncs as ggfuncs
 
 # needs to be extended
 _DRIVER_DICT = {
@@ -18,7 +17,6 @@ _DRIVER_DICT = {
 }
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
-#gdal.UseExceptions()
 
 def GeoGrid(fname=None,            
             nbands=1, nrows=None, ncols=None,
@@ -30,13 +28,12 @@ def GeoGrid(fname=None,
     # An existing file will be read -> only dtype and proj_params
     # are accpted as arguments
     if "fname" in kwargs:
-        return _GdalGrid(kwargs["fname"],dtype)
+        return _GdalGrid(kwargs["fname"], dtype)
         
     # data is given
     elif "data" in kwargs:
         kwargs["nbands"], kwargs["nrows"], kwargs["ncols"] = ((1,1) + data.shape)[-3:]
         kwargs["dtype"] = data.dtype
-        # return _DummyGrid(**kwargs)
         return _GeoGrid(**kwargs)
         
     # nrows and ncols are also good ... 
@@ -68,7 +65,7 @@ class _GeoGrid(NumpyMemberBase):
             self,"data",
             hooks = {c: lambda x: x._setDataType(bool) for c in COMPARISON_OPERATORS}
         )
-
+                
         self.nbands        = nbands if nbands else 1
         self.nrows         = nrows
         self.ncols         = ncols
@@ -78,7 +75,7 @@ class _GeoGrid(NumpyMemberBase):
         self.cellsize      = cellsize
         self.proj_params   = proj_params
 
-        self._fill_value = fill_value
+        self._fill_value   = fill_value
         self._dtype        = np.dtype(dtype).type
         self._data         = self._initData(data)
 
@@ -87,7 +84,6 @@ class _GeoGrid(NumpyMemberBase):
     def _initData(self,data):
         if data == None:
             data = np.full(self.shape,self.fill_value, dtype=self.dtype)
-            # data.fill(self.fill_value)
         return data
 
     @property
@@ -177,7 +173,10 @@ class _GeoGrid(NumpyMemberBase):
         """
         self._fill_value = self.dtype(self._fill_value)
         self._data = self._data.astype(self._dtype)
+        self.yllcorner = self.dtype(self.yllcorner)
+        self.xllcorner = self.dtype(self.xllcorner)
 
+        
     def __eq__(self,other):
         super(_GeoGrid,self).__eq__(other)
         
@@ -205,7 +204,7 @@ class _GeoGrid(NumpyMemberBase):
         # In order to create a correct mask the fill_value must
         # be set last
         fill_value = self.dtype(value)
-        self.data[self.mask] = fill_value
+        self._data[self.mask] = fill_value
         self._fill_value = fill_value
         
     @property
