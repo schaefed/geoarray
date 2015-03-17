@@ -8,7 +8,7 @@ import geogridfuncs as ggfuncs
 import warnings
 warnings.filterwarnings("ignore") 
 
-FNAME = os.path.join(os.path.split(__file__)[0],"dem.tif")
+FNAME = os.path.join(os.path.split(__file__)[0],"dem.asc")
 #FNAME = "dem.asc"
 
 PROJ_PARAMS = {
@@ -78,49 +78,48 @@ class TestInitialisation(unittest.TestCase):
     
 class TestGeoGrid(unittest.TestCase):
     
-    def setUp(self):
-        
+    def setUp(self):        
         self.grid = GeoGrid(fname=FNAME)        
         self.write_path = "out"
 
-    def tearDown(self):
-        
+    def tearDown(self):        
         try:
             shutil.rmtree(self.write_path)
         except:
             pass
         
     def test_typeConsistency(self):
-        
         def check(grid):
-            
-            self.assertTrue(grid.dtype == type(grid.fill_value))            
+            self.assertTrue(grid.dtype == type(grid.fill_value))
+            self.assertTrue(grid.dtype == type(grid.yllcorner))            
+            self.assertTrue(grid.dtype == type(grid.xllcorner))
+        #
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = np.int32
         check(self.grid)
         check(checkgrid)
-            
-    def test_setNodataValue(self):
         
+    def test_setFillValue(self):
         rpcvalue = -2222
-        checkgrid = copy.deepcopy(self.grid)
+        checkgrid = GeoGrid(FNAME)
+        org_fill_fvalue = checkgrid.fill_value
         checkgrid.fill_value = rpcvalue
+        self.assertFalse(np.any(checkgrid == org_fill_fvalue))
+        self.assertEqual(checkgrid.fill_value, rpcvalue)
         nodatapos1 = np.where(checkgrid == rpcvalue)
         nodatapos2 = np.where(self.grid == self.grid.fill_value)
         for pos1,pos2 in zip(nodatapos1,nodatapos2):
             self.assertTrue(np.all(pos1 == pos2))
         self.assertEqual(checkgrid.fill_value, rpcvalue)
         
-    def test_setDtype(self):
-        
+    def test_setDtype(self):        
         rpctype = np.float64
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = rpctype
         self.assertEqual(checkgrid.dtype,rpctype)
         self.assertEqual(checkgrid.dtype,rpctype)
         
-    def test_getitem(self):
-        
+    def test_getitem(self):        
         data = self.grid.data.copy()
         slices = (
             self.grid < 3,
@@ -179,9 +178,10 @@ class TestGeoGrid(unittest.TestCase):
             self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
 
     def test_copy(self):
-        
+        deep_copy = copy.deepcopy(self.grid)
+        self.assertTrue(deep_copy.header == self.grid.header)
+        self.assertTrue(np.all(self.grid == deep_copy))
         self.assertTrue(np.all(copy.copy(self.grid) == self.grid.fill_value))
-        self.assertTrue(np.all(copy.deepcopy(self.grid[:]) == self.grid[:]))
 
     def test_numpyFunctions(self):
         
@@ -208,14 +208,12 @@ class TestGeoGrid(unittest.TestCase):
         idx            = (slice(0,maxrow),slice(mincol,None))
         idx_inv        = (slice(maxrow,None),slice(0,mincol))
         self.grid[idx] = value
-        self.grid.data  ## force to read all data !
         self.assertTrue(np.all(self.grid[idx] == value))
         self.assertTrue(np.all(self.grid[idx_inv] == checkgrid[idx_inv]))
         
 class TestGeoGridFuncs(unittest.TestCase):
     
-    def setUp(self):
-        
+    def setUp(self):        
         self.grid = GeoGrid(FNAME)        
 
     def test_addCells(self):
