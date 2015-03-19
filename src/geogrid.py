@@ -341,10 +341,11 @@ class _GridWriter(object):
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
     def _proj4String(self):
-        return "+{:}".format(" +".join(
-            ["=".join(pp) for pp in self.fobj.proj_params.items()])
-        )
-    
+        params = self.fobj.proj_params
+        if params:
+            return "+{:}".format(" +".join(
+                ["=".join(pp) for pp in params.items()])
+                             )
 
     def _writeGdalMemory(self):
         driver = gdal.GetDriverByName("MEM")
@@ -363,7 +364,7 @@ class _GridWriter(object):
         for n in xrange(self.fobj.nbands):
             band = out.GetRasterBand(n+1)
             band.SetNoDataValue(float(self.fobj.fill_value)) 
-            band.WriteArray(self.fobj[:])
+            band.WriteArray(self.fobj[(n,Ellipsis) if self.fobj.nbands > 1 else (Ellipsis)])
         out.FlushCache()
         return out
 
