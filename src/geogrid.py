@@ -171,10 +171,11 @@ class _GeoGrid(NumpyMemberBase):
         """
            Reflect dtype changes
         """
-        self._fill_value = self.dtype(self._fill_value)
-        self._data = self._data.astype(self._dtype)
         self.yllcorner = self.dtype(self.yllcorner)
         self.xllcorner = self.dtype(self.xllcorner)
+        self._fill_value = self.dtype(self._fill_value)
+        if np.dtype(self._data.dtype).type != self._dtype:
+            self._data = self._data.astype(self._dtype)
         
     def __eq__(self,other):
         super(_GeoGrid,self).__eq__(other)
