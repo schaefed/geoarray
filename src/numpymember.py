@@ -88,7 +88,6 @@ class NumpyMemberBase(object):
             return the ndarray from the childclass
         """
         return self.__obj.__getattribute__(self.__attr)
-
         
     def __prepObject(self,obj):
         """

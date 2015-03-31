@@ -95,7 +95,6 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(grid.dtype       == type(grid.xllcorner))
             self.assertTrue(grid.data.dtype  == grid.dtype)
             self.assertTrue(grid._data.dtype == grid.dtype)
-
         #
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = np.int32
