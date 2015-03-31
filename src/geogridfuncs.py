@@ -148,25 +148,22 @@ def removeCells(grid,top=0,left=0,bottom=0,right=0):
     bottom = int(max(bottom,0))
     right  = int(max(right,0))
 
-    out = GeoGrid(
-            nrows        = grid.nrows - top  - bottom,
-            ncols        = grid.ncols - left - right,
+    nrows = grid.nrows - top  - bottom
+    ncols = grid.ncols - left - right
+    
+    return GeoGrid(
+            nrows        = nrows,
+            ncols        = ncols,
             xllcorner    = grid.xllcorner + left*grid.cellsize,
             yllcorner    = grid.yllcorner + bottom*grid.cellsize,
             cellsize     = grid.cellsize,
-            data         = None,
+            data         = grid[Ellipsis, top:top+nrows, left:left+ncols],
             dtype        = grid.dtype,
             proj_params  = grid.proj_params,
-            fill_value = grid.fill_value,
+            fill_value   = grid.fill_value,
     )
 
-    # the Ellipsis ensures that the function works with 
-    # arrays with more than two dimensions
-    out[:] = grid[Ellipsis, top:top+out.nrows, left:left+out.ncols]
-    return out
-
-
-
+    
 def enlargeGrid(grid,bbox):
     """
     Input:
@@ -210,6 +207,7 @@ def shrinkGrid(grid,bbox):
                          /grid.cellsize, MAX_PRECISION))
     right  = floor(round((grid_bbox["xmax"] - bbox["xmax"])
                          /grid.cellsize, MAX_PRECISION))
+    
     return removeCells(grid,max(top,0),max(left,0),max(bottom,0),max(right,0))        
 
         
