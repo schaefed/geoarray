@@ -60,7 +60,7 @@ class NumpyMemberBase(object):
         
         self.__obj = obj            
         self.__attr = name
-        self.__ndarray = None
+        # self.__ndarray = None
         self.__hooks = hooks if hooks else {}
         
         self.__setOperators(
@@ -87,9 +87,7 @@ class NumpyMemberBase(object):
         """
             return the ndarray from the childclass
         """
-        if self.__ndarray == None:
-            self.__ndarray = self.__obj.__getattribute__(self.__attr)
-        return self.__ndarray
+        return self.__obj.__getattribute__(self.__attr)
 
         
     def __prepObject(self,obj):
