@@ -79,7 +79,7 @@ class TestInitialisation(unittest.TestCase):
 class TestGeoGrid(unittest.TestCase):
     
     def setUp(self):        
-        self.grid = GeoGrid(fname=FNAME)        
+        self.grid = GeoGrid(fname=FNAME,dtype=np.float32)
         self.write_path = "out"
 
     def tearDown(self):        
@@ -90,9 +90,12 @@ class TestGeoGrid(unittest.TestCase):
         
     def test_typeConsistency(self):
         def check(grid):
-            self.assertTrue(grid.dtype == type(grid.fill_value))
-            self.assertTrue(grid.dtype == type(grid.yllcorner))            
-            self.assertTrue(grid.dtype == type(grid.xllcorner))
+            self.assertTrue(grid.dtype       == type(grid.fill_value))
+            self.assertTrue(grid.dtype       == type(grid.yllcorner))            
+            self.assertTrue(grid.dtype       == type(grid.xllcorner))
+            self.assertTrue(grid.data.dtype  == grid.dtype)
+            self.assertTrue(grid._data.dtype == grid.dtype)
+
         #
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = np.int32
@@ -112,12 +115,13 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(np.all(pos1 == pos2))
         self.assertEqual(checkgrid.fill_value, rpcvalue)
         
-    def test_setDtype(self):        
-        rpctype = np.float64
+    def test_setDataType(self):
+        rpctype = np.int32        
         checkgrid = copy.deepcopy(self.grid)
         checkgrid.dtype = rpctype
         self.assertEqual(checkgrid.dtype,rpctype)
-        self.assertEqual(checkgrid.dtype,rpctype)
+        self.assertEqual(checkgrid.data.dtype,rpctype)
+        self.assertEqual(checkgrid._data.dtype,rpctype)
         
     def test_getitem(self):        
         data = self.grid.data.copy()
