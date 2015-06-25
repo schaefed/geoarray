@@ -14,6 +14,7 @@ _DRIVER_DICT = {
     ".bmp" : "BMP",
     ".img" : "HFA",
     ".jpg" : "JPEG",
+    ".png" : "PNG"
 }
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
