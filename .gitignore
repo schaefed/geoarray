@@ -1,0 +1,8 @@
+# compiled sources #
+# ----------------
+*.pyc
+
+# emacs tmp files #
+# ---------------
+*~
+\#*
