@@ -171,10 +171,11 @@ class _GeoGrid(NumpyMemberBase):
         """
            Reflect dtype changes
         """
-        self._fill_value = self.dtype(self._fill_value)
-        self._data = self._data.astype(self._dtype)
         self.yllcorner = self.dtype(self.yllcorner)
         self.xllcorner = self.dtype(self.xllcorner)
+        self._fill_value = self.dtype(self._fill_value)
+        if np.dtype(self._data.dtype).type != self._dtype:
+            self._data = self._data.astype(self._dtype)
         
     def __eq__(self,other):
         super(_GeoGrid,self).__eq__(other)
@@ -341,10 +342,11 @@ class _GridWriter(object):
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
     def _proj4String(self):
-        return "+{:}".format(" +".join(
-            ["=".join(pp) for pp in self.fobj.proj_params.items()])
-        )
-    
+        params = self.fobj.proj_params
+        if params:
+            return "+{:}".format(" +".join(
+                ["=".join(pp) for pp in params.items()])
+                             )
 
     def _writeGdalMemory(self):
         driver = gdal.GetDriverByName("MEM")
@@ -363,7 +365,7 @@ class _GridWriter(object):
         for n in xrange(self.fobj.nbands):
             band = out.GetRasterBand(n+1)
             band.SetNoDataValue(float(self.fobj.fill_value)) 
-            band.WriteArray(self.fobj[:])
+            band.WriteArray(self.fobj[(n,Ellipsis) if self.fobj.nbands > 1 else (Ellipsis)])
         out.FlushCache()
         return out
 
