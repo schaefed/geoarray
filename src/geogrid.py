@@ -243,7 +243,8 @@ class _GeoGrid(NumpyMemberBase):
     data          = property(fget=lambda self:            self._getData(),
                              fset=lambda self, value:     self._setData(value))
     mask          = property(fget=lambda self:            self._getMask())
-                        
+
+    
 class _GdalGrid(_GeoGrid):
     def __init__(self,fname,dtype=None):
         self.fobj             = self._open(fname)
