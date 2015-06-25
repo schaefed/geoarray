@@ -4,7 +4,7 @@
 import re, os, copy
 import gdal, osr
 import numpy as np
-from numpymember import NumpyMemberBase, COMPARISON_OPERATORS
+from numpymember import NumpyMemberBase
 from slicing import slicingBounds, fullSlices
 
 # needs to be extended
@@ -64,7 +64,7 @@ class _GeoGrid(NumpyMemberBase):
     ):
         super(_GeoGrid,self).__init__(
             self,"data",
-            hooks = {c: lambda x: x._setDataType(bool) for c in COMPARISON_OPERATORS}
+            # hooks = {c: lambda x: x._setDataType(bool) for c in COMPARISON_OPERATORS}
         )
                 
         self.nbands        = nbands if nbands else 1
@@ -137,7 +137,7 @@ class _GeoGrid(NumpyMemberBase):
         """
         Output:
             {"ymin": int/float, "ymax": int/float,
-            "xmin": int/float, "xmax": int/float}
+             "xmin": int/float, "xmax": int/float}
         Purpose:
             Returns the bounding box of the GeoGrid Instance.
         Note:
@@ -177,16 +177,13 @@ class _GeoGrid(NumpyMemberBase):
         self._fill_value = self.dtype(self._fill_value)
         if np.dtype(self._data.dtype).type != self._dtype:
             self._data = self._data.astype(self._dtype)
-        
-    def __eq__(self,other):
-        super(_GeoGrid,self).__eq__(other)
-        
+                
     def __copy__(self):
         return GeoGrid(**self.header)
         
     def __deepcopy__(self,memo=None):
         kwargs = copy.deepcopy(self.header)
-        kwargs["data"] = self.data
+        kwargs["data"] = self.data.copy()
         return GeoGrid(**kwargs)
         
     def _getFillValue(self):
@@ -380,23 +377,24 @@ class _GridWriter(object):
             raise IOError(errormsg)
 
 
-class InfoArray(np.ndarray):
-    def __new__(subtype, shape, dtype=float, buffer=None, offset=0,
-                strides=None, order=None, info=None):
-        obj = np.ndarray.__new__(subtype, shape, dtype, buffer, offset, strides,
-                                 order)
-        # Finally, we must return the newly created object:
-        return obj
+# class InfoArray(np.ndarray):
+#     def __new__(subtype, shape, dtype=float, buffer=None, offset=0,
+#                 strides=None, order=None, info=None):
+#         obj = np.ndarray.__new__(subtype, shape, dtype, buffer, offset, strides,
+#                                  order)
+#         # Finally, we must return the newly created object:
+#         return obj
 
-    def __array__(self,dtype):
-        print "Hallo"
-        return super(InfoArray,self).__array__(dtype)
+#     def __array__(self,dtype):
+#         print "Hallo"
+#         return super(InfoArray,self).__array__(dtype)
         
-    def __array_finalize__(self, obj):
-        if obj is None: return
+#     def __array_finalize__(self, obj):
+#         if obj is None: return
 
-    def __getitem__(self,slc):
-        # print type(slc), slc.data.dtype
-        out = super(InfoArray,self).__getitem__(slc)
-        # print type(slc), slc.data.dtype
-        return out
+#     def __getitem__(self,slc):
+#         # print type(slc), slc.data.dtype
+#         out = super(InfoArray,self).__getitem__(slc)
+#         # print type(slc), slc.data.dtype
+#         return out
+

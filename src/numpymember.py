@@ -4,34 +4,8 @@
 import copy
 import numpy as np
 
-# Comparisons
-COMPARISON_OPERATORS = (
-    "__eq__","__ne__","__lt__","__gt__","__le__","__ge__"
-)    
-
-# Operators returning a copy
-COPY_OPERATORS = (
-    "__add__","__sub__","__mul__","__div__","__floordiv__",
-    "__truediv__","__mod__","__divmod__",
-    "__pow__","__lshift__",
-    "__rshift__","__and__","__or__","__xor__",
-    "__radd__","__rsub__","__rmul__","__rdiv__","__rfloordiv__",
-    "__rtruediv__","__rmod__","__rdivmod__",
-    "__rpow__","__rlshift__",
-    "__rrshift__","__rand__","__ror__","__rxor__"
-)
-
-# Operators changing data in place
-INPLACE_OPERATORS = (
-    "__iadd__","__isub__","__imul__","__idiv__","__ifloordiv__",
-    "__itruediv__","__imod__","__ipow__","__ilshift__",
-    "__irshift__","__iand__","__ior__","__ixor__",
-)
-
-
 class NumpyMemberBase(object):
 
-    # __array_priority__ = 1
 
     """
     Purpose:
@@ -41,114 +15,21 @@ class NumpyMemberBase(object):
     Arguments
         obj:        instance of the childclass holding the np.ndarray object
         name:       name of the np.ndarray attribute in the childclass
-        hooks:      dictionary {operator_name: function to call after operator call}
 
     Restrictions:
-        - Performance is most likely not too good as the array view system
-          of numpy is not implemented an more copies than necessary are
-          created
-        - Slincing an numpy.ndarray using a subclass of Numpymember with an boolean
+        - Slincing a numpy.ndarray using a subclass of NumpyMemberBase with an boolean
           data attribute yields wrong results (__getitem__ actually treats the boolean
           as an integer array and slices it accordingly)
-        - The operators set through the __setOperators method are not overwritable
-          in the subclasses. The implemted method in the subclass won't ever be called
-          -> A solution would be to implement all these methods seperately ;-(
     """
     
-    def __init__(self, obj, name, hooks=None, #implement=False
-             ):
+    def __init__(self, obj, name):
         
         self.__obj = obj            
         self.__attr = name
-        # self.__ndarray = None
-        self.__hooks = hooks if hooks else {}
-        
-        self.__setOperators(
-            INPLACE_OPERATORS,
-            self.__inplaceOperator,
-        )
-
-        self.__setOperators(
-            COPY_OPERATORS,
-            self.__copyOperator,
-        )
-
-        self.__setOperators(
-            COMPARISON_OPERATORS,
-            self.__copyOperator,
-            # self.__comparisonOperators,
-        )
                 
     @property
     def __array_interface__(self):
-        return self.__getArray().__array_interface__
-        
-    def __getArray(self):
-        """
-            return the ndarray from the childclass
-        """
-        return self.__obj.__getattribute__(self.__attr)
-        
-    def __prepObject(self,obj):
-        """
-            Returns the ndarray member of obj or the obj itself
-            if it is not a subclass of NumpyMemberBase
-        """
-        try:
-            return obj.__getArray()
-        except AttributeError:
-            return obj
-
-    def __setOperators(self,operators,factory):
-        for op in operators:
-            setattr(self.__class__,op, factory(op))            
-
-    def __changedCopy(self,array):
-        """
-            Returns a copy of self.__obj where the ndarray
-            attribute is replaced by array. Right now the
-            underlying data is first copied, than replaced.
-            That is probably not the most efficent way...
-        """
-        # should be a deepcopy without self.__attr!
-        out = copy.copy(self.__obj)
-        out.__obj.__setattr__(out.__attr, array)
-        return out
-        
-    def __inplaceOperator(self,opname):
-        """
-            Wrapper closure for the different inplace operators.
-        """
-        f = getattr(np.ndarray,opname)            
-        def operator(self,other):
-            self.__obj.__setattr__(self.__attr,
-                    f(self.__getArray(),self.__prepObject(other))
-                )
-            if opname in self.__hooks:
-                self.__hooks[opname](self)
-            return self
-        return operator
-            
-    def __copyOperator(self,opname):
-        """
-            Wrapper closure for the different copy operators.
-        """
-        f = getattr(np.ndarray,opname)
-        def operator(self,other):
-            out = self.__changedCopy(
-                f(self.__getArray(),
-                  self.__prepObject(other))                
-            )            
-            if opname in self.__hooks:
-                self.__hooks[opname](out)
-            return out
-        return operator
-    
-    def __repr__(self):
-        return self.__getArray().__repr__()
-    
-    def __str__(self):
-        return self.__getArray().__str__()
+        return self._array.__array_interface__
 
     def __array_prepare__(cls,array,context=None):
         """
@@ -169,27 +50,48 @@ class NumpyMemberBase(object):
             an instance of self.__obj.__class__
         """
         if array.shape:
-            return cls.__changedCopy(array)
+            out = copy.copy(cls.__obj)
+            out._setArray(array)            
+            return out
         return array[0]
-
-    # def __array__(cls,dtype=None):
-    #     return cls.__getArray()
         
+    def _getArray(self):
+        """
+            return the ndarray from the childclass
+        """
+        return self.__obj.__getattribute__(self.__attr)
+
+    def _setArray(self,arr):
+        self.__obj.__setattr__(self.__attr,arr)
+
+    def __copy(self,data):
+        out = copy.copy(self)
+        out._array = data
+        return out
+    
+    def __prepObject(self,obj):
+        """
+            Returns the ndarray member of obj or the obj itself
+            if it is not a subclass of NumpyMemberBase
+        """
+        try:
+            return obj._array
+        except AttributeError:
+            return obj
+    
     def __getitem__(self,slc):
         """
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        # return self.__getArray()[slc]
-        return self.__getArray()[self.__prepObject(slc)]
-            
+        return self._array[self.__prepObject(slc)]
+
     def __setitem__(self,slc,value):
         """
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        # self.__getArray()[slc] = value
-        self.__getArray()[self.__prepObject(slc)] = value
+        self._array[self.__prepObject(slc)] = value
  
     
     def __getslice__(self, start, stop) :
@@ -212,16 +114,193 @@ class NumpyMemberBase(object):
         """
         return self.__setitem__(slice(start, stop),value)
 
-    # def __getattr__(self, name):
-    #     if name == "__deepcopy__":
-    #         return
-    #     else:
-    #         if name.startswith("__") or self.__implement:
-    #             try:
-    #                 return getattr(self.__getArray(),name)
-    #             except AttributeError:
-    #                 pass
-    #         raise AttributeError("{:} object has no attribute '{:}'".format(
-    #             self.__obj, name))
+        
+    #Inplace operators
+    def __iadd__(self,other):
+        self._array = self._array.__iadd__(self.__prepObject(other))                   
+        
+    def __isub__(self,other):
+        self._array = self._array.__isub__(self.__prepObject(other))                   
+        
+    def __imul__(self,other):
+        self._array = self._array.__imul__(self.__prepObject(other))                   
+        
+    def __idiv__(self,other):
+        self._array = self._array.__idiv__(self.__prepObject(other))                   
+        
+    def __ifloordiv__(self,other):
+        self._array = self._array.__ifloordiv__(self.__prepObject(other))                   
+        
+    def __itruediv__(self,other):
+        self._array = self._array.__itruediv__(self.__prepObject(other))                   
+        
+    def __imod__(self,other):
+        self._array = self._array.__imod__(self.__prepObject(other))                   
+        
+    def __ipow__(self,other):
+        self._array = self._array.__ipow__(self.__prepObject(other))                   
+        
+    def __ilshift__(self,other):
+        self._array = self._array.__ilshift__(self.__prepObject(other))                   
+        
+    def __irshift__(self,other):
+        self._array = self._array.__irshift__(self.__prepObject(other))                   
+        
+    def __iand__(self,other):
+        self._array = self._array.__iand__(self.__prepObject(other))                   
+        
+    def __ior__(self,other):
+        self._array = self._array.__ior__(self.__prepObject(other))                   
+        
+    def __ixor__(self,other):
+        self._array = self._array.__ixor__(self.__prepObject(other))                   
+        
+    # Comparison operators
+    def __eq__(self,other):
+        return self.__copy(
+            self._array.__eq__(self.__prepObject(other)))    
 
+    def __ne__(self,other):
+        return self.__copy(
+            self._array.__ne__(self.__prepObject(other)))    
     
+    def __lt__(self,other):
+        return self.__copy(
+            self._array.__lt__(self.__prepObject(other)))    
+    
+    def __gt__(self,other):
+        return self.__copy(
+            self._array.__gt__(self.__prepObject(other)))    
+    
+    def __le__(self,other):
+        return self.__copy(
+            self._array.__le__(self.__prepObject(other)))    
+    
+    def __ge__(self,other):
+        return self.__copy(
+            self._array.__ge__(self.__prepObject(other)))    
+    
+    # Copy operators
+    def __add__(self, other):
+        return self.__copy(
+            self._array.__add__(self.__prepObject(other)))
+    
+    def __sub__(self, other):
+        return self.__copy(
+            self._array.__sub__(self.__prepObject(other)))
+    
+    def __mul__(self, other):
+        return self.__copy(
+            self._array.__mul__(self.__prepObject(other)))
+    
+    def __div__(self, other):
+        return self.__copy(
+            self._array.__div__(self.__prepObject(other)))
+    
+    def __floordiv__(self, other):    
+        return self.__copy(
+            self._array.__floordiv__(self.__prepObject(other)))
+
+    def __truediv__(self, other):
+        return self.__copy(
+            self._array.__truediv__(self.__prepObject(other)))
+
+    def __mod__(self, other):
+        return self.__copy(
+            self._array.__mod__(self.__prepObject(other)))
+    
+    def __divmod__(self, other):
+        return self.__copy(
+            self._array.__divmod__(self.__prepObject(other)))
+
+    def __pow__(self, other):
+        return self.__copy(
+            self._array.__pow__(self.__prepObject(other)))
+    
+    def __lshift__(self, other):
+        return self.__copy(
+            self._array.__lshift__(self.__prepObject(other)))
+
+    def __rshift__(self, other):
+        return self.__copy(
+            self._array.__rshift__(self.__prepObject(other)))
+
+    def __and__(self, other):
+        return self.__copy(
+            self._array.__and__(self.__prepObject(other)))
+    
+    def __or__(self, other):
+        return self.__copy(
+            self._array.__or__(self.__prepObject(other)))
+    
+    def __xor__(self, other):
+        return self.__copy(
+            self._array.__xor__(self.__prepObject(other)))
+    
+    def __radd__(self, other):
+        return self.__copy(
+            self._array.__radd__(self.__prepObject(other)))
+    
+    def __rsub__(self, other):
+        return self.__copy(
+            self._array.__rsub__(self.__prepObject(other)))
+    
+    def __rmul__(self, other):
+        return self.__copy(
+            self._array.__rmul__(self.__prepObject(other)))
+    
+    def __rdiv__(self, other):
+        return self.__copy(
+            self._array.__rdiv__(self.__prepObject(other)))
+    
+    def __rfloordiv__(self, other):
+        return self.__copy(
+            self._array.__rfloordiv__(self.__prepObject(other)))
+
+    def __rtruediv__(self, other):
+        return self.__copy(
+            self._array.__rtruediv__(self.__prepObject(other)))
+
+    def __rmod__(self, other):
+        return self.__copy(
+            self._array.__rmod__(self.__prepObject(other)))
+    
+    def __rdivmod__(self, other):
+        return self.__copy(
+            self._array.__rdivmod__(self.__prepObject(other)))
+
+    def __rpow__(self, other):
+        return self.__copy(
+            self._array.__rpow__(self.__prepObject(other)))
+    
+    def __rlshift__(self, other):
+        return self.__copy(
+            self._array.__rlshift__(self.__prepObject(other)))
+
+    def __rrshift__(self, other):
+        return self.__copy(
+            self._array.__rrshift__(self.__prepObject(other)))
+
+    def __rand__(self, other):
+        return self.__copy(
+            self._array.__rand__(self.__prepObject(other)))
+    
+    def __ror__(self, other):
+        return self.__copy(
+            self._array.__ror__(self.__prepObject(other)))
+    
+    def __rxor__(self, other):
+        return self.__copy(
+            self._array.__rxor__(self.__prepObject(other)))
+    
+    def __repr__(self):
+        return self._array.__repr__()
+    
+    def __str__(self):
+        return self._array.__str__()
+
+    _array    = property(fget=lambda self:            self._getArray(),
+                         fset=lambda self, value:     self._setArray(value))
+
+
+
