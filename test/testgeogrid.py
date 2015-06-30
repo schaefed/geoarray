@@ -132,14 +132,13 @@ class TestGeoGrid(unittest.TestCase):
         )
         idx = np.arange(12,20)
         self.assertTrue(np.all(self.grid[idx] == self.grid[GeoGrid(data=idx)]))
-
         for i,slc in enumerate(slices):
             try:
                 slc = slc.data
             except AttributeError:
                 pass
             self.assertTrue(np.all(data[slc] == self.grid[slc]))
-
+        
     def test_setitem(self):
         
         slices = (

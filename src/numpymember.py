@@ -3,6 +3,15 @@
 
 import copy
 import numpy as np
+# from contextlib import contextmanager
+
+# @contextmanager
+# def popInstanceAttribute(obj,name):
+#     objcls = obj.__class__
+#     attr = getattr(objcls,name)
+#     delattr(objcls,name)
+#     yield obj
+#     setattr(objcls,name,attr)
 
 class NumpyMemberBase(object):
 
@@ -31,29 +40,22 @@ class NumpyMemberBase(object):
     def __array_interface__(self):
         return self._array.__array_interface__
 
-    def __array_prepare__(cls,array,context=None):
+    def __array_prepare__(self,array,context=None):
         """
             Called at the beginning of every ufunc.
             The output of this function is passed to
             the ufunc -> the ndarray needs to be
             returned
         """
-        if array.shape:
-            return cls.__prepObject(array)
-        return array[0]
+        return array
 
-        
-    def __array_wrap__(cls,array,context=None):
+    def __array_wrap__(self,array,context=None):
         """
             Called at the end of every ufunc.
             The place to wrap the ndarray into
             an instance of self.__obj.__class__
         """
-        if array.shape:
-            out = copy.copy(cls.__obj)
-            out._setArray(array)            
-            return out
-        return array[0]
+        return self.__copy(array)
         
     def _getArray(self):
         """
@@ -65,33 +67,57 @@ class NumpyMemberBase(object):
         self.__obj.__setattr__(self.__attr,arr)
 
     def __copy(self,data):
-        out = copy.copy(self)
+        """
+        There should be more efficient solution
+        """
+        out = copy.deepcopy(self.__obj)
         out._array = data
         return out
-    
+        
     def __prepObject(self,obj):
         """
-            Returns the ndarray member of obj or the obj itself
-            if it is not a subclass of NumpyMemberBase
+        Returns the ndarray member of obj or the obj itself
+        if it is not a subclass of NumpyMemberBase
+        TODO:
+            Check if obj is a subclass of NumpyMemberBase
         """
-        try:
+        if isinstance(obj, NumpyMemberBase):
             return obj._array
-        except AttributeError:
-            return obj
-    
+        return obj
+
     def __getitem__(self,slc):
         """
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        return self._array[self.__prepObject(slc)]
+        sliced = self._array.__getitem__(
+            self.__prepObject(slc)
+        )    
+        if isinstance(sliced, self.__class__):
+            return sliced
+        return self.__copy(sliced)
 
     def __setitem__(self,slc,value):
         """
             Redirect the slicing to the ndarray
             attribute of self.__obj
         """
-        self._array[self.__prepObject(slc)] = value
+        self._array.__setitem__(self.__prepObject(slc),value)
+
+        
+    # def __getitem__(self,slc):
+    #     """
+    #         Redirect the slicing to the ndarray
+    #         attribute of self.__obj
+    #     """
+    #     return self._array[self.__prepObject(slc)]
+
+    # def __setitem__(self,slc,value):
+    #     """
+    #         Redirect the slicing to the ndarray
+    #         attribute of self.__obj
+    #     """
+    #     self._array[self.__prepObject(slc)] = value
  
     
     def __getslice__(self, start, stop) :
@@ -301,6 +327,4 @@ class NumpyMemberBase(object):
 
     _array    = property(fget=lambda self:            self._getArray(),
                          fset=lambda self, value:     self._setArray(value))
-
-
 

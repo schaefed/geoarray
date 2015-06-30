@@ -182,9 +182,7 @@ class _GeoGrid(NumpyMemberBase):
         return GeoGrid(**self.header)
         
     def __deepcopy__(self,memo=None):
-        kwargs = copy.deepcopy(self.header)
-        kwargs["data"] = self.data.copy()
-        return GeoGrid(**kwargs)
+        return GeoGrid(data=self.data.copy(),**self.header)
         
     def _getFillValue(self):
         """
@@ -229,7 +227,10 @@ class _GeoGrid(NumpyMemberBase):
         self._dtype = np.dtype(value).type
         self._consistentTypes()
     
-                
+
+    def __getitem__(self,slc):
+        return self.data[slc]
+        
     def write(self,fname):
         _GridWriter(self).write(fname)
         
@@ -320,7 +321,6 @@ class _GdalGrid(_GeoGrid):
         proj_string = srs.ExportToProj4()
         proj_params = filter(None,re.split("[+= ]",proj_string))
         return dict(zip(proj_params[0::2],proj_params[1::2]))
-
         
 class _GridWriter(object):
 
