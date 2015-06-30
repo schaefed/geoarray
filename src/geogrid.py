@@ -60,11 +60,9 @@ class _GeoGrid(NumpyMemberBase):
             nbands=None, nrows=None, ncols=None,
             xllcorner=None, yllcorner=None, cellsize=None,
             dtype=None, data=None, fill_value=None,
-            proj_params=None
-    ):
+            proj_params=None):
         super(_GeoGrid,self).__init__(
             self,"data",
-            # hooks = {c: lambda x: x._setDataType(bool) for c in COMPARISON_OPERATORS}
         )
                 
         self.nbands        = nbands if nbands else 1
