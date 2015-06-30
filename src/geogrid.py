@@ -20,16 +20,18 @@ _DRIVER_DICT = {
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 
-def gridOrigin(nrows, ncols, cellsize, lbound=None, rbound=None, ubound=None, bbound=None):
+def gridOrigin(nrows, ncols, cellsize, yorigin, xorigin,origin):
 
-    yorigin = ubound if ubound else bbound - cellsize * (nrows + 1),
-    xorigin = lbound if lbound else rbound - cellsize * ncols + 1        
+    if origin[0] == "l":
+        yorigin -= (nrows + 1)
+    if origin[1] == "r":
+        xorigin -= (ncols + 1)
 
     return yorigin, xorigin
         
-    
+# "ul", "ll", "ur", "lr"
 def GeoGrid(fname=None, data=None, shape=(),
-            yorigin=0, xorigin=0,
+            yorigin=0, xorigin=0, origin="ul",
             # lbound=None, rbound=None, ubound=None, bbound=None,
             dtype=np.float64, fill_value=-9999, cellsize=1,
             proj_params=None):
@@ -46,12 +48,11 @@ def GeoGrid(fname=None, data=None, shape=(),
         
     # wrap array
     if 1 < data.ndim < 4:
-        nrows,ncols = data.shape[-2:]
-        # if any((lbound,rbound)) and any((ubound,bbound)):
-        #     yorigin,xorigin = gridOrigin(nrows,ncols,lbound,rbound,ubound,bbound)
-        return _GeoGrid(data, yorigin, xorigin, cellsize, fill_value, proj_params)
-            
-        
+        nrows, ncols = data.shape[-2:]
+        if origin in ("ul", "ll", "ur", "lr"):
+            yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
+            return _GeoGrid(data, yorigin, xorigin, cellsize, fill_value, proj_params)
+                    
     raise TypeError("Insufficient arguments given!")
 
         
@@ -66,13 +67,14 @@ class _GeoGrid(NumpyMemberBase):
             self,"data",
         )
         
-        self._data = data        
         self.xorigin = xorigin
         self.yorigin = yorigin
-        self.cellsize = cellsize
-        self._fill_value = fill_value
+        self.cellsize = cellsize 
         self.proj_params = proj_params
-            
+
+        self._data = data        
+        self._fill_value = fill_value
+        
         self._propagateType()
 
 
@@ -93,55 +95,35 @@ class _GeoGrid(NumpyMemberBase):
             "shape"       : self.shape,
             "yorigin"     : self.yorigin,
             "xorigin"     : self.xorigin,
+            "origin"      : "ul",
             "dtype"       : self.dtype,
             "fill_value"  : self.fill_value,            
             "cellsize"    : self.cellsize,
             "proj_params" : self.proj_params
         }
         
-    # @property
-    # def coordinates(self):
-    #     """
-    #     Input:
-    #         None
-    #     Output:
-    #         y: numpy.ndarray (1D)
-    #         x: numpy.ndarray (1D)
-    #     Purpose:
-    #         Returns the coordinates of the lower left corner of all cells as
-    #         two sepererate numpy arrays. 
-    #     """
-    #     x = np.arange(self.xorigin, self.xorigin + self.ncols * self.cellsize,\
-    #                   self.cellsize)
-    #     y = np.arange(self.yllcorner, self.yllcorner + self.nrows * self.cellsize,\
-    #                   self.cellsize)
-    #     return y,x
+    @property
+    def bbox(self):
+        """
+        Output:
+            {"ymin": int/float, "ymax": int/float,
+             "xmin": int/float, "xmax": int/float}
+        Purpose:
+            Returns the bounding box of the GeoGrid Instance.
+        Note:
+            Bounding box is here definied as a rectangle entirely enclosing
+            the GeoGrid Instance. That means that ymax and xmax values are
+            calculated as the coordinates of the last cell + cellsize.
+            Trying to acces the point ymax/xmax will therefore fail, as these
+            coorindates actually point to the cell nrows+1/ncols+1
+        """
+        return {
+            "ymax":self.yorigin,
+            "ymin":self.yorigin - self.nrows * self.cellsize,
+            "xmin":self.xorigin,
+            "xmax":self.xorigin + self.ncols * self.cellsize
+        }
 
-#     @property
-#     def bbox(self):
-#         """
-#         Output:
-#             {"ymin": int/float, "ymax": int/float,
-#              "xmin": int/float, "xmax": int/float}
-#         Purpose:
-#             Returns the bounding box of the GeoGrid Instance.
-#         Note:
-#             Bounding box is here definied as a rectangle entirely enclosing
-#             the GeoGrid Instance. That means that ymax and xmax values are
-#             calculated as the coordinates of the last cell + cellsize.
-#             Trying to acces the point ymax/xmax will therefore fail, as these
-#             coorindates actually point to the cell nrows+1/ncols+1
-#         """
-#         return {
-#             "ymin":self.yllcorner,
-#             "ymax":self.yllcorner + self.nrows * self.cellsize,
-#             "xmin":self.xllcorner,
-#             "xmax":self.xllcorner + self.ncols * self.cellsize
-#         }
-
-
-    # def _getMask(self):
-    #     return self.data == self.fill_value
                 
     def _propagateType(self):
         """
@@ -171,9 +153,6 @@ class _GeoGrid(NumpyMemberBase):
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
-        # In order to create a correct mask the fill_value must
-        # be set last        
-        # fill_value = self.dtype(value)
         self.data[self.data == self.fill_value] = value
         self._fill_value = value
 
@@ -263,9 +242,8 @@ class _GdalGrid(_GeoGrid):
     def _getData(self):
         if not np.all(self.__readmask):            
             data = self.__fobj.ReadAsArray()
-            self._data[~self.__readmask]  = data[~self.__readmask]
-            self.__readmask[~self.__readmask] = True
-        return self._data
+            self.__setitem__(~self.__readmask,data[~self.__readmask])
+        return super(_GdalGrid,self)._getData()
         
     def __getitem__(self,slc):
         """
@@ -283,8 +261,7 @@ class _GdalGrid(_GeoGrid):
         self.__readmask[slc] = True
         super(_GdalGrid,self).__setitem__(slc,value)
                 
-    def __cellsize(self):
-        
+    def __cellsize(self):       
         if abs(self.__geotrans[1]) == abs(self.__geotrans[5]):
             return abs(self.__geotrans[1])
         raise NotImplementedError(
@@ -293,11 +270,9 @@ class _GdalGrid(_GeoGrid):
     def __proj4Params(self):
         srs = osr.SpatialReference()
         srs.ImportFromWkt(self.__fobj.GetProjection())
-        proj_string = srs.ExportToProj4()
-        proj_params = filter(None,re.split("[+= ]",proj_string))
+        proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
- 
     
 class _GridWriter(object):
 
