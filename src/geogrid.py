@@ -88,7 +88,7 @@ class _GeoGrid(NumpyMemberBase):
             dict
         Note:
             The output of this method is sufficient to create a new
-            albeit empty GeoGrid instance.
+            albeit empty _GeoGrid using the GeoGrid factory function.
         """
             
         return {

@@ -102,18 +102,20 @@ def addCells(grid,top=0,left=0,bottom=0,right=0):
     bottom = int(max(bottom,0))
     right  = int(max(right,0))
     
+    shape = list(grid.shape)
+    shape[-2:] = grid.nrows + top  + bottom, grid.ncols + left + right
+
     out = GeoGrid(
-            nrows        = grid.nrows + top  + bottom,
-            ncols        = grid.ncols + left + right,
-            xllcorner    = grid.xllcorner - left*grid.cellsize,
-            yllcorner    = grid.yllcorner - bottom*grid.cellsize ,
-            cellsize     = grid.cellsize,
-            dtype        = grid.dtype,
-            data         = None,
-            fill_value = grid.fill_value,
-            proj_params  = grid.proj_params,
+        shape       = shape,
+        xorigin     = grid.xorigin - left*grid.cellsize,
+        yorigin     = grid.yorigin + top*grid.cellsize ,
+        cellsize    = grid.cellsize,
+        dtype       = grid.dtype,        
+        fill_value  = grid.fill_value,
+        proj_params = grid.proj_params,
     )
 
+    
     # the Ellipsis ensures that the function works with 
     # arrays with more than two dimensions
     out[Ellipsis, top:top+grid.nrows, left:left+grid.ncols] = grid.data
@@ -150,19 +152,18 @@ def removeCells(grid,top=0,left=0,bottom=0,right=0):
 
     nrows = grid.nrows - top  - bottom
     ncols = grid.ncols - left - right
-    
+
     return GeoGrid(
-            nrows        = nrows,
-            ncols        = ncols,
-            xllcorner    = grid.xllcorner + left*grid.cellsize,
-            yllcorner    = grid.yllcorner + bottom*grid.cellsize,
-            cellsize     = grid.cellsize,
-            data         = grid[Ellipsis, top:top+nrows, left:left+ncols],
-            dtype        = grid.dtype,
-            proj_params  = grid.proj_params,
-            fill_value   = grid.fill_value,
+        data        = grid[Ellipsis, top:top+nrows, left:left+ncols],
+        xorigin     = grid.xorigin + left*grid.cellsize,
+        yorigin     = grid.yorigin - top*grid.cellsize ,
+        cellsize    = grid.cellsize,
+        dtype       = grid.dtype,        
+        fill_value  = grid.fill_value,
+        proj_params = grid.proj_params,
     )
 
+    
     
 def enlargeGrid(grid,bbox):
     """
@@ -275,23 +276,13 @@ def snapGrid(grid,other):
         be disturbed!
     """
 
-    dy = (grid.yllcorner-other.yllcorner)%grid.cellsize
-    dx = (grid.xllcorner-other.xllcorner)%grid.cellsize
+    dy = (grid.yorigin-other.yorigin)%grid.cellsize
+    dx = (grid.xorigin-other.xorigin)%grid.cellsize
 
     if dy > grid.cellsize/2.:
         dy = (grid.cellsize-dy) * -1
     if dx > grid.cellsize/2.:
         dx = (grid.cellsize-dx) * -1
 
-    grid.yllcorner -= dy
-    grid.xllcorner -= dx
-
-
-    
-
-
-
-
-
-
-
+    grid.yorigin -= dy
+    grid.xorigin -= dx

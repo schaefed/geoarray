@@ -18,52 +18,52 @@ PROJ_PARAMS = {
     'proj' : 'laea',    'ellps': 'WGS84'
 }
 
-class TestInitialisation(unittest.TestCase):
+# class TestInitialisation(unittest.TestCase):
 
-    def test_initReadData(self):
-        grid = GeoGrid(FNAME)
+#     def test_initReadData(self):
+#         grid = GeoGrid(FNAME)
         
-    def test_initWithData(self):
+#     def test_initWithData(self):
         
-        data = np.arange(48).reshape(2,4,6)
-        grid = GeoGrid(data=data)
-        self.assertEqual(grid.shape, data.shape)
+#         data = np.arange(48).reshape(2,4,6)
+#         grid = GeoGrid(data=data)
+#         self.assertEqual(grid.shape, data.shape)
 
-        # given with to be ignored shape parameters
-        grid = GeoGrid(data=data, shape=(3,3,44))
-        self.assertEqual(grid.shape, data.shape)
+#         # given with to be ignored shape parameters
+#         grid = GeoGrid(data=data, shape=(3,3,44))
+#         self.assertEqual(grid.shape, data.shape)
 
-        # given with all other parameters
-        grid = GeoGrid(data=data, dtype=np.float32, shape=(3,3,44),
-                       fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
-        )
-        # grid[1:-1]
-        self.assertEqual(grid.shape, data.shape)
-        self.assertEqual(grid.dtype, data.dtype)
-        self.assertEqual(grid.fill_value,42)
-        self.assertEqual(grid.yorigin,-15)
-        self.assertEqual(grid.xorigin,88)
-        self.assertEqual(grid.cellsize,33.33)
+#         # given with all other parameters
+#         grid = GeoGrid(data=data, dtype=np.float32, shape=(3,3,44),
+#                        fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
+#         )
+#         # grid[1:-1]
+#         self.assertEqual(grid.shape, data.shape)
+#         self.assertEqual(grid.dtype, data.dtype)
+#         self.assertEqual(grid.fill_value,42)
+#         self.assertEqual(grid.yorigin,-15)
+#         self.assertEqual(grid.xorigin,88)
+#         self.assertEqual(grid.cellsize,33.33)
 
-    def test_initWithoutData(self):
+#     def test_initWithoutData(self):
         
-        grid = GeoGrid(shape=(4,44,66))
-        self.assertEqual(grid.shape,(4,44,66))
+#         grid = GeoGrid(shape=(4,44,66))
+#         self.assertEqual(grid.shape,(4,44,66))
 
-        grid = GeoGrid(shape=(4,44,66),fill_value=42)
-        self.assertEqual(grid.shape,(4,44,66))
-        self.assertTrue(np.all(grid == 42))
+#         grid = GeoGrid(shape=(4,44,66),fill_value=42)
+#         self.assertEqual(grid.shape,(4,44,66))
+#         self.assertTrue(np.all(grid == 42))
 
-        # given with all other parameters
-        grid = GeoGrid(shape=(4,44,66),dtype=np.float32,
-                       fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
-        )        
-        self.assertEqual(grid.shape, (4,44,66))
-        self.assertEqual(grid.dtype, np.float32)
-        self.assertEqual(grid.fill_value,42)
-        self.assertEqual(grid.yorigin,-15)
-        self.assertEqual(grid.xorigin,88)
-        self.assertEqual(grid.cellsize,33.33)
+#         # given with all other parameters
+#         grid = GeoGrid(shape=(4,44,66),dtype=np.float32,
+#                        fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
+#         )        
+#         self.assertEqual(grid.shape, (4,44,66))
+#         self.assertEqual(grid.dtype, np.float32)
+#         self.assertEqual(grid.fill_value,42)
+#         self.assertEqual(grid.yorigin,-15)
+#         self.assertEqual(grid.xorigin,88)
+#         self.assertEqual(grid.cellsize,33.33)
     
 class TestGeoGrid(unittest.TestCase):
     
@@ -174,23 +174,44 @@ class TestGeoGrid(unittest.TestCase):
         self.assertTrue(np.all(self.grid == deep_copy))
         self.assertTrue(np.all(copy.copy(self.grid) == self.grid.fill_value))
 
-    # def test_numpyFunctions(self):
+    def test_numpyFunctions(self):
         
-    #     # funcs tuple could be extended
-    #     funcs = (np.exp,
-    #              np.sin,np.cos,np.tan,np.arcsinh,
-    #              np.around,np.rint,np.fix,
-    #              np.prod,np.sum,
-    #              # np.cumprod,            # returns an array of changed shape -> does not make sense here
-    #              np.trapz,
-    #              np.i0,np.sinc,
-    #              np.arctanh, np.gradient,                
-    #     )
-    #     compare = self.grid[:]
-    #     for f in funcs:
-    #         np.testing.assert_equal(f(self.grid),f(compare))
-            
+        # funcs tuple could be extended
+        funcs = (np.exp,
+                 np.sin,np.cos,np.tan,np.arcsinh,
+                 np.around,np.rint,np.fix,
+                 np.prod,np.sum,
+                 # np.cumprod,            # returns an array of changed shape -> does not make sense here
+                 np.trapz,
+                 np.i0,np.sinc,
+                 np.arctanh, np.gradient,                
+        )
+        compare = self.grid[:]
+        for f in funcs:
+            np.testing.assert_equal(f(self.grid),f(compare))
 
+    # def test_numpyAttributes(self):
+    #     g = GeoGrid(shape=(40,45))
+
+    #     # print g.shape
+    #     # print g.ndim
+    #     # gg = g.T
+    #     # print gg.shape
+    #     # gg = g.reshape(1,-1)
+    #     # print gg.shape
+    #     print np.transpose((g,g)).shape
+    #     # print type(np.hstack((g,g)))
+    #     # print np.hstack((g,g)).shape
+    #     # print np.transpose(g)
+    #     # print type(np.transpose((g,g)))
+    #     # print type(g.T)
+    #     # print type(np.transpose(g))
+    #     # print type(self.grid)
+    #     # print type(np.hstack((self.grid,self.grid)))
+    #     # print self.grid.bbox
+    #     # g = np.transpose(self.grid)
+    #     # print g.bbox
+        
     def test_reading(self):
         value          = 42
         maxrow         = 10
@@ -202,78 +223,78 @@ class TestGeoGrid(unittest.TestCase):
         self.assertTrue(np.all(self.grid[idx] == value))
         self.assertTrue(np.all(self.grid[idx_inv] == checkgrid[idx_inv]))
         
-# class TestGeoGridFuncs(unittest.TestCase):
+class TestGeoGridFuncs(unittest.TestCase):
     
-#     def setUp(self):        
-#         self.grid = GeoGrid(FNAME)        
+    def setUp(self):        
+        self.grid = GeoGrid(FNAME)        
 
-#     def test_addCells(self):
+    def test_addCells(self):
         
-#         padgrid = ggfuncs.addCells(self.grid, 1, 1, 1, 1)
-#         self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, 1, 1, 1, 1)
+        self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
 
-#         padgrid = ggfuncs.addCells(self.grid, 0, 0, 0, 0)
-#         self.assertTrue(np.sum(padgrid[:] == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, 0, 0, 0, 0)
+        self.assertTrue(np.sum(padgrid[:] == self.grid))
 
-#         padgrid = ggfuncs.addCells(self.grid, 0, 99, 0, 4000)
-#         self.assertTrue(np.sum(padgrid[...,99:-4000] == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, 0, 99, 0, 4000)
+        self.assertTrue(np.sum(padgrid[...,99:-4000] == self.grid))
 
-#         padgrid = ggfuncs.addCells(self.grid, -1000, -4.55, 0, -6765.222)
-#         self.assertTrue(np.all(padgrid == self.grid))
+        padgrid = ggfuncs.addCells(self.grid, -1000, -4.55, 0, -6765.222)
+        self.assertTrue(np.all(padgrid == self.grid))
         
         
-#     def test_enlargeGrid(self):
+    def test_enlargeGrid(self):
         
-#         bbox = self.grid.bbox
-#         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
-#                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
-#                    "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
-#                    "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
-#         enlrgrid = ggfuncs.enlargeGrid(self.grid,newbbox)
-#         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
-#         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
+        bbox = self.grid.bbox
+        newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
+        enlrgrid = ggfuncs.enlargeGrid(self.grid,newbbox)
+        self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
+        self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
-#     def test_shrinkGrid(self):
+    def test_shrinkGrid(self):
         
-#         bbox = self.grid.bbox
-#         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
-#                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
-#                    "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
-#                    "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
-#         shrgrid = ggfuncs.shrinkGrid(self.grid,newbbox)        
-#         self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
-#         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
+        bbox = self.grid.bbox
+        newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
+                   "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
+                   "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
+                   "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
+        shrgrid = ggfuncs.shrinkGrid(self.grid,newbbox)        
+        self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
+        self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
-#     def test_removeCells(self):
+    def test_removeCells(self):
         
-#         rmgrid = ggfuncs.removeCells(self.grid,1,1,1,1)
-#         self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
-#         rmgrid = ggfuncs.removeCells(self.grid,0,0,0,0)
-#         self.assertEqual(np.sum(rmgrid - self.grid) , 0)
+        rmgrid = ggfuncs.removeCells(self.grid,1,1,1,1)
+        self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
+        rmgrid = ggfuncs.removeCells(self.grid,0,0,0,0)
+        self.assertEqual(np.sum(rmgrid - self.grid) , 0)
 
         
-#     def test_trimGrid(self):
+    def test_trimGrid(self):
         
-#         trimgrid = ggfuncs.trimGrid(self.grid)
-#         self.assertTrue(np.any(trimgrid[0,...]  != self.grid.fill_value))
-#         self.assertTrue(np.any(trimgrid[-1,...] != self.grid.fill_value))
-#         self.assertTrue(np.any(trimgrid[...,0]  != self.grid.fill_value))
-#         self.assertTrue(np.any(trimgrid[...,-1] != self.grid.fill_value))
+        trimgrid = ggfuncs.trimGrid(self.grid)
+        self.assertTrue(np.any(trimgrid[0,...]  != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[-1,...] != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[...,0]  != self.grid.fill_value))
+        self.assertTrue(np.any(trimgrid[...,-1] != self.grid.fill_value))
 
-#     def test_snapGrid(self):
+    def test_snapGrid(self):
         
-#         checkgrid = copy.deepcopy(self.grid)
-#         checkgrid.xllcorner += 50
-#         checkgrid.yllcorner -= 75
-#         ggfuncs.snapGrid(checkgrid,self.grid)
-#         self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner)
-#         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner)
+        checkgrid = copy.deepcopy(self.grid)
+        checkgrid.xorigin += 50
+        checkgrid.yorigin -= 75
+        ggfuncs.snapGrid(checkgrid,self.grid)
+        self.assertEqual(checkgrid.xorigin, self.grid.xorigin)
+        self.assertEqual(checkgrid.yorigin, self.grid.yorigin)
 
-#         checkgrid.xllcorner += (checkgrid.cellsize * .9)
-#         checkgrid.yllcorner -= (checkgrid.cellsize * .9)
-#         ggfuncs.snapGrid(checkgrid,self.grid)
-#         self.assertEqual(checkgrid.xllcorner, self.grid.xllcorner + self.grid.cellsize)
-#         self.assertEqual(checkgrid.yllcorner, self.grid.yllcorner - self.grid.cellsize)
+        checkgrid.xorigin += (checkgrid.cellsize * .9)
+        checkgrid.yorigin += (checkgrid.cellsize * 20)
+        ggfuncs.snapGrid(checkgrid,self.grid)
+        self.assertEqual(checkgrid.xorigin, self.grid.xorigin + self.grid.cellsize)
+        self.assertEqual(checkgrid.yorigin, self.grid.yorigin - self.grid.cellsize)
 
 
 if __name__== "__main__":

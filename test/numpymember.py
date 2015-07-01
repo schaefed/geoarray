@@ -1,1 +1,1 @@
-../src/numpymember.py
+../src/numpymember/numpymember.py
