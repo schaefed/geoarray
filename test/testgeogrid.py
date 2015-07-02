@@ -18,52 +18,52 @@ PROJ_PARAMS = {
     'proj' : 'laea',    'ellps': 'WGS84'
 }
 
-# class TestInitialisation(unittest.TestCase):
+class TestInitialisation(unittest.TestCase):
 
-#     def test_initReadData(self):
-#         grid = GeoGrid(FNAME)
+    def test_initReadData(self):
+        grid = GeoGrid(FNAME)
         
-#     def test_initWithData(self):
+    def test_initWithData(self):
         
-#         data = np.arange(48).reshape(2,4,6)
-#         grid = GeoGrid(data=data)
-#         self.assertEqual(grid.shape, data.shape)
+        data = np.arange(48).reshape(2,4,6)
+        grid = GeoGrid(data=data)
+        self.assertEqual(grid.shape, data.shape)
 
-#         # given with to be ignored shape parameters
-#         grid = GeoGrid(data=data, shape=(3,3,44))
-#         self.assertEqual(grid.shape, data.shape)
+        # given with to be ignored shape parameters
+        grid = GeoGrid(data=data, shape=(3,3,44))
+        self.assertEqual(grid.shape, data.shape)
 
-#         # given with all other parameters
-#         grid = GeoGrid(data=data, dtype=np.float32, shape=(3,3,44),
-#                        fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
-#         )
-#         # grid[1:-1]
-#         self.assertEqual(grid.shape, data.shape)
-#         self.assertEqual(grid.dtype, data.dtype)
-#         self.assertEqual(grid.fill_value,42)
-#         self.assertEqual(grid.yorigin,-15)
-#         self.assertEqual(grid.xorigin,88)
-#         self.assertEqual(grid.cellsize,33.33)
+        # given with all other parameters
+        grid = GeoGrid(data=data, dtype=np.float32, shape=(3,3,44),
+                       fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
+        )
+        # grid[1:-1]
+        self.assertEqual(grid.shape, data.shape)
+        self.assertEqual(grid.dtype, data.dtype)
+        self.assertEqual(grid.fill_value,42)
+        self.assertEqual(grid.yorigin,-15)
+        self.assertEqual(grid.xorigin,88)
+        self.assertEqual(grid.cellsize,33.33)
 
-#     def test_initWithoutData(self):
+    def test_initWithoutData(self):
         
-#         grid = GeoGrid(shape=(4,44,66))
-#         self.assertEqual(grid.shape,(4,44,66))
+        grid = GeoGrid(shape=(4,44,66))
+        self.assertEqual(grid.shape,(4,44,66))
 
-#         grid = GeoGrid(shape=(4,44,66),fill_value=42)
-#         self.assertEqual(grid.shape,(4,44,66))
-#         self.assertTrue(np.all(grid == 42))
+        grid = GeoGrid(shape=(4,44,66),fill_value=42)
+        self.assertEqual(grid.shape,(4,44,66))
+        self.assertTrue(np.all(grid == 42))
 
-#         # given with all other parameters
-#         grid = GeoGrid(shape=(4,44,66),dtype=np.float32,
-#                        fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
-#         )        
-#         self.assertEqual(grid.shape, (4,44,66))
-#         self.assertEqual(grid.dtype, np.float32)
-#         self.assertEqual(grid.fill_value,42)
-#         self.assertEqual(grid.yorigin,-15)
-#         self.assertEqual(grid.xorigin,88)
-#         self.assertEqual(grid.cellsize,33.33)
+        # given with all other parameters
+        grid = GeoGrid(shape=(4,44,66),dtype=np.float32,
+                       fill_value=42, yorigin=-15,xorigin=88,cellsize=33.33
+        )        
+        self.assertEqual(grid.shape, (4,44,66))
+        self.assertEqual(grid.dtype, np.float32)
+        self.assertEqual(grid.fill_value,42)
+        self.assertEqual(grid.yorigin,-15)
+        self.assertEqual(grid.xorigin,88)
+        self.assertEqual(grid.cellsize,33.33)
     
 class TestGeoGrid(unittest.TestCase):
     
@@ -282,19 +282,34 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertTrue(np.any(trimgrid[...,-1] != self.grid.fill_value))
 
     def test_snapGrid(self):
-        
-        checkgrid = copy.deepcopy(self.grid)
-        checkgrid.xorigin += 50
-        checkgrid.yorigin -= 75
-        ggfuncs.snapGrid(checkgrid,self.grid)
-        self.assertEqual(checkgrid.xorigin, self.grid.xorigin)
-        self.assertEqual(checkgrid.yorigin, self.grid.yorigin)
 
-        checkgrid.xorigin += (checkgrid.cellsize * .9)
-        checkgrid.yorigin += (checkgrid.cellsize * 20)
-        ggfuncs.snapGrid(checkgrid,self.grid)
-        self.assertEqual(checkgrid.xorigin, self.grid.xorigin + self.grid.cellsize)
-        self.assertEqual(checkgrid.yorigin, self.grid.yorigin - self.grid.cellsize)
+        def test(grid,target):
+            yorg,xorg = grid.getOrigin()
+            ggfuncs.snapGrid(grid,target)            
+
+            xdelta = abs(grid.xorigin - xorg)
+            ydelta = abs(grid.yorigin - yorg)
+
+            # asure the shift to the next cell
+            self.assertLessEqual(xdelta,target.cellsize/2)
+            self.assertLessEqual(ydelta,target.cellsize/2)
+            
+            # grid origin is shifted to a cell multiple of self.grid.origin
+            self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize,0)
+            self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize,0)
+
+        offsets = (
+            (-75,-30),
+            (self.grid.cellsize *.9,self.grid.cellsize *20),
+            (self.grid.yorigin * -1.1, self.grid.xorigin * 1.89),
+        )
+
+        for yoff,xoff in offsets:            
+            checkgrid = copy.deepcopy(self.grid)
+            checkgrid.yorigin -= yoff
+            checkgrid.xorigin -= xoff
+            test(checkgrid,self.grid)
+
 
 
 if __name__== "__main__":

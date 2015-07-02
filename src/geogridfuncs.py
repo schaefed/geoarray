@@ -260,15 +260,15 @@ def trimGrid(grid):
         return grid
 
 
-def snapGrid(grid,other):
+def snapGrid(grid,target):
     """
     Input:
         GeoGrid
     Output:
         None
     Purpose:
-        Fit the map origin to the lower-left corner
-        of the nearest cell in the input grid.
+        Shift the grid origin in a way that it matches the nearest corner
+        of any gridcell in target
     Restrictions:
         The shift will only alter the grid coordinates.
         No changes to the data will be done. In case of large
@@ -276,13 +276,14 @@ def snapGrid(grid,other):
         be disturbed!
     """
 
-    dy = (grid.yorigin-other.yorigin)%grid.cellsize
-    dx = (grid.xorigin-other.xorigin)%grid.cellsize
+    diff = np.array(grid.getOrigin()) - np.array(target.getOrigin(grid.origin))
+    dy,dx = abs(diff)%target.cellsize * np.sign(diff)
 
-    if dy > grid.cellsize/2.:
-        dy = (grid.cellsize-dy) * -1
-    if dx > grid.cellsize/2.:
-        dx = (grid.cellsize-dx) * -1
+    if abs(dx) > grid.cellsize/2.:
+        dx += grid.cellsize
 
-    grid.yorigin -= dy
+    if abs(dy) > grid.cellsize/2.:
+        dy += grid.cellsize
+
     grid.xorigin -= dx
+    grid.yorigin -= dy

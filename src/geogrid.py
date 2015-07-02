@@ -50,8 +50,8 @@ def GeoGrid(fname=None, data=None, shape=(),
     if 1 < data.ndim < 4:
         nrows, ncols = data.shape[-2:]
         if origin in ("ul", "ll", "ur", "lr"):
-            yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
-            return _GeoGrid(data, yorigin, xorigin, cellsize, fill_value, proj_params)
+            # yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
+            return _GeoGrid(data, yorigin, xorigin, origin, cellsize, fill_value, proj_params)
                     
     raise TypeError("Insufficient arguments given!")
 
@@ -61,7 +61,7 @@ class _GeoGrid(NumpyMemberBase):
     """
     ORIGIN: upper left corner
     """        
-    def __init__(self, data, yorigin, xorigin, cellsize,
+    def __init__(self, data, yorigin, xorigin, origin,cellsize,
                  fill_value, proj_params=None):
         super(_GeoGrid,self).__init__(
             self,"data",
@@ -69,6 +69,7 @@ class _GeoGrid(NumpyMemberBase):
         
         self.xorigin = xorigin
         self.yorigin = yorigin
+        self.origin = origin
         self.cellsize = cellsize 
         self.proj_params = proj_params
 
@@ -95,7 +96,7 @@ class _GeoGrid(NumpyMemberBase):
             "shape"       : self.shape,
             "yorigin"     : self.yorigin,
             "xorigin"     : self.xorigin,
-            "origin"      : "ul",
+            "origin"      : self.origin,
             "dtype"       : self.dtype,
             "fill_value"  : self.fill_value,            
             "cellsize"    : self.cellsize,
@@ -117,14 +118,30 @@ class _GeoGrid(NumpyMemberBase):
             Trying to acces the point ymax/xmax will therefore fail, as these
             coorindates actually point to the cell nrows+1/ncols+1
         """
-        return {
-            "ymax":self.yorigin,
-            "ymin":self.yorigin - self.nrows * self.cellsize,
-            "xmin":self.xorigin,
-            "xmax":self.xorigin + self.ncols * self.cellsize
+        yopp = self.nrows * self.cellsize
+        xopp = self.ncols * self.cellsize
+        return { 
+            "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin - yopp,
+            "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin + yopp,
+            "xmin": self.xorigin if self.origin[1] == "l" else self.xorigin - xopp,
+            "xmax": self.xorigin if self.origin[1] == "r" else self.xorigin + xopp,
         }
 
-                
+
+    def getOrigin(self,origin=None):
+        """
+        Return the grid's corner coorindates. Defaults to the origin
+        corner, any other corner may be specifed with the 'origin' argument, 
+        which should be one of: 'ul','ur','ll','lr'
+        """
+        if not origin:
+            origin = self.origin
+        bbox = self.bbox
+        return (
+            bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
+            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
+        )
+    
     def _propagateType(self):
         """
            Reflect dtype changes
@@ -222,6 +239,7 @@ class _GdalGrid(_GeoGrid):
             data = np.full(self.__shape,self.__fill_value, self.__dtype),
             yorigin     = self.__geotrans[3],
             xorigin     = self.__geotrans[0],
+            origin      = "ul",
             cellsize    = self.__cellsize(),
             fill_value   = self.__fill_value,
             proj_params = self.__proj4Params()
@@ -244,7 +262,7 @@ class _GdalGrid(_GeoGrid):
             data = self.__fobj.ReadAsArray()
             self.__setitem__(~self.__readmask,data[~self.__readmask])
         return super(_GdalGrid,self)._getData()
-        
+    
     def __getitem__(self,slc):
         """
             slicing operator invokes the data reading
