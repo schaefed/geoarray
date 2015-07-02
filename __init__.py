@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from .src.geogrid import GeoGrid
-from .src.geogridfuncs import (
+from src.geogrid import GeoGrid
+from src.geogridfuncs import (
     indexCoordinates,
     coordinateIndex, 
     addCells,     
