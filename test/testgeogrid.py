@@ -8,7 +8,7 @@ import geogridfuncs as ggfuncs
 import warnings
 warnings.filterwarnings("ignore") 
 
-FNAME = os.path.join(os.path.split(__file__)[0],"dem.tif")
+FNAME = os.path.join(os.path.split(__file__)[0],"dem.asc")
 #FNAME = "dem.asc"
 
 PROJ_PARAMS = {
@@ -18,10 +18,10 @@ PROJ_PARAMS = {
     'proj' : 'laea',    'ellps': 'WGS84'
 }
 
-# class TestInitialisation(unittest.TestCase):
+class TestInitialisation(unittest.TestCase):
 
-#     def test_initReadData(self):
-#         grid = GeoGrid(FNAME)
+    def test_initReadData(self):
+        grid = GeoGrid(FNAME)
         
 #     def test_initWithData(self):
         
@@ -82,81 +82,85 @@ class TestGeoGrid(unittest.TestCase):
         checkgrid = GeoGrid(FNAME)
         org_fill_fvalue = checkgrid.fill_value
         checkgrid.fill_value = rpcvalue
-        self.assertFalse(np.any(checkgrid.data == org_fill_fvalue))
-        self.assertEqual(checkgrid.fill_value, rpcvalue)
-        nodatapos1 = np.where(checkgrid == rpcvalue)
-        nodatapos2 = np.where(self.grid == self.grid.fill_value)
-        for pos1,pos2 in zip(nodatapos1,nodatapos2):
-            self.assertTrue(np.all(pos1 == pos2))
-        self.assertEqual(checkgrid.fill_value, rpcvalue)
-        
-    def test_setDataType(self):
-        rpctype = np.int32
-        checkgrid = self.grid.astype(rpctype)
-        self.assertEqual(checkgrid.dtype,rpctype)
-        self.assertEqual(checkgrid.data.dtype,rpctype)
-        
-    def test_getitem(self):        
-        data = self.grid.data.copy()
-        slices = (
-            self.grid < 3,
-            self.grid == 10,
-            np.where(self.grid>6),
-            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
-        )
-        
-        idx = np.arange(12,20).reshape(1,-1)
-        self.assertTrue(np.all(self.grid[idx] == self.grid[GeoGrid(data=idx)]))
-        for i,slc in enumerate(slices):
-            self.assertTrue(np.all(data[slc] == self.grid[slc]))
-        
-    def test_setitem(self):
-        
-        slices = (
-            self.grid < 3,
-            self.grid == 10,
-            np.where(self.grid>6),
-            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
-        )
-        value = 11
-        slc = np.arange(12,20).reshape(1,-1)
-        
-        testgrid = copy.deepcopy(self.grid)
-        testgrid[slc] = value
-        self.assertTrue(np.all(testgrid[slc] == value))
+        # self.assertFalse(np.any(checkgrid == org_fill_fvalue))
+        # self.assertEqual(checkgrid.fill_value, rpcvalue)
+        # nodatapos1 = np.where(checkgrid == checkgrid.fill_value)
+        # nodatapos2 = np.where(self.grid == self.grid.fill_value)
+        # print type(nodatapos1[0])
 
-        testgrid = copy.deepcopy(self.grid)
-        testgrid[GeoGrid(data=slc)] = value
-        self.assertTrue(np.all(testgrid[slc] == value))
-
-        for slc in slices:
-            testgrid = copy.deepcopy(self.grid)
-            testgrid[slc] = value
-            self.assertTrue(np.all(testgrid[slc] == value))
-
-    def test_write(self):
+        # print nodatapos2[0]
+        # print nodatapos1
+        # for pos1,pos2 in zip(nodatapos1,nodatapos2):
+        #     self.assertTrue(pos1 == pos2)
+        # self.assertEqual(checkgrid.fill_value, rpcvalue)
         
-        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in _DRIVER_DICT)
-        for fname in fnames:
-            try:
-                self.grid.write(fname)
-            except IOError:
-                continue                
-            checkgrid = GeoGrid(fname,proj_params=PROJ_PARAMS)
-            self.assertTrue(np.all(checkgrid == self.grid))
-            self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
-
-    def test_copy(self):
+#     def test_setDataType(self):
+#         rpctype = np.int32
+#         checkgrid = self.grid.astype(rpctype)
+#         self.assertEqual(checkgrid.dtype,rpctype)
+#         self.assertEqual(checkgrid.data.dtype,rpctype)
         
-        deep_copy = copy.deepcopy(self.grid)        
-        self.assertTrue(self.grid.header == deep_copy.header)
-        self.assertNotEqual(id(self.grid.data),id(deep_copy.data))
-        self.assertTrue(np.all(self.grid.data == deep_copy.data))
+#     def test_getitem(self):        
+#         data = self.grid.data.copy()
+#         slices = (
+#             self.grid < 3,
+#             self.grid == 10,
+#             np.where(self.grid>6),
+#             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+#         )
+        
+#         idx = np.arange(12,20).reshape(1,-1)
+#         self.assertTrue(np.all(self.grid[idx] == self.grid[GeoGrid(data=idx)]))
+#         for i,slc in enumerate(slices):
+#             self.assertTrue(np.all(data[slc] == self.grid[slc]))
+        
+#     def test_setitem(self):
+        
+#         slices = (
+#             self.grid < 3,
+#             self.grid == 10,
+#             np.where(self.grid>6),
+#             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+#         )
+#         value = 11
+#         slc = np.arange(12,20).reshape(1,-1)
+        
+#         testgrid = copy.deepcopy(self.grid)
+#         testgrid[slc] = value
+#         self.assertTrue(np.all(testgrid[slc] == value))
 
-        shallow_copy = copy.copy(self.grid)
-        self.assertTrue(self.grid.header == shallow_copy.header)
-        self.assertEqual(id(self.grid.data),id(shallow_copy.data))
-        self.assertTrue(np.all(self.grid.data == shallow_copy.data))
+#         testgrid = copy.deepcopy(self.grid)
+#         testgrid[GeoGrid(data=slc)] = value
+#         self.assertTrue(np.all(testgrid[slc] == value))
+
+#         for slc in slices:
+#             testgrid = copy.deepcopy(self.grid)
+#             testgrid[slc] = value
+#             self.assertTrue(np.all(testgrid[slc] == value))
+
+#     def test_write(self):
+        
+#         fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in _DRIVER_DICT)
+#         for fname in fnames:
+#             try:
+#                 self.grid.write(fname)
+#             except IOError:
+#                 continue                
+#             checkgrid = GeoGrid(fname,proj_params=PROJ_PARAMS)
+#             self.assertTrue(np.all(checkgrid == self.grid))
+#             self.assertDictEqual(checkgrid.getDefinition(), self.grid.getDefinition())
+
+#     def test_copy(self):
+        
+#         deep_copy = copy.deepcopy(self.grid)        
+#         self.assertTrue(self.grid.header == deep_copy.header)
+#         self.assertNotEqual(id(self.grid.data),id(deep_copy.data))
+#         self.assertTrue(np.all(self.grid.data == deep_copy.data))
+
+#         shallow_copy = copy.copy(self.grid)
+#         self.assertTrue(self.grid.header == shallow_copy.header)
+#         self.assertEqual(id(self.grid.data),id(shallow_copy.data))
+#         self.assertTrue(np.all(self.grid.data == shallow_copy.data))
 
 
     # def test_numpyFunctions(self):
