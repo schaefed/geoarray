@@ -56,16 +56,13 @@ def GeoGrid(fname=None, data=None, shape=(),
     raise TypeError("Insufficient arguments given!")
 
         
-class _GeoGrid(NumpyMemberBase):
+class _GeoGrid(object):
     
     """
     ORIGIN: upper left corner
     """        
     def __init__(self, data, yorigin, xorigin, origin,cellsize,
                  fill_value, proj_params=None):
-        super(_GeoGrid,self).__init__(
-            self,"data",
-        )
         
         self.xorigin = xorigin
         self.yorigin = yorigin
@@ -73,7 +70,7 @@ class _GeoGrid(NumpyMemberBase):
         self.cellsize = cellsize 
         self.proj_params = proj_params
 
-        self._data = data        
+        self.data = data        
         self._fill_value = fill_value
         
         self._propagateType()
@@ -147,16 +144,27 @@ class _GeoGrid(NumpyMemberBase):
            Reflect dtype changes
         """
         dtype = self.data.dtype.type
-        self.yorigin = dtype(self.yorigin)
-        self.xorigin = dtype(self.xorigin)
         self._fill_value = dtype(self._fill_value)
                 
     def __copy__(self):
-        return GeoGrid(**self.header)
+        return GeoGrid(data=self.data,**self.header)
         
     def __deepcopy__(self,memo=None):
         return GeoGrid(data=self.data.copy(),**self.header)
+
+    def copy(self):
+        return self.__deepcopy__()
+    
+    def __array_prepare__(self,array,context=None):
+        if isinstance(array,_GeoGrid):
+            return array.data
+        return array
         
+    def __array_wrap__(self,array,context=None):
+        if array.shape:
+            return GeoGrid(data=array,**self.header)
+        return array[0]
+    
     def _getFillValue(self):
         """
             fill_value getter
@@ -172,33 +180,22 @@ class _GeoGrid(NumpyMemberBase):
         """
         self.data[self.data == self.fill_value] = value
         self._fill_value = value
-
-    def _getData(self):
-        return self._data
-
-    def _setData(self,data):
-        self._data = data
-
+    
     @property
     def shape(self):
         """
         """
         return self.data.shape
-    
-    def _getDataType(self):
+
+    @property
+    def dtype(self):
         """
             dtype getter
         """
         return self.data.dtype
 
-    def _setDataType(self,value):
-        """
-            dtype setter
-            If the data is already read from file its type will be
-            changed. _consistentTypes() is invoked
-        """
-        self.data = self.data.astype(value)
-        self._propagateType()
+    def astype(self,dtype):
+        return GeoGrid(data=self.data.astype(dtype),**self.header)
     
     @property
     def nbands(self):
@@ -213,30 +210,43 @@ class _GeoGrid(NumpyMemberBase):
         return self.shape[-1]
     
     def __getitem__(self,slc):
+        if isinstance(slc,_GeoGrid):
+            slc = slc.data
         return self.data[slc]
+
+    def __setitem__(self,slc,value):
+        if isinstance(slc,_GeoGrid):
+            slc = slc.data
+        if isinstance(value,_GeoGrid):
+            value = value.data
+        self.data[slc] = value
         
     def write(self,fname):
         _GridWriter(self).write(fname)
         
     fill_value    = property(fget=lambda self:            self._getFillValue(),
                              fset=lambda self, value:     self._setFillValue(value))
-    dtype         = property(fget=lambda self:            self._getDataType(),
-                             fset=lambda self, value:     self._setDataType(value))
-    data          = property(fget=lambda self:            self._getData(),
-                             fset=lambda self, data:     self._setData(data))
+    # dtype         = property(fget=lambda self:            self._getDataType(),
+    #                          fset=lambda self, value:     self._setDataType(value))
+    # data          = property(fget=lambda self:            self._getData(),
+    #                          fset=lambda self, data:     self._setData(data))
     
 class _GdalGrid(_GeoGrid):
     def __init__(self,fname,dtype=None):
+
         self.__fobj       = self.__open(fname)
         self.__geotrans   = self.__fobj.GetGeoTransform()
         self.__rasterband = self.__fobj.GetRasterBand(1)
         self.__fill_value = self.__rasterband.GetNoDataValue()
-        self.__shape      = self.__shape()
-        self.__dtype      = gdal.GetDataTypeName(self.__rasterband.DataType)
-        self.__readmask   = np.zeros(self.__shape,dtype=bool)
-        
+        nrows = self.__fobj.RasterYSize        
+        ncols = self.__fobj.RasterXSize
+        nbands = self.__fobj.RasterCount
+        dtype = np.dtype(gdal.GetDataTypeName(self.__rasterband.DataType))
         super(_GdalGrid,self).__init__(            
-            data = np.full(self.__shape,self.__fill_value, self.__dtype),
+            data = self.__fobj.GetVirtualMemArray(
+                gdal.GF_Write,
+                cache_size = nbands*nrows*ncols*dtype.itemsize
+            ),
             yorigin     = self.__geotrans[3],
             xorigin     = self.__geotrans[0],
             origin      = "ul",
@@ -244,41 +254,28 @@ class _GdalGrid(_GeoGrid):
             fill_value   = self.__fill_value,
             proj_params = self.__proj4Params()
         )
+
+    def __del__(self):
+        self.data = None
         
     def __open(self,fname):
         fobj = gdal.Open(fname)
         if fobj:
             return fobj
         raise IOError("Could not open file")
-        
-    def __shape(self):
-        nbands = self.__fobj.RasterCount
-        if nbands > 1:
-            return (nbands, self.__fobj.RasterYSize, self.__fobj.RasterXSize)
-        return (self.__fobj.RasterYSize, self.__fobj.RasterXSize)
-        
-    def _getData(self):
-        if not np.all(self.__readmask):            
-            data = self.__fobj.ReadAsArray()
-            self.__setitem__(~self.__readmask,data[~self.__readmask])
-        return super(_GdalGrid,self)._getData()
-    
-    def __getitem__(self,slc):
-        """
-            slicing operator invokes the data reading
-            TODO: Implement a slice reading from file
-        """
-        # if not np.all(self._readmask[slc]):
-        # slices = slicingBounds(slc,self.shape)
-        # if fullSlices(slices,self.shape):
-        #     self._getData()
-        self._getData()
-        return super(_GdalGrid,self).__getitem__(slc)
-
-    def __setitem__(self,slc,value):
-        self.__readmask[slc] = True
-        super(_GdalGrid,self).__setitem__(slc,value)
                 
+    # def _getData(self):
+    #     if not np.all(self.__readmask):            
+    #         data = self.__fobj.ReadAsArray()
+    #         self.__setitem__(~self.__readmask,data[~self.__readmask])
+    #     return super(_GdalGrid,self)._getData()
+
+    # def __shape(self):
+    #     nbands = self.__fobj.RasterCount
+    #     if nbands > 1:
+    #         return (nbands, self.__fobj.RasterYSize, self.__fobj.RasterXSize)        
+    #     return (self.__fobj.RasterYSize, self.__fobj.RasterXSize)    
+    
     def __cellsize(self):       
         if abs(self.__geotrans[1]) == abs(self.__geotrans[5]):
             return abs(self.__geotrans[1])
