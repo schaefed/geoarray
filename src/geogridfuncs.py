@@ -118,7 +118,7 @@ def addCells(grid,top=0,left=0,bottom=0,right=0):
     
     # the Ellipsis ensures that the function works with 
     # arrays with more than two dimensions
-    out[Ellipsis, top:top+grid.nrows, left:left+grid.ncols] = grid.data
+    out[Ellipsis, top:top+grid.nrows, left:left+grid.ncols] = grid
     return out
 
 
@@ -225,7 +225,7 @@ def mergeGrid(grid,other):
         in the common area must match
     """
     y_offset,x_offset = _offset(grid,other)
-    grid[y_offset:y_offset+other.nrows,x_offset:x_offset+other.ncols] = grid.data
+    grid[y_offset:y_offset+other.nrows,x_offset:x_offset+other.ncols] = grid
 
 @_gridMatch
 def maskGrid(grid,other):
@@ -237,7 +237,7 @@ def maskGrid(grid,other):
         argument contains fill_value
     """
     y_offset,x_offset = _offset(grid,other)
-    y_idx,x_idx = np.where(grid.data == grid.fill_value)
+    y_idx,x_idx = np.where(grid == grid.fill_value)
     grid[y_idx+y_offset,x_idx+x_offset] = grid.fill_value
 
 def trimGrid(grid):

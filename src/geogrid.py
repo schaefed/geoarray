@@ -1,11 +1,9 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re, os, copy
+import re, os
 import gdal, osr
 import numpy as np
-from numpymember import NumpyMemberBase
-from slicing import slicingBounds, fullSlices
 
 # needs to be extended
 _DRIVER_DICT = {
@@ -47,11 +45,11 @@ def GeoGrid(fname=None, data=None, shape=(),
         data = np.full(shape, fill_value, dtype=dtype)
         
     # wrap array
-    if 1 < data.ndim < 4:
-        nrows, ncols = data.shape[-2:]
-        if origin in ("ul", "ll", "ur", "lr"):
-            # yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
-            return _GeoGrid(data, yorigin, xorigin, origin, cellsize, fill_value, proj_params)
+    # if 0 < data.ndim < 4:
+    nrows, ncols = ((1,1) + data.shape) [-2:]
+    if origin in ("ul", "ll", "ur", "lr"):
+        # yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
+        return _GeoGrid(data, yorigin, xorigin, origin, cellsize, fill_value, proj_params)
                     
     raise TypeError("Insufficient arguments given!")
 
@@ -145,16 +143,7 @@ class _GeoGrid(np.ndarray):
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
             bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
         )
-    
-    # def _propagateType(self):
-    #     """
-    #        Reflect dtype changes
-    #     """
-    #     dtype = self.dtype.type
-    #     self.yorigin = dtype(self.yorigin)
-    #     self.xorigin = dtype(self.xorigin)
-    #     self._fill_value = dtype(self._fill_value)
-            
+                
     def _getFillValue(self):
         """
             fill_value getter
@@ -179,8 +168,7 @@ class _GeoGrid(np.ndarray):
         if array.shape:
             return GeoGrid(data=array,**self.header)
         return array[0]
-
-        
+    
     @property
     def nbands(self):
         try:
@@ -206,27 +194,26 @@ class _GeoGrid(np.ndarray):
         _GridWriter(self).write(fname)
         
     fill_value    = property(fget=_getFillValue, fset=_setFillValue)
-    
+           
 class _GdalGrid(_GeoGrid):
-    
-    
+        
     def __new__(cls,fname):
-
-        fobj       = cls.__open(fname)
-        rasterband = fobj.GetRasterBand(1)
-        fill_value = rasterband.GetNoDataValue()
-        geotrans   = fobj.GetGeoTransform()
+        
+        fobj        = cls.__open(fname)
+        rasterband  = fobj.GetRasterBand(1)
+        fill_value  = rasterband.GetNoDataValue()
+        geotrans    = fobj.GetGeoTransform()
         proj_params = cls.__projParams(fobj)
-        nrows = fobj.RasterYSize        
-        ncols = fobj.RasterXSize
-        nbands =fobj.RasterCount
-        dtype = np.dtype(gdal.GetDataTypeName(rasterband.DataType))
+        nrows       = fobj.RasterYSize        
+        ncols       = fobj.RasterXSize
+        nbands      = fobj.RasterCount
+        dtype       = np.dtype(gdal.GetDataTypeName(rasterband.DataType))
 
         data = fobj.GetVirtualMemArray(
                 gdal.GF_Write,
                 cache_size = nbands*nrows*ncols*dtype.itemsize
             )
-
+        
         obj = super(_GdalGrid,cls).__new__(
             cls,
             array       = data,
@@ -237,29 +224,22 @@ class _GdalGrid(_GeoGrid):
             fill_value  = fill_value,
             proj_params = proj_params,
         )
-        obj._fobj = fobj
-        obj._data = data
-        return obj
 
-    def __del__(self):
-        print "__del__"
-        self._data = None
-        # self._fobj.Close()
+        # this reference is needed to avoid the situation that the open
+        # file's refcount reaches zeros before the GetVirtualMemArray array
+        # does...
+        obj._fobj = fobj
+        return obj
         
     def __array_finalize__(self,obj):
         if obj is not None:
-            self._fobj       = getattr(obj,"_fobj",None)
-            self._data       = getattr(obj,"_data",None)            
-            self.xorigin     = getattr(obj,'xorigin',None)
-            self.yorigin     = getattr(obj,'yorigin',None)
-            self.origin      = getattr(obj,'origin',None)
-            self.cellsize    = getattr(obj,'cellsize',None)
-            self.proj_params = getattr(obj,'proj_params',None)
-            self._fill_value = getattr(obj,'_fill_value',None)
-
+            self._fobj       = getattr(obj,"_fobj",None)                        
+            super(_GdalGrid,self).__array_finalize__(obj)
+    
+            
     @classmethod
     def __open(cls,fname):
-        fobj = gdal.Open(fname)
+        fobj = gdal.OpenShared(fname)
         if fobj:
             return fobj
         raise IOError("Could not open file")
@@ -279,65 +259,6 @@ class _GdalGrid(_GeoGrid):
         proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
         return dict(zip(proj_params[0::2],proj_params[1::2]))
     
-            
-    
-# class _GdalGrid(_GeoGrid):
-#     def __init__(self,fname,dtype=None):
-
-#         self.__fobj       = self.__open(fname)
-#         self.__geotrans   = self.__fobj.GetGeoTransform()
-#         self.__rasterband = self.__fobj.GetRasterBand(1)
-#         self.__fill_value = self.__rasterband.GetNoDataValue()
-#         nrows = self.__fobj.RasterYSize        
-#         ncols = self.__fobj.RasterXSize
-#         nbands = self.__fobj.RasterCount
-#         dtype = np.dtype(gdal.GetDataTypeName(self.__rasterband.DataType))
-#         super(_GdalGrid,self).__init__(            
-#             data = self.__fobj.GetVirtualMemArray(
-#                 gdal.GF_Write,
-#                 cache_size = nbands*nrows*ncols*dtype.itemsize
-#             ),
-#             yorigin     = self.__geotrans[3],
-#             xorigin     = self.__geotrans[0],
-#             origin      = "ul",
-#             cellsize    = self.__cellsize(),
-#             fill_value   = self.__fill_value,
-#             proj_params = self.__proj4Params()
-#         )
-
-#     def __del__(self):
-#         self.data = None
-        
-#     def __open(self,fname):
-#         fobj = gdal.Open(fname)
-#         if fobj:
-#             return fobj
-#         raise IOError("Could not open file")
-                
-    # def _getData(self):
-    #     if not np.all(self.__readmask):            
-    #         data = self.__fobj.ReadAsArray()
-    #         self.__setitem__(~self.__readmask,data[~self.__readmask])
-    #     return super(_GdalGrid,self)._getData()
-
-    # def __shape(self):
-    #     nbands = self.__fobj.RasterCount
-    #     if nbands > 1:
-    #         return (nbands, self.__fobj.RasterYSize, self.__fobj.RasterXSize)        
-    #     return (self.__fobj.RasterYSize, self.__fobj.RasterXSize)    
-    
-    # def __cellsize(self):       
-    #     if abs(self.__geotrans[1]) == abs(self.__geotrans[5]):
-    #         return abs(self.__geotrans[1])
-    #     raise NotImplementedError(
-    #         "Diverging cellsizes in x and y direction are not allowed yet!")    
-        
-    # def __proj4Params(self):
-    #     srs = osr.SpatialReference()
-    #     srs.ImportFromWkt(self.__fobj.GetProjection())
-    #     proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
-    #     return dict(zip(proj_params[0::2],proj_params[1::2]))
-
     
 class _GridWriter(object):
 
