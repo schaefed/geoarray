@@ -15,101 +15,164 @@ _DRIVER_DICT = {
     ".png" : "PNG"
 }
 
+_FILEREF = None
+
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
+def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
+          nodata_value=-9999,cellsize=1,proj_params=None):
+    
+    return _GeoArray(np.asarray(data) if not dtype else np.asarray(data,dtype),
+                    yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
         
-# "ul", "ll", "ur", "lr"
-def GeoGrid(fname=None, data=None, shape=(),
-            yorigin=0, xorigin=0, origin="ul",
-            # lbound=None, rbound=None, ubound=None, bbound=None,
-            dtype=np.float64, fill_value=-9999, cellsize=1,
-            proj_params=None):
-    """
-    expected data shape: (nbands,y,x)
-    """
-    # read data
-    if fname:
-        return _GdalGrid(fname)
+def zeros(shape,dtype=np.float64,yorigin=0, xorigin=0, origin="ul",
+          nodata_value=-9999,cellsize=1,proj_params=None):
+    return _GeoArray(np.zeros(shape,dtype),yorigin,xorigin,
+                    origin,nodata_value,cellsize,proj_params)
 
-    # initialize empty data
-    if data == None:
-        data = np.full(shape, fill_value, dtype=dtype)
-        
-    # wrap array
-    # if 0 < data.ndim < 4:
-    nrows, ncols = ((1,1) + data.shape) [-2:]
-    if origin in ("ul", "ll", "ur", "lr"):
-        return _GeoGrid(data, yorigin, xorigin, origin, cellsize, fill_value, proj_params)
-                    
-    raise TypeError("Insufficient arguments given!")
+def ones(shape,dtype=np.float64,yorigin=0, xorigin=0, origin="ul",
+         nodata_value=-9999,cellsize=1,proj_params=None):
+    return _GeoArray(np.ones(shape,dtype),yorigin,xorigin,
+                    origin,nodata_value,cellsize,proj_params)
 
-class _GeoGrid(np.ndarray):
+def full(shape,fill_value,dtype=None,yorigin=0, xorigin=0, origin="ul",
+         nodata_value=-9999,cellsize=1,proj_params=None):
+    return _GeoArray(np.full(shape,fill_value,dtype),yorigin,xorigin,
+                    origin,nodata_value,cellsize,proj_params)
+
+def empty(shape,dtype=None,yorigin=0, xorigin=0, origin="ul",
+          nodata_value=-9999,cellsize=1,proj_params=None):
+    return _GeoArray(np.full(shape,nodata_value,dtype),yorigin,xorigin,
+                    origin,nodata_value,cellsize,proj_params)
+
+def fromfile(fname):
+
+    def _openFile(fname):
+        fobj = gdal.OpenShared(fname)
+        if fobj:
+            return fobj
+        raise IOError("Could not open file")    
+
+    def _cellsize(geotrans):       
+        if abs(geotrans[1]) == abs(geotrans[5]):
+            return abs(geotrans[1])
+        raise NotImplementedError(
+            "Diverging cellsizes in x and y direction are not allowed yet!")    
+
+    def _projParams(fobj):
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(fobj.GetProjection())
+        proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
+        return dict(zip(proj_params[0::2],proj_params[1::2]))
+
+    # the file object needs to survive 'data'
+    global _FILEREF
+
+    _FILEREF   = _openFile(fname)
+
+    rasterband = _FILEREF.GetRasterBand(1)
+    geotrans   = _FILEREF.GetGeoTransform()
+
+    nrows      = _FILEREF.RasterYSize        
+    ncols      = _FILEREF.RasterXSize
+    nbands     = _FILEREF.RasterCount
+
+    dtype      = np.dtype(gdal.GetDataTypeName(rasterband.DataType))
+
+    data       = _FILEREF.GetVirtualMemArray(
+        gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
+    )
+    return _GeoArray(data,geotrans[3],geotrans[0],"ul",_cellsize(geotrans),
+                    rasterband.GetNoDataValue(),_projParams(_FILEREF))
+
+
+def tofile(fname,geogrid):
+    def _fnameExtension(fname):
+        return os.path.splitext(fname)[-1].lower()
+
+    def _projection(grid):
+        params = None 
+        if grid.proj_params:
+            params =  "+{:}".format(" +".join(
+                ["=".join(pp) for pp in grid.proj_params.items()])                                    
+                )
+        srs = osr.SpatialReference()
+        srs.ImportFromProj4(params)
+        return srs.ExportToWkt()
+
+    def _getDriver(fext):
+        if fext in _DRIVER_DICT:
+            driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
+            metadata = driver.GetMetadata_Dict()
+            if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
+                return driver
+            raise IOError("Datatype canot be written")            
+        raise IOError("No driver found for filenmae extension '{:}'".format(fext))
+    
+    def _writeGdalMemory(grid,projection):
+        driver = gdal.GetDriverByName("MEM")
+        out = driver.Create(
+            "",grid.ncols,grid.nrows,grid.nbands,
+            gdal.GetDataTypeByName(str(grid.dtype))
+        )
+        out.SetGeoTransform(
+            (grid.xorigin, grid.cellsize,0,
+             grid.yorigin, 0, grid.cellsize)
+        )
+        out.SetProjection(projection)
+        for n in xrange(grid.nbands):
+            band = out.GetRasterBand(n+1)
+            band.SetNoDataValue(float(grid.nodata_value)) 
+            band.WriteArray(grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)])
+        out.FlushCache()
+        return out
+            
+    memset = _writeGdalMemory(geogrid, _projection(geogrid))
+    outdriver = _getDriver(_fnameExtension(fname))
+    out = outdriver.CreateCopy(fname,memset,0)
+    errormsg = gdal.GetLastErrorMsg()
+    if errormsg or not out:
+        raise IOError(errormsg)
+    
+class _GeoArray(np.ndarray):
     
     """
     ORIGIN: upper left corner
     """        
-    def __new__(cls, array, yorigin , xorigin, origin,cellsize,
-                fill_value, proj_params=None):
+    def __new__(cls, data, yorigin , xorigin, origin, nodata_value,
+                cellsize, proj_params=None):
 
-        obj = np.asarray(array).view(cls)
+        obj = np.asarray(data).view(cls)
         obj.yorigin = yorigin
         obj.xorigin = xorigin
         obj.origin = origin
+        obj._nodata_value = nodata_value
         obj.cellsize = cellsize
-        obj._fill_value = fill_value
         obj.proj_params = proj_params
         return obj
 
     def __array_finalize__(self,obj):
-        # if isinstance(obj,_GeoGrid):
         if obj is not None:
             self.xorigin = getattr(obj,'xorigin',None)
             self.yorigin = getattr(obj,'yorigin',None)
             self.origin = getattr(obj,'origin',None)
             self.cellsize = getattr(obj,'cellsize',None)
             self.proj_params = getattr(obj,'proj_params',None)
-            self._fill_value = getattr(obj,'_fill_value',None)
-            # self._propagateType()
+            self._nodata_value = getattr(obj,'_nodata_value',None)
             
     @property
     def header(self):
-        """
-        Output:
-        Purpose:
-            Returns the basic definition of the instance. The values given in
-            the optional exclude argument will not be part of the definition
-            dict
-        Note:
-            The output of this method is sufficient to create a new
-            albeit empty _GeoGrid using the GeoGrid factory function.
-        """
-            
         return {
-            "shape"       : self.shape,
             "yorigin"     : self.yorigin,
             "xorigin"     : self.xorigin,
             "origin"      : self.origin,
-            "dtype"       : self.dtype,
-            "fill_value"  : self.fill_value,            
+            "nodata_value"  : self.nodata_value,            
             "cellsize"    : self.cellsize,
             "proj_params" : self.proj_params
         }
         
     @property
     def bbox(self):
-        """
-        Output:
-            {"ymin": int/float, "ymax": int/float,
-             "xmin": int/float, "xmax": int/float}
-        Purpose:
-            Returns the bounding box of the GeoGrid Instance.
-        Note:
-            Bounding box is here definied as a rectangle entirely enclosing
-            the GeoGrid Instance. That means that ymax and xmax values are
-            calculated as the coordinates of the last cell + cellsize.
-            Trying to acces the point ymax/xmax will therefore fail, as these
-            coorindates actually point to the cell nrows+1/ncols+1
-        """
         yopp = self.nrows * self.cellsize
         xopp = self.ncols * self.cellsize
         return { 
@@ -134,30 +197,30 @@ class _GeoGrid(np.ndarray):
             bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
         )
                 
-    def _getFillValue(self):
+    def _getNodataValue(self):
         """
-            fill_value getter
+            nodata_value getter
         """
-        if type(self._fill_value) != self.dtype.type:
-            self._fill_value = self.dtype.type(self._fill_value)
-        return self._fill_value
+        if type(self._nodata_value) != self.dtype.type:
+            self._nodata_value = self.dtype.type(self._nodata_value)
+        return self._nodata_value
 
-    def _setFillValue(self,value):
+    def _setNodataValue(self,value):
         """
-            fill_value setter
-            All fill_values in the dataset will be changed accordingly.
+            nodata_value setter
+            All nodata_values in the dataset will be changed accordingly.
             Stored data will be read from disk, so calling this
             property may be a costly operation
         """
         if type(value) != self.dtype.type:
             value = self.dtype.type(value)
-        self[self == self.fill_value] = value
-        self._fill_value = value
+        self[self == self.nodata_value] = value
+        self._nodata_value = value
 
-    def __array_wrap__(self,array):
-        if array.shape:
-            return GeoGrid(data=array,**self.header)
-        return array[0]
+    def __array_wrap__(self,result):
+        if result.shape:
+            return array(data=result,**self.header)
+        return result[0]
     
     @property
     def nbands(self):
@@ -181,72 +244,11 @@ class _GeoGrid(np.ndarray):
             return 0
     
     def write(self,fname):
-        _GridWriter(self).write(fname)
+        tofile(fname,self)
+        # _GridWriter(self).write(fname)
         
-    fill_value    = property(fget=_getFillValue, fset=_setFillValue)
-           
-class _GdalGrid(_GeoGrid):
-        
-    def __new__(cls,fname):
-        
-        fobj        = cls.__open(fname)
-        rasterband  = fobj.GetRasterBand(1)
-        fill_value  = rasterband.GetNoDataValue()
-        geotrans    = fobj.GetGeoTransform()
-        proj_params = cls.__projParams(fobj)
-        nrows       = fobj.RasterYSize        
-        ncols       = fobj.RasterXSize
-        nbands      = fobj.RasterCount
-        dtype       = np.dtype(gdal.GetDataTypeName(rasterband.DataType))
+    nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
 
-        data = fobj.GetVirtualMemArray(
-                gdal.GF_Write,
-                cache_size = nbands*nrows*ncols*dtype.itemsize
-            )
-        
-        obj = super(_GdalGrid,cls).__new__(
-            cls,
-            array       = data,
-            yorigin     = geotrans[3],
-            xorigin     = geotrans[0],
-            origin      = "ul",
-            cellsize    = cls.__cellsize(geotrans),
-            fill_value  = fill_value,
-            proj_params = proj_params,
-        )
-
-        # this reference is needed to avoid the situation that the open
-        # file's refcount reaches zeros before the GetVirtualMemArray array
-        # does...
-        obj._fobj = fobj
-        return obj
-        
-    def __array_finalize__(self,obj):
-        if obj is not None:
-            self._fobj       = getattr(obj,"_fobj",None)                        
-            super(_GdalGrid,self).__array_finalize__(obj)
-                
-    @classmethod
-    def __open(cls,fname):
-        fobj = gdal.OpenShared(fname)
-        if fobj:
-            return fobj
-        raise IOError("Could not open file")
-           
-    @staticmethod
-    def __cellsize(geotrans):       
-        if abs(geotrans[1]) == abs(geotrans[5]):
-            return abs(geotrans[1])
-        raise NotImplementedError(
-            "Diverging cellsizes in x and y direction are not allowed yet!")    
-
-    @staticmethod
-    def __projParams(fobj):
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(fobj.GetProjection())
-        proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
-        return dict(zip(proj_params[0::2],proj_params[1::2]))
-    
     
 class _GridWriter(object):
 
@@ -287,7 +289,7 @@ class _GridWriter(object):
         out.SetProjection(srs.ExportToWkt())
         for n in xrange(self.fobj.nbands):
             band = out.GetRasterBand(n+1)
-            band.SetNoDataValue(float(self.fobj.fill_value)) 
+            band.SetNoDataValue(float(self.fobj.nodata_value)) 
             band.WriteArray(self.fobj[(n,Ellipsis) if self.fobj.nbands > 1 else (Ellipsis)])
         out.FlushCache()
         return out
