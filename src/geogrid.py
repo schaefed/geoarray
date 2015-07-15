@@ -17,15 +17,6 @@ _DRIVER_DICT = {
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-
-def gridOrigin(nrows, ncols, cellsize, yorigin, xorigin,origin):
-
-    if origin[0] == "l":
-        yorigin -= (nrows + 1)
-    if origin[1] == "r":
-        xorigin -= (ncols + 1)
-
-    return yorigin, xorigin
         
 # "ul", "ll", "ur", "lr"
 def GeoGrid(fname=None, data=None, shape=(),
@@ -48,7 +39,6 @@ def GeoGrid(fname=None, data=None, shape=(),
     # if 0 < data.ndim < 4:
     nrows, ncols = ((1,1) + data.shape) [-2:]
     if origin in ("ul", "ll", "ur", "lr"):
-        # yorigin,xorigin = gridOrigin(nrows,ncols,cellsize,yorigin,xorigin,origin)
         return _GeoGrid(data, yorigin, xorigin, origin, cellsize, fill_value, proj_params)
                     
     raise TypeError("Insufficient arguments given!")
@@ -235,15 +225,13 @@ class _GdalGrid(_GeoGrid):
         if obj is not None:
             self._fobj       = getattr(obj,"_fobj",None)                        
             super(_GdalGrid,self).__array_finalize__(obj)
-    
-            
+                
     @classmethod
     def __open(cls,fname):
         fobj = gdal.OpenShared(fname)
         if fobj:
             return fobj
         raise IOError("Could not open file")
-
            
     @staticmethod
     def __cellsize(geotrans):       
