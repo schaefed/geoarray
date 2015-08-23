@@ -250,55 +250,55 @@ class _GeoArray(np.ndarray):
     nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
 
     
-class _GridWriter(object):
+# class _GridWriter(object):
 
-    def __init__(self,fobj):
-        self.fobj = fobj
+#     def __init__(self,fobj):
+#         self.fobj = fobj
         
-    def _fnameExtension(self,fname):
-        return os.path.splitext(fname)[-1].lower()
+#     def _fnameExtension(self,fname):
+#         return os.path.splitext(fname)[-1].lower()
 
-    def _getDriver(self,fext):
-        if fext in _DRIVER_DICT:
-            driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
-            metadata = driver.GetMetadata_Dict()
-            if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
-                return driver
-            raise IOError("Datatype canot be written")            
-        raise IOError("No driver found for filenmae extension '{:}'".format(fext))
+#     def _getDriver(self,fext):
+#         if fext in _DRIVER_DICT:
+#             driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
+#             metadata = driver.GetMetadata_Dict()
+#             if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
+#                 return driver
+#             raise IOError("Datatype canot be written")            
+#         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
-    def _proj4String(self):
-        params = self.fobj.proj_params
-        if params:
-            return "+{:}".format(" +".join(
-                ["=".join(pp) for pp in params.items()])
-                             )
+#     def _proj4String(self):
+#         params = self.fobj.proj_params
+#         if params:
+#             return "+{:}".format(" +".join(
+#                 ["=".join(pp) for pp in params.items()])
+#                              )
 
-    def _writeGdalMemory(self):
-        driver = gdal.GetDriverByName("MEM")
-        out = driver.Create(
-            "",self.fobj.ncols,self.fobj.nrows,self.fobj.nbands,
-            gdal.GetDataTypeByName(str(self.fobj.dtype))
-        )
-        out.SetGeoTransform(
-            (self.fobj.xorigin, self.fobj.cellsize,0,
-             self.fobj.yorigin, 0, self.fobj.cellsize)
-        )
-        srs = osr.SpatialReference()
-        srs.ImportFromProj4(self._proj4String())
-        out.SetProjection(srs.ExportToWkt())
-        for n in xrange(self.fobj.nbands):
-            band = out.GetRasterBand(n+1)
-            band.SetNoDataValue(float(self.fobj.nodata_value)) 
-            band.WriteArray(self.fobj[(n,Ellipsis) if self.fobj.nbands > 1 else (Ellipsis)])
-        out.FlushCache()
-        return out
+#     def _writeGdalMemory(self):
+#         driver = gdal.GetDriverByName("MEM")
+#         out = driver.Create(
+#             "",self.fobj.ncols,self.fobj.nrows,self.fobj.nbands,
+#             gdal.GetDataTypeByName(str(self.fobj.dtype))
+#         )
+#         out.SetGeoTransform(
+#             (self.fobj.xorigin, self.fobj.cellsize,0,
+#              self.fobj.yorigin, 0, self.fobj.cellsize)
+#         )
+#         srs = osr.SpatialReference()
+#         srs.ImportFromProj4(self._proj4String())
+#         out.SetProjection(srs.ExportToWkt())
+#         for n in xrange(self.fobj.nbands):
+#             band = out.GetRasterBand(n+1)
+#             band.SetNoDataValue(float(self.fobj.nodata_value)) 
+#             band.WriteArray(self.fobj[(n,Ellipsis) if self.fobj.nbands > 1 else (Ellipsis)])
+#         out.FlushCache()
+#         return out
 
-    def write(self,fname):
-        memset = self._writeGdalMemory()
-        fext = self._fnameExtension(fname)        
-        outdriver = self._getDriver(fext)
-        out = outdriver.CreateCopy(fname,memset,0)
-        errormsg = gdal.GetLastErrorMsg()
-        if errormsg or not out:
-            raise IOError(errormsg)
+#     def write(self,fname):
+#         memset = self._writeGdalMemory()
+#         fext = self._fnameExtension(fname)        
+#         outdriver = self._getDriver(fext)
+#         out = outdriver.CreateCopy(fname,memset,0)
+#         errormsg = gdal.GetLastErrorMsg()
+#         if errormsg or not out:
+#             raise IOError(errormsg)

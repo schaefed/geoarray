@@ -1,22 +1,23 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest, copy, shutil, os
+import unittest, copy, shutil
 import numpy as np
-#from geogrid import GeoGrid, _DRIVER_DICT
 import geogrid as gg
-#import geogridfuncs as ggfuncs
 import warnings
 warnings.filterwarnings("ignore") 
 
-FNAME = os.path.join(os.path.split(__file__)[0],"dem.asc")
-#FNAME = "dem.asc"
+#FNAME = os.path.join(os.path.split(__file__)[0],"dem.asc")
+FNAME = "dem.asc"
 
 PROJ_PARAMS = {
-    'lon_0': '148.8',   'lat_0': '0',
-    'y_0'  : '3210000', 'x_0': '4321000',
-    'units': 'm', 
-    'proj' : 'laea',    'ellps': 'WGS84'
+    'lon_0' : '148.8',
+    'lat_0' : '0',
+    'y_0'   : '3210000',
+    'x_0'   : '4321000',
+    'units' : 'm', 
+    'proj'  : 'laea',
+    'ellps' : 'WGS84'
 }
 
 class TestInitialisation(unittest.TestCase):
@@ -27,9 +28,11 @@ class TestInitialisation(unittest.TestCase):
         yorigin = -15
         xorigin = 72
         cellsize = 33.33
-        grid = gg.array(data=data, nodata_value=nodata_value,
-                           yorigin=yorigin, xorigin=xorigin,
-                           cellsize=cellsize)
+        grid = gg.array(
+            data=data, nodata_value=nodata_value,
+            yorigin=yorigin, xorigin=xorigin,
+            cellsize=cellsize
+        )
         self.assertEqual(grid.shape, data.shape)
         self.assertEqual(grid.nodata_value, nodata_value)
         self.assertEqual(grid.yorigin, yorigin)
@@ -82,16 +85,15 @@ class TestGeoGrid(unittest.TestCase):
         checkgrid.nodata_value = rpcvalue
         self.assertFalse(np.any(checkgrid == org_fill_fvalue))
         self.assertEqual(checkgrid.nodata_value, rpcvalue)
-        # nodatapos1 = np.where(checkgrid == checkgrid.nodata_value)
-        # nodatapos2 = np.where(self.grid == self.grid.nodata_value)
-        # for pos1,pos2 in zip(nodatapos1,nodatapos2):
-        #     self.assertTrue(pos1 == pos2)
+        nodatapos1 = np.where(checkgrid == checkgrid.nodata_value)
+        nodatapos2 = np.where(self.grid == self.grid.nodata_value)
+        for pos1,pos2 in zip(nodatapos1,nodatapos2):
+            self.assertItemsEqual(pos1,pos2)
         self.assertEqual(checkgrid.nodata_value, rpcvalue)
         
     def test_setDataType(self):
         rpctype = np.int32
         checkgrid = self.grid.astype(rpctype)
-        self.assertEqual(checkgrid.dtype,rpctype)
         self.assertEqual(checkgrid.dtype,rpctype)
         
     def test_getitem(self):        
@@ -164,7 +166,6 @@ class TestGeoGrid(unittest.TestCase):
                  np.sin,np.cos,np.tan,np.arcsinh,
                  np.around,np.rint,np.fix,
                  np.prod,np.sum,
-                 # np.cumprod,            # returns an array of changed shape -> does not make sense here
                  np.trapz,
                  np.i0,np.sinc,
                  np.arctanh, np.gradient,                
