@@ -4,10 +4,9 @@
 import unittest, copy, shutil, os
 import numpy as np
 import geogrid as gg
-import geogridfuncs as ggfuncs
 import warnings
 
-FNAME = os.path.join(os.path.dirname(__file__),"dem.asc")
+FNAME = os.path.join(os.path.dirname(__file__), "dem.asc")
 
 PROJ_PARAMS = {
     'lon_0' : '148.8',

@@ -1,5 +1,41 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+This module provides a numpy.ndarray subclass adding
+
+
+>>> import numpy as np
+>>> import geogrid as gg
+
+>>> arr = np.array([-9.,-9.       ,-9.       ,-9.       ,-9.       ,-9.,
+...                 -9.,2.16512767,4.97776467,4.2279204 ,0.        ,-9.,
+...                 -9.,8.25658422,0.01238773,5.05858306,8.33503939,-9.,
+...                 -9.,7.53470443,7.15304826,9.45150218,8.79359049,-9.,
+...                 -9.,0.0536634 ,0.42101194,0.22721601,1.1458486 ,-9.,
+...                 -9.,6.79183025,2.50622739,3.76725118,3.97934707,-9.,
+...                 -9.,0.        ,0.24743279,1.4627512 ,0.38430722,-9.,
+...                 -9.,5.30171261,0.        ,3.17667353,3.80908144,-9.,
+...                 -9.,7.12445478,4.83891708,6.10898131,2.93801857,-9.,
+...                 -9.,2.56170107,2.54503559,1.72767934,0.        ,-9.,
+...                 -9.,-9.       ,-9.       ,-9.       ,-9.       ,-9.,])
+
+# fill value
+>>> nodata_value = -9
+
+# x-coordinate of the grid origin
+>>> xorigin = 63733
+
+# y-coordinate of the grid origin
+>>> yorigin = 78867
+>>> cellsize = 23.3
+
+# Set the origin to the upper left corner. One of ("ul", "ll", "ur", "ul" )
+>>> origin = "ul"
+
+>>> grid = array(arr, yorigin=yorigin, xorigin=xorigin, origin=origin, cellsize=cellsize)
+>>> grid
+
+"""
 
 import re, os
 import gdal, osr
@@ -84,7 +120,6 @@ def fromfile(fname):
         proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
-    # the file object needs to survive 'data'
     global _FILEREFS
     
     fobj = _openFile(fname)
@@ -97,7 +132,6 @@ def fromfile(fname):
     ncols      = fobj.RasterXSize
     nbands     = fobj.RasterCount
 
-    # dtype      = np.dtype(gdal.GetDataTypeName(rasterband.DataType))
     dtype      = np.dtype(GDAL2DTYPE[rasterband.DataType])
 
     data       = fobj.GetVirtualMemArray(
@@ -160,9 +194,6 @@ def tofile(fname,geogrid):
         
 class _GeoArray(np.ndarray):
     
-    """
-    ORIGIN: upper left corner
-    """        
     def __new__(cls, data, yorigin , xorigin, origin, nodata_value,
                 cellsize, proj_params=None):
 
@@ -498,3 +529,9 @@ class _GeoArray(np.ndarray):
 
 
     nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+
+    
