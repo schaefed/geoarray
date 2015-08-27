@@ -210,7 +210,7 @@ class TestGeoGridFuncs(unittest.TestCase):
                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
                    "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
-        enlrgrid = self.grid.enlargeGrid(newbbox)
+        enlrgrid = self.grid.enlargeGrid(**newbbox)
         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
@@ -221,7 +221,7 @@ class TestGeoGridFuncs(unittest.TestCase):
                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
                    "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
-        shrgrid = self.grid.shrinkGrid(newbbox)        
+        shrgrid = self.grid.shrinkGrid(**newbbox)        
         self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
