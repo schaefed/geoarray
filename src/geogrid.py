@@ -1,40 +1,121 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-This module provides a numpy.ndarray subclass adding
+Purpose:
+    This module provides a numpy.ndarray subclass adding geographic context to
+    the data. The class supports reading and writing of a number of file formats
+    (see the variable _DRIVER_DICT) using the Python GDAL bindings, but otherwise
+    aims to be as much as an numpy.ndarray as possible. This design choice 
+    holds for the implementation of the factory functions (e.g. array, full,
+    zeros, ones, empty) and the I/0 related functionality (e.g. fromfile, tofile).
 
+Prerequesites:
+
+Arguments:
+
+Restrictions:
+    - A _GeoGrid instance can be passed to any numpy function expecting a
+      numpy.ndarray as argument and, in theory, all these functions should also return
+      an object of the same type. In practice not all functions do however and some
+      will still return a numpy.ndarray.
+    - Adding the geographic information to the data does (at the moment) not imply
+      any additional logic. If the shapes of two grids allow the succusful execution 
+      of a certain operator/function the program execution will continue. It is 
+      within the responsability of the user to check whether a given operation 
+      makes sense within a geographic context (e.g. grids cover the same spatial domain,
+      share a common projection, etc.) or not.
+    
 
 >>> import numpy as np
 >>> import geogrid as gg
 
->>> arr = np.array([-9.,-9.       ,-9.       ,-9.       ,-9.       ,-9.,
-...                 -9.,2.16512767,4.97776467,4.2279204 ,0.        ,-9.,
-...                 -9.,8.25658422,0.01238773,5.05858306,8.33503939,-9.,
-...                 -9.,7.53470443,7.15304826,9.45150218,8.79359049,-9.,
-...                 -9.,0.0536634 ,0.42101194,0.22721601,1.1458486 ,-9.,
-...                 -9.,6.79183025,2.50622739,3.76725118,3.97934707,-9.,
-...                 -9.,0.        ,0.24743279,1.4627512 ,0.38430722,-9.,
-...                 -9.,5.30171261,0.        ,3.17667353,3.80908144,-9.,
-...                 -9.,7.12445478,4.83891708,6.10898131,2.93801857,-9.,
-...                 -9.,2.56170107,2.54503559,1.72767934,0.        ,-9.,
-...                 -9.,-9.       ,-9.       ,-9.       ,-9.       ,-9.,])
-
-# fill value
+>>> yorigin      = 63829.3
+>>> xorigin      = 76256.6
+>>> origin       = "ul"
 >>> nodata_value = -9
+>>> cellsize     = 55
+>>> data         = np.array([[-9 ,-9, -9, -9, -9, -9],
+...                          [-9 , 4,  4,  0,  2, -9],
+...                          [-9 , 0,  5,  8,  5, -9],
+...                          [-9 , 0,  0,  1,  0, -9],
+...                          [-9 , 2,  3,  3,  3, -9],
+...                          [-9 , 0,  1,  0,  6, -9],
+...                          [-9 , 0,  3,  3,  3, -9],
+...                          [-9 , 4,  6,  2,  4, -9],
+...                          [-9 , 2,  1,  0,  1, -9],
+...                          [-9 ,-9, -9, -9, -9, -9],])
 
-# x-coordinate of the grid origin
->>> xorigin = 63733
+>>> grid = array(data,yorigin=yorigin,xorigin=xorigin,nodata_value=nodata_value,cellsize=cellsize)
 
-# y-coordinate of the grid origin
->>> yorigin = 78867
->>> cellsize = 23.3
+# as a subclass of np.ndarray the geogrid can be cast back easily
+>>> np.array(grid)
+array([[-9, -9, -9, -9, -9, -9],
+       [-9,  4,  4,  0,  2, -9],
+       [-9,  0,  5,  8,  5, -9],
+       [-9,  0,  0,  1,  0, -9],
+       [-9,  2,  3,  3,  3, -9],
+       [-9,  0,  1,  0,  6, -9],
+       [-9,  0,  3,  3,  3, -9],
+       [-9,  4,  6,  2,  4, -9],
+       [-9,  2,  1,  0,  1, -9],
+       [-9, -9, -9, -9, -9, -9]])
 
-# Set the origin to the upper left corner. One of ("ul", "ll", "ur", "ul" )
->>> origin = "ul"
+# geogrid supports all the numpy operators ... 
+>>> grid + 5    
+_GeoArray([[-4, -4, -4, -4, -4, -4],
+           [-4,  9,  9,  5,  7, -4],
+           [-4,  5, 10, 13, 10, -4],
+           [-4,  5,  5,  6,  5, -4],
+           [-4,  7,  8,  8,  8, -4],
+           [-4,  5,  6,  5, 11, -4],
+           [-4,  5,  8,  8,  8, -4],
+           [-4,  9, 11,  7,  9, -4],
+           [-4,  7,  6,  5,  6, -4],
+           [-4, -4, -4, -4, -4, -4]])
 
->>> grid = array(arr, yorigin=yorigin, xorigin=xorigin, origin=origin, cellsize=cellsize)
->>> grid
+# ... and functions
+>>> np.exp(grid).astype(np.int64)
+_GeoArray([[   0,    0,    0,    0,    0,    0],
+           [   0,   54,   54,    1,    7,    0],
+           [   0,    1,  148, 2980,  148,    0],
+           [   0,    1,    1,    2,    1,    0],
+           [   0,    7,   20,   20,   20,    0],
+           [   0,    1,    2,    1,  403,    0],
+           [   0,    1,   20,   20,   20,    0],
+           [   0,   54,  403,    7,   54,    0],
+           [   0,    7,    2,    1,    2,    0],
+           [   0,    0,    0,    0,    0,    0]])
 
+>>> np.sum(grid)
+-176
+
+# all arguments are accessible
+>>> grid.yorigin == yorigin
+True
+
+>>> grid.nodata_value == nodata_value
+True
+
+# currently the amount of grid related functinality is still limited.
+# There are functions to:
+# 1. increase the size of the grid, padding it with nodatdata values
+#    1.1 increase by an amount of cells
+>>> grid.addCells(top=1,bottom=2,left=1)    
+_GeoArray([[-9, -9, -9, -9, -9, -9, -9],
+           [-9, -9, -9, -9, -9, -9, -9],
+           [-9, -9,  4,  4,  0,  2, -9],
+           [-9, -9,  0,  5,  8,  5, -9],
+           [-9, -9,  0,  0,  1,  0, -9],
+           [-9, -9,  2,  3,  3,  3, -9],
+           [-9, -9,  0,  1,  0,  6, -9],
+           [-9, -9,  0,  3,  3,  3, -9],
+           [-9, -9,  4,  6,  2,  4, -9],
+           [-9, -9,  2,  1,  0,  1, -9],
+           [-9, -9, -9, -9, -9, -9, -9],
+           [-9, -9, -9, -9, -9, -9, -9],
+           [-9, -9, -9, -9, -9, -9, -9]])
+
+#    1.2 increase to a given extend
 """
 
 import re, os
