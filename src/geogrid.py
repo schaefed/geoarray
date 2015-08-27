@@ -14,17 +14,21 @@ Prerequesites:
 Arguments:
 
 Restrictions:
-    - A _GeoGrid instance can be passed to any numpy function expecting a
-      numpy.ndarray as argument and, in theory, all these functions should also return
-      an object of the same type. In practice not all functions do however and some
-      will still return a numpy.ndarray.
-    - Adding the geographic information to the data does (at the moment) not imply
-      any additional logic. If the shapes of two grids allow the succusful execution 
-      of a certain operator/function the program execution will continue. It is 
-      within the responsability of the user to check whether a given operation 
-      makes sense within a geographic context (e.g. grids cover the same spatial domain,
-      share a common projection, etc.) or not.
-    
+    1. A _GeoGrid instance can be passed to any numpy function expecting a
+       numpy.ndarray as argument and, in theory, all these functions should also return
+       an object of the same type. In practice not all functions do however and some
+       will still return a numpy.ndarray.
+    2. Adding the geographic information to the data does (at the moment) not imply
+       any additional logic. If the shapes of two grids allow the succesful execution 
+       of a certain operator/function it will run happily. It is within the responsability
+       of the user to check whether a given operation makes sense within a geographic context 
+       (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
+       Overriding the __array_prepare__ method would solve that issue for all operators
+       and almoast all functions. But there are a few edge cases, where numpy functions
+       are not routed through the __array_prepare__/__array_wrap__ mechanism. Implementing
+       implicit checks would still mean, that there are some unchecked calls, beside
+       pretending a (geographically safe) environment.
+       
 
 >>> import numpy as np
 >>> import geogrid as gg
@@ -96,7 +100,7 @@ True
 >>> grid.nodata_value == nodata_value
 True
 
-# currently the amount of grid related functinality is still limited.
+# currently the amount of grid related functinality is limited.
 # There are functions to:
 # 1. increase the size of the grid, padding it with nodatdata values
 #    1.1 increase by an amount of cells
@@ -116,6 +120,59 @@ _GeoArray([[-9, -9, -9, -9, -9, -9, -9],
            [-9, -9, -9, -9, -9, -9, -9]])
 
 #    1.2 increase to a given extend
+>>> grid.enlargeGrid(xmin=grid.xorigin-3.5*cellsize,xmax=grid.xorigin+(grid.ncols+2)*grid.cellsize)
+_GeoArray([[-9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  4,  4,  0,  2, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  0,  5,  8,  5, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  0,  0,  1,  0, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  2,  3,  3,  3, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  0,  1,  0,  6, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  0,  3,  3,  3, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  4,  6,  2,  4, -9, -9, -9],
+           [-9, -9, -9, -9, -9,  2,  1,  0,  1, -9, -9, -9],
+           [-9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9, -9]])
+
+# 2. decrease the size of a grid
+#    2.1 decrease by an amount of cells
+>>> grid.removeCells(top=2,bottom=2)
+_GeoArray([[-9,  0,  5,  8,  5, -9],
+           [-9,  0,  0,  1,  0, -9],
+           [-9,  2,  3,  3,  3, -9],
+           [-9,  0,  1,  0,  6, -9],
+           [-9,  0,  3,  3,  3, -9],
+           [-9,  4,  6,  2,  4, -9]])
+
+#    2.2 decrease to a given extend
+>>> grid.shrinkGrid(ymax=grid.yorigin-1.9*grid.cellsize)
+_GeoArray([[-9,  4,  4,  0,  2, -9],
+           [-9,  0,  5,  8,  5, -9],
+           [-9,  0,  0,  1,  0, -9],
+           [-9,  2,  3,  3,  3, -9],
+           [-9,  0,  1,  0,  6, -9],
+           [-9,  0,  3,  3,  3, -9],
+           [-9,  4,  6,  2,  4, -9],
+           [-9,  2,  1,  0,  1, -9],
+           [-9, -9, -9, -9, -9, -9]])
+
+#   3 Remove framing nodata_value
+>>> grid.trimGrid()
+_GeoArray([[4, 4, 0, 2],
+           [0, 5, 8, 5],
+           [0, 0, 1, 0],
+           [2, 3, 3, 3],
+           [0, 1, 0, 6],
+           [0, 3, 3, 3],
+           [4, 6, 2, 4],
+           [2, 1, 0, 1]])
+
+#  4. Match two grids
+#     ...
+
+#  5. Get the grid position of coordinates
+#     ...
+
+#  6. Get the coordinates of a grid cell
+#     ...
 """
 
 import re, os
@@ -156,29 +213,29 @@ _FILEREFS = []
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999,cellsize=1,proj_params=None):
+          nodata_value=-9999, cellsize=1, proj_params=None):
     
-    return _GeoArray(np.asarray(data) if not dtype else np.asarray(data,dtype),
+    return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
                     yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
         
-def zeros(shape,dtype=np.float64,yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999,cellsize=1,proj_params=None):
-    return _GeoArray(np.zeros(shape,dtype),yorigin,xorigin,
+def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
+          nodata_value=-9999, cellsize=1, proj_params=None):
+    return _factory(np.zeros(shape,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
-def ones(shape,dtype=np.float64,yorigin=0, xorigin=0, origin="ul",
-         nodata_value=-9999,cellsize=1,proj_params=None):
-    return _GeoArray(np.ones(shape,dtype),yorigin,xorigin,
+def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
+         nodata_value=-9999, cellsize=1, proj_params=None):
+    return _factory(np.ones(shape,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
-def full(shape,fill_value,dtype=None,yorigin=0, xorigin=0, origin="ul",
-         nodata_value=-9999,cellsize=1,proj_params=None):
-    return _GeoArray(np.full(shape,fill_value,dtype),yorigin,xorigin,
+def full(shape, fill_value, dtype=None, yorigin=0, xorigin=0, origin="ul",
+         nodata_value=-9999, cellsize=1, proj_params=None):
+    return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
-def empty(shape,dtype=None,yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999,cellsize=1,proj_params=None):
-    return _GeoArray(np.full(shape,nodata_value,dtype),yorigin,xorigin,
+def empty(shape, dtype=None, yorigin=0, xorigin=0, origin="ul",
+          nodata_value=-9999, cellsize=1, proj_params=None):
+    return _factory(np.full(shape,nodata_value,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
 def fromfile(fname):
@@ -218,9 +275,15 @@ def fromfile(fname):
     data       = fobj.GetVirtualMemArray(
         gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
     )
-    return _GeoArray(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
+    return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
                      origin="ul",nodata_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
+
+def _factory(data, yorigin, xorigin, origin, nodata_value, cellsize, proj_params):
+    origins = ("ul","ur","ll","lr")
+    if origin not in origins:
+        raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
+    return _GeoArray(data,yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
 
 
 def tofile(fname,geogrid):
@@ -486,7 +549,7 @@ class _GeoArray(np.ndarray):
             proj_params = self.proj_params,
         )
 
-    def shrinkGrid(self,bbox):
+    def shrinkGrid(self,ymin=None,ymax=None,xmin=None,xmax=None):
         """
         Input:
             bbox: {"ymin": int/float, "ymax": int/float,
@@ -497,6 +560,12 @@ class _GeoArray(np.ndarray):
             Shrinks the grid in a way that the given bbox is still 
             within the grid domain.        
         """
+        bbox = {
+            "ymin": ymin if ymin else self.bbox["ymin"],
+            "ymax": ymax if ymax else self.bbox["ymax"],
+            "xmin": xmin if xmin else self.bbox["xmin"],
+            "xmax": xmax if xmax else self.bbox["xmax"],
+            }
         top    = floor(round((self.bbox["ymax"] - bbox["ymax"])
                              /self.cellsize, MAX_PRECISION))
         left   = floor(round((bbox["xmin"] - self.bbox["xmin"])
@@ -558,7 +627,7 @@ class _GeoArray(np.ndarray):
         out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
         return out
 
-    def enlargeGrid(self,bbox):
+    def enlargeGrid(self,ymin=None,ymax=None,xmin=None,xmax=None):
         """
         Input:
             bbox: {"ymin": int/float, "ymax": int/float,
@@ -570,6 +639,12 @@ class _GeoArray(np.ndarray):
             be part of the grid domain. Added rows/cols ar filled with
             the grid's nodata value
         """
+        bbox = {
+            "ymin": ymin if ymin else self.bbox["ymin"],
+            "ymax": ymax if ymax else self.bbox["ymax"],
+            "xmin": xmin if xmin else self.bbox["xmin"],
+            "xmax": xmax if xmax else self.bbox["xmax"],
+            }
         top    = ceil(round((bbox["ymax"] - self.bbox["ymax"])
                             /self.cellsize,MAX_PRECISION))
         left   = ceil(round((self.bbox["xmin"] - bbox["xmin"])
