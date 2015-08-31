@@ -5,13 +5,10 @@ Purpose:
     This module provides a numpy.ndarray subclass adding geographic context to
     the data. The class supports reading and writing of a number of file formats
     (see the variable _DRIVER_DICT) using the Python GDAL bindings, but otherwise
-    aims to be as much as an numpy.ndarray as possible. This design choice 
+    aims to be as much as an numpy.ndarray as possible. This design choice also
     holds for the implementation of the factory functions (e.g. array, full,
     zeros, ones, empty) and the I/0 related functionality (e.g. fromfile, tofile).
 
-Prerequesites:
-
-Arguments:
 
 Restrictions:
     1. A _GeoGrid instance can be passed to any numpy function expecting a
@@ -20,12 +17,12 @@ Restrictions:
        will still return a numpy.ndarray.
     2. Adding the geographic information to the data does (at the moment) not imply
        any additional logic. If the shapes of two grids allow the succesful execution 
-       of a certain operator/function it will run happily. It is within the responsability
+       of a certain operator/function your program will continue. It is within the responsability
        of the user to check whether a given operation makes sense within a geographic context 
        (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
-       Overriding the __array_prepare__ method would solve that issue for all operators
-       and almoast all functions. But there are a few edge cases, where numpy functions
-       are not routed through the __array_prepare__/__array_wrap__ mechanism. Implementing
+       Overriding the __array_prepare__ method to implement the necessary checks would solve that
+       issue for all operators and most functions. But there are a few edge cases, where numpy 
+       functions are not routed through the __array_prepare__/__array_wrap__ mechanism. Implementing
        implicit checks would still mean, that there are some unchecked calls, beside
        pretending a (geographically safe) environment.
        
@@ -166,13 +163,24 @@ _GeoArray([[4, 4, 0, 2],
            [2, 1, 0, 1]])
 
 #  4. Match two grids
-#     ...
+>>> grid2 = empty_like(grid)
+>>> grid2.yorigin -= 76872.8
+>>> grid2.xorigin += 34792.2
+>>> grid2.snapGrid(grid)
+>>> (np.array(grid2.getOrigin()) - np.array(grid.getOrigin()))/grid.cellsize
+array([-1398.,   631.])
 
 #  5. Get the grid position of coordinates
-#     ...
+>>> yll,xll = grid.getOrigin("ll")
+>>> yll += grid.cellsize*3.3
+>>> xll += grid.cellsize*1.2
+>>> grid.coordinateIndex(yll,xll)
+(6, 1)
 
 #  6. Get the coordinates of a grid cell
-#     ...
+>>> grid.indexCoordinates(4,4)
+(63609.3, 76476.6)
+
 """
 
 import re, os
@@ -214,29 +222,139 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
           nodata_value=-9999, cellsize=1, proj_params=None):
-    
+    """
+    Input:
+        data         : numpy.ndarray -> data to wrap
+
+    Optinal Input    :
+        dtype        : str/np.dtype  -> type of the returned grid
+        yorigin      : int/float     -> y-value of the grid's origin
+        xorigin      : int/float     -> x-value of the grid's origin
+        origin       : str           -> position of the origin. One of:
+                                            "ul"  : upper left corner
+                                            "ur"  : upper right corner
+                                            "ll"  : lower left corner
+                                            "lr" : lower right corner
+        nodata_value : inf/float     -> nodata or fill value
+        cellsize     : int/float     -> cellsize
+        proj_params  : dict/None     -> proj4 projection parameters
+    """
     return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
                     yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
         
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           nodata_value=-9999, cellsize=1, proj_params=None):
+    """
+    Input:
+        shape        : tuple 
+
+    Optinal Input    :
+        dtype        : str/np.dtype  -> type of the returned grid
+        yorigin      : int/float     -> y-value of the grid's origin
+        xorigin      : int/float     -> x-value of the grid's origin
+        origin       : str           -> position of the origin. One of:
+                                            "ul"  : upper left corner
+                                            "ur"  : upper right corner
+                                            "ll"  : lower left corner
+                                            "lr" : lower right corner
+        nodata_value : inf/float     -> nodata or fill value
+        cellsize     : int/float     -> cellsize
+        proj_params  : dict/None     -> proj4 projection parameters
+    """
     return _factory(np.zeros(shape,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
+def zeros_like(array_like,*args,**kwargs):
+    return _array_like(np.zeros_like(array_like,*args,**kwargs))
+
+
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
          nodata_value=-9999, cellsize=1, proj_params=None):
+    """
+    Input:
+        shape        : tuple 
+
+    Optinal Input    :
+        dtype        : str/np.dtype  -> type of the returned grid
+        yorigin      : int/float     -> y-value of the grid's origin
+        xorigin      : int/float     -> x-value of the grid's origin
+        origin       : str           -> position of the origin. One of:
+                                            "ul"  : upper left corner
+                                            "ur"  : upper right corner
+                                            "ll"  : lower left corner
+                                            "lr" : lower right corner
+        nodata_value : inf/float     -> nodata or fill value
+        cellsize     : int/float     -> cellsize
+        proj_params  : dict/None     -> proj4 projection parameters
+    """
     return _factory(np.ones(shape,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
-def full(shape, fill_value, dtype=None, yorigin=0, xorigin=0, origin="ul",
+def ones_like(array_like,*args,**kwargs):
+    return _array_like(np.ones_like(array_like,*args,**kwargs))
+
+
+def full(shape, fill_value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
          nodata_value=-9999, cellsize=1, proj_params=None):
+    """
+    Input:
+        shape        : tuple 
+        fill_value   : int/float
+
+    Optinal Input    :
+        dtype        : str/np.dtype  -> type of the returned grid
+        yorigin      : int/float     -> y-value of the grid's origin
+        xorigin      : int/float     -> x-value of the grid's origin
+        origin       : str           -> position of the origin. One of:
+                                            "ul"  : upper left corner
+                                            "ur"  : upper right corner
+                                            "ll"  : lower left corner
+                                            "lr" : lower right corner
+        nodata_value : inf/float     -> nodata or fill value
+        cellsize     : int/float     -> cellsize
+        proj_params  : dict/None     -> proj4 projection parameters
+    """
     return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
 
-def empty(shape, dtype=None, yorigin=0, xorigin=0, origin="ul",
+def full_like(array_like,*args,**kwargs):
+    return _array_like(np.full_like(array_like,*args,**kwargs))
+
+
+def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           nodata_value=-9999, cellsize=1, proj_params=None):
+    """
+    Input:
+        shape        : tuple 
+
+    Optinal Input    :
+        dtype        : str/np.dtype  -> type of the returned grid
+        yorigin      : int/float     -> y-value of the grid's origin
+        xorigin      : int/float     -> x-value of the grid's origin
+        origin       : str           -> position of the origin. One of:
+                                            "ul"  : upper left corner
+                                            "ur"  : upper right corner
+                                            "ll"  : lower left corner
+                                            "lr" : lower right corner
+        nodata_value : inf/float     -> nodata or fill value
+        cellsize     : int/float     -> cellsize
+        proj_params  : dict/None     -> proj4 projection parameters
+    """
     return _factory(np.full(shape,nodata_value,dtype),yorigin,xorigin,
                     origin,nodata_value,cellsize,proj_params)
+
+def empty_like(array_like,*args,**kwargs):
+    return _array_like(np.empty_like(array_like,*args,**kwargs))
+
+def _array_like(array_like):
+    return array(array_like,**array_like.header)
+
+def _factory(data, yorigin, xorigin, origin, nodata_value, cellsize, proj_params):
+    origins = ("ul","ur","ll","lr")
+    if origin not in origins:
+        raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
+    return _GeoArray(data,yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
+
 
 def fromfile(fname):
 
@@ -278,13 +396,6 @@ def fromfile(fname):
     return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
                      origin="ul",nodata_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
-
-def _factory(data, yorigin, xorigin, origin, nodata_value, cellsize, proj_params):
-    origins = ("ul","ur","ll","lr")
-    if origin not in origins:
-        raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
-    return _GeoArray(data,yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
-
 
 def tofile(fname,geogrid):
     def _fnameExtension(fname):
@@ -359,19 +470,42 @@ class _GeoArray(np.ndarray):
             self.proj_params = getattr(obj,'proj_params',None)
             self._nodata_value = getattr(obj,'_nodata_value',None)
             
+    def __array_wrap__(self,result):
+        if result.shape:
+            return array(data=result,**self.header)
+        return result[0]
+    
     @property
     def header(self):
+        """
+        Input:
+            None
+        Output:
+            dict
+        Purpose:
+            Return the basic definition of the grid. Together
+            with a numpy.ndarray this information
+            can be passed to any of the factory functions.
+        """
         return {
-            "yorigin"     : self.yorigin,
-            "xorigin"     : self.xorigin,
-            "origin"      : self.origin,
-            "nodata_value"  : self.nodata_value,            
-            "cellsize"    : self.cellsize,
-            "proj_params" : self.proj_params
+            "yorigin"      : self.yorigin,
+            "xorigin"      : self.xorigin,
+            "origin"       : self.origin,
+            "nodata_value" : self.nodata_value,            
+            "cellsize"     : self.cellsize,
+            "proj_params"  : self.proj_params
         }
         
     @property
     def bbox(self):
+        """
+        Input:
+            None
+        Output:
+            dict
+        Purpose:
+            Return the grid's bounding box.
+        """
         yopp = self.nrows * self.cellsize
         xopp = self.ncols * self.cellsize
         return { 
@@ -384,9 +518,14 @@ class _GeoArray(np.ndarray):
 
     def getOrigin(self,origin=None):
         """
-        Return the grid's corner coorindates. Defaults to the origin
-        corner, any other corner may be specifed with the 'origin' argument, 
-        which should be one of: 'ul','ur','ll','lr'
+        Input:
+            origin: str/None
+        Output:
+            2-tuple
+        Purpose:
+            Return the grid's corner coordinates. Defaults to the origin
+            corner. Any other corner may be specifed with the 'origin' argument, 
+            which should be one of: 'ul','ur','ll','lr'.
         """
         if not origin:
             origin = self.origin
@@ -398,7 +537,12 @@ class _GeoArray(np.ndarray):
                 
     def _getNodataValue(self):
         """
-            nodata_value getter
+        Input:
+            None
+        Output:
+            int/float
+        Purpose:
+            Return the nodata_value.
         """
         if type(self._nodata_value) != self.dtype.type:
             self._nodata_value = self.dtype.type(self._nodata_value)
@@ -406,23 +550,31 @@ class _GeoArray(np.ndarray):
 
     def _setNodataValue(self,value):
         """
-            nodata_value setter
-            All nodata_values in the dataset will be changed accordingly.
-            Stored data will be read from disk, so calling this
-            property may be a costly operation
+        Input:
+            value: int/float
+        Output:
+            None
+        Purpose:
+            Set the nodata_value attribute. All nodata_values in the dataset 
+            will be changed accordingly. Stored data will be read from disk, 
+            so calling this property may be a costly operation.
         """
         if type(value) != self.dtype.type:
             value = self.dtype.type(value)
         self[self == self.nodata_value] = value
         self._nodata_value = value
 
-    def __array_wrap__(self,result):
-        if result.shape:
-            return array(data=result,**self.header)
-        return result[0]
     
     @property
     def nbands(self):
+        """
+        Input:
+            None
+        Output:
+            int
+        Purpose:
+            Return the number of bands in the dataset.
+        """
         try:
             return self.shape[-3]
         except IndexError:
@@ -430,6 +582,14 @@ class _GeoArray(np.ndarray):
 
     @property
     def nrows(self):
+        """
+        Input:
+            None
+        Output:
+            int
+        Purpose:
+            Return the number of rows in the dataset.
+        """
         try:
             return self.shape[-2]
         except IndexError:
@@ -437,6 +597,14 @@ class _GeoArray(np.ndarray):
 
     @property
     def ncols(self):
+        """
+        Input:
+            None
+        Output:
+            int
+        Purpose:
+            Return the number of columns in the dataset.
+        """
         try:
             return self.shape[-1]
         except IndexError:
@@ -454,12 +622,11 @@ class _GeoArray(np.ndarray):
             y_coor: int/float
             x_coor: int/float
         Purpose:
-            Returns the coordinates of the cell definied by the input indices.
-            Works as the reverse of getCoordinateIdx.
-        Note:
-            The arguments are expected to be numpy arrax indices, i.e. the 
-            upper left corner of the grid is the origin. 
+            Return the coordinates of the grid cell definied by the given index values.
+            The cell corner to which the returned values belong is definied by the 
+            attribute origin (i.e "ll": lower-left, "ur": upper-right).
         """        
+
         if (y_idx < 0 or x_idx < 0) or (y_idx >= self.nrows or x_idx >= self.ncols):
             raise ValueError("Index out of bounds !")
         yorigin, xorigin = self.getOrigin("ul")
@@ -473,11 +640,13 @@ class _GeoArray(np.ndarray):
             y_coor: int/float
             x_coor: int/float
         Output:
-            y_idx:  int/float
-            x_idx:  int/float
+            y_idx: int 
+            x_idx: int 
         Purpose:
-            Returns the indices of the cell in which the coordinates fall        
+            Find the grid cell into which the given coordinates 
+            fall and return its index values.
         """
+
         yorigin, xorigin = self.getOrigin("ul")
 
         y_idx = int(floor((yorigin - y_coor)/float(self.cellsize))) 
@@ -492,10 +661,10 @@ class _GeoArray(np.ndarray):
         Input:
             None
         Output:
-            GeoGrid
+            _GeoGrid
         Purpose:
-            Removes rows/cols containing only nodata values from the
-            margins of the GeoGrid Instance
+            Removes rows and columns from the margins of the
+            grid if they contain only nodata value.
         """
         y_idx, x_idx = np.where(self != self.nodata_value)
         try:
@@ -508,15 +677,14 @@ class _GeoArray(np.ndarray):
     def removeCells(self,top=0,left=0,bottom=0,right=0):
         """
         Input:
-            top, left, bottom, right:    Integer
+            top, left, bottom, right: int
         Output:
-            GeoGrid
+            _GeoGrid
         Purpose:
             Removes the number of given cells from the 
-            respective margin of the grid
+            respective margin of the grid.
         Example:
-            top=1, left=0, bottom=1, right=2
-            fill_value  0
+            removeCells(top=1, left=0, bottom=1, right=2)
 
                         |0|5|8|9| 
                         ---------
@@ -552,10 +720,9 @@ class _GeoArray(np.ndarray):
     def shrinkGrid(self,ymin=None,ymax=None,xmin=None,xmax=None):
         """
         Input:
-            bbox: {"ymin": int/float, "ymax": int/float,
-                "xmin": int/float, "xmax": int/float}
+            ymin, ymax, xmin, xmax : int/float
         Output:
-            GeoGrid
+            _GeoGrid
         Purpose:
             Shrinks the grid in a way that the given bbox is still 
             within the grid domain.        
@@ -580,18 +747,14 @@ class _GeoArray(np.ndarray):
     def addCells(self,top=0,left=0,bottom=0,right=0):
         """
         Input:
-            top:    int 
-            left:   int 
-            bottom: int 
-            right:  int 
+            top, left, bottom, right: int 
         Output:
-            GeoGrid
+            _GeoGrid
         Purpose:
-            Adds the number of given cells to the respective
+            Add the number of given cells to the respective
             margin of the grid.
         Example:
-            top=1, left=0, bottom=1, right=2
-            fill_value  0
+            addCells(top=1, left=0, bottom=1, right=2)
 
                                       |0|0|0|0| 
                                       ---------
@@ -630,14 +793,13 @@ class _GeoArray(np.ndarray):
     def enlargeGrid(self,ymin=None,ymax=None,xmin=None,xmax=None):
         """
         Input:
-            bbox: {"ymin": int/float, "ymax": int/float,
-                "xmin": int/float, "xmax": int/float}
+            ymin, ymax, xmin, xmax : int/float
         Output:
-            GeoGrid
+            _GeoGrid
         Purpose:
-            Enlarges the GeoGrid Instance in a way that the given bbox will 
-            be part of the grid domain. Added rows/cols ar filled with
-            the grid's nodata value
+            Enlarge the gri in a way that the given coordinates will 
+            be part of the grid domain. Added rows/cols are filled with
+            the grid's nodata value.
         """
         bbox = {
             "ymin": ymin if ymin else self.bbox["ymin"],
@@ -658,17 +820,15 @@ class _GeoArray(np.ndarray):
     def snapGrid(self,target):
         """
         Input:
-            GeoGrid
+            target: _GeoGrid
         Output:
             None
         Purpose:
-            Shift the grid origin in a way that it matches the nearest corner
-            of any gridcell in target
+            Shift the grid origin in a way that it matches the nearest cell in target.
         Restrictions:
-            The shift will only alter the grid coordinates.
-            No changes to the data will be done. In case of large
-            shifts the physical integrety of the data might
-            be disturbed!
+            The shift will only alter the grid coordinates. No changes to the
+            data will be done. In case of large shifts the physical integrety 
+            of the data might be disturbed!
         """
 
         diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
@@ -682,7 +842,6 @@ class _GeoArray(np.ndarray):
 
         self.xorigin -= dx
         self.yorigin -= dy
-
 
     nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
 
