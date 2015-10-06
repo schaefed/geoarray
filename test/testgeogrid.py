@@ -203,25 +203,25 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertTrue(np.all(padgrid == self.grid))
         
         
-    def test_enlargeGrid(self):
+    def test_enlarge(self):
         
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
                    "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
-        enlrgrid = self.grid.enlargeGrid(**newbbox)
+        enlrgrid = self.grid.enlarge(**newbbox)
         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
 
-    def test_shrinkGrid(self):
+    def test_shrink(self):
         
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
                    "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
                    "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
-        shrgrid = self.grid.shrinkGrid(**newbbox)        
+        shrgrid = self.grid.shrink(**newbbox)        
         self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
@@ -233,19 +233,19 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(np.sum(rmgrid - self.grid) , 0)
 
         
-    def test_trimGrid(self):
+    def test_trim(self):
         
-        trimgrid = self.grid.trimGrid()
+        trimgrid = self.grid.trim()
         self.assertTrue(np.any(trimgrid[0,...]  != self.grid.nodata_value))
         self.assertTrue(np.any(trimgrid[-1,...] != self.grid.nodata_value))
         self.assertTrue(np.any(trimgrid[...,0]  != self.grid.nodata_value))
         self.assertTrue(np.any(trimgrid[...,-1] != self.grid.nodata_value))
 
-    def test_snapGrid(self):
+    def test_snap(self):
 
         def test(grid,target):
             yorg,xorg = grid.getOrigin()
-            grid.snapGrid(target)            
+            grid.snap(target)            
 
             xdelta = abs(grid.xorigin - xorg)
             ydelta = abs(grid.yorigin - yorg)
