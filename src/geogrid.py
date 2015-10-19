@@ -667,7 +667,7 @@ def _tofile(fname,geogrid):
         raise IOError(errormsg)
 
         
-class GeoArray(np.ndarray):
+class GeoArray(np.ma.MaskedArray):
     """
     Parameters
     ----------
@@ -805,32 +805,51 @@ class GeoArray(np.ndarray):
     (7, 5)
     """
    
-    def __new__(cls, data, yorigin , xorigin, origin, nodata_value,
-                cellsize, proj_params=None):
+    def __new__(cls, data, yorigin, xorigin, origin, nodata_value,
+                cellsize, proj_params=None,mask=None):
+        
+        data = np.asarray(data)
 
-        obj = np.asarray(data).view(cls)
+        obj = super(GeoArray,cls).__new__(cls,data,mask=data==nodata_value,fill_value=nodata_value)
+
         obj.yorigin = yorigin
         obj.xorigin = xorigin
         obj.origin = origin
-        obj._nodata_value = nodata_value
         obj.cellsize = cellsize
         obj.proj_params = proj_params
+
         return obj
 
     def __array_finalize__(self,obj):
         if obj is not None:
-            self.xorigin = getattr(obj,'xorigin',None)
-            self.yorigin = getattr(obj,'yorigin',None)
-            self.origin = getattr(obj,'origin',None)
-            self.cellsize = getattr(obj,'cellsize',None)
+            self.xorigin     = getattr(obj,'xorigin',None)
+            self.yorigin     = getattr(obj,'yorigin',None)
+            self.origin      = getattr(obj,'origin',None)
+            self.cellsize    = getattr(obj,'cellsize',None)
             self.proj_params = getattr(obj,'proj_params',None)
-            self._nodata_value = getattr(obj,'_nodata_value',None)
+            np.ma.MaskedArray.__array_finalize__(self,obj)
             
     def __array_wrap__(self,result):
         if result.shape:
             return array(data=result,**self.header)
         return result[0]
-    
+
+    def __getitem__(self,slc):
+        out = np.ma.MaskedArray.__getitem__(self,slc)
+        return self._update(out)
+
+    def copy(self):
+        out = np.ma.MaskedArray.copy(self)
+        return self._update(out)
+
+    def _update(self,obj):
+        obj.yorigin = self.yorigin
+        obj.xorigin = self.xorigin
+        obj.origin = self.origin
+        obj.cellsize = self.cellsize
+        obj.proj_params = self.proj_params
+        return obj
+
     @property
     def header(self):
         """
@@ -861,7 +880,7 @@ class GeoArray(np.ndarray):
             "yorigin"      : self.yorigin,
             "xorigin"      : self.xorigin,
             "origin"       : self.origin,
-            "nodata_value" : self.nodata_value,            
+            "nodata_value" : self.fill_value,            
             "cellsize"     : self.cellsize,
             "proj_params"  : self.proj_params
         }
