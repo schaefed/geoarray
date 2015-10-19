@@ -69,7 +69,7 @@ _FILEREFS = []
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
@@ -85,7 +85,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    nodata_value : inf/float             # nodata or fill value
+    fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -104,7 +104,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     >>> yorigin      = 63829.3
     >>> xorigin      = 76256.6
     >>> origin       = "ul"
-    >>> nodata_value = -9
+    >>> fill_value = -9
     >>> cellsize     = 55
     >>> data         = np.array([[-9 ,-9, -9, -9, -9, -9],
     ...                          [-9 , 4,  4,  0,  2, -9],
@@ -117,7 +117,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     ...                          [-9 , 2,  1,  0,  1, -9],
     ...                          [-9 ,-9, -9, -9, -9, -9],])
     
-    >>> gg.array(data,yorigin=yorigin,xorigin=xorigin,nodata_value=nodata_value,cellsize=cellsize)
+    >>> gg.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
     GeoArray([[-9, -9, -9, -9, -9, -9],
               [-9,  4,  4,  0,  2, -9],
               [-9,  0,  5,  8,  5, -9],
@@ -131,10 +131,10 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
  
     """
     return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
-                    yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
+                    yorigin,xorigin,origin,fill_value,cellsize,proj_params)
         
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
@@ -150,7 +150,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    nodata_value : inf/float             # nodata or fill value
+    fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
     
@@ -172,7 +172,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [ 0.,  0.,  0.,  0.]])
     """
     return _factory(np.zeros(shape,dtype),yorigin,xorigin,
-                    origin,nodata_value,cellsize,proj_params)
+                    origin,fill_value,cellsize,proj_params)
 
 def zeros_like(a,*args,**kwargs):
     """
@@ -234,7 +234,7 @@ def zeros_like(a,*args,**kwargs):
         
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         nodata_value=-9999, cellsize=1, proj_params=None):
+         fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
@@ -250,7 +250,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    nodata_value : inf/float             # nodata or fill value
+    fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -273,7 +273,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
 
     return _factory(np.ones(shape,dtype),yorigin,xorigin,
-                    origin,nodata_value,cellsize,proj_params)
+                    origin,fill_value,cellsize,proj_params)
 
 def ones_like(a,*args,**kwargs):
     """
@@ -334,8 +334,8 @@ def ones_like(a,*args,**kwargs):
         return array(np.ones_like(a,*args,**kwargs))
 
 
-def full(shape, fill_value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         nodata_value=-9999, cellsize=1, proj_params=None):
+def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
+         fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
@@ -352,7 +352,7 @@ def full(shape, fill_value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    nodata_value : inf/float             # nodata or fill value
+    fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -373,8 +373,8 @@ def full(shape, fill_value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [ 42.,  42.,  42.,  42.],
               [ 42.,  42.,  42.,  42.]])
     """
-    return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
-                    origin,nodata_value,cellsize,proj_params)
+    return _factory(np.full(shape,value,dtype),yorigin,xorigin,
+                    origin,fill_value,cellsize,proj_params)
 
 def full_like(a,fill_value,*args,**kwargs):
     """
@@ -436,7 +436,7 @@ def full_like(a,fill_value,*args,**kwargs):
         return array(np.full_like(a,fill_value,*args,**kwargs))
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          nodata_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
@@ -452,7 +452,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #    "ur" : upper right corner
                                          #    "ll" : lower left corner
                                          #    "lr" : lower right corner
-    nodata_value : inf/float             # nodata or fill value
+    fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
     
@@ -462,7 +462,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Purpose
     -------
-    Return a new GeoArray of given shape and type, filled with nodata_value
+    Return a new GeoArray of given shape and type, filled with fill_value
 
     Examples
     --------
@@ -474,15 +474,15 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [-9999., -9999., -9999., -9999.],
               [-9999., -9999., -9999., -9999.]])
     
-    >>> gg.empty((4,4),nodata_value=32)
+    >>> gg.empty((4,4),fill_value=32)
     GeoArray([[ 32.,  32.,  32.,  32.],
               [ 32.,  32.,  32.,  32.],
               [ 32.,  32.,  32.,  32.],
               [ 32.,  32.,  32.,  32.]])
    """
 
-    return _factory(np.full(shape,nodata_value,dtype),yorigin,xorigin,
-                    origin,nodata_value,cellsize,proj_params)
+    return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
+                    origin,fill_value,cellsize,proj_params)
 
 def empty_like(a,*args,**kwargs):
     """
@@ -521,7 +521,7 @@ def empty_like(a,*args,**kwargs):
               [-9999, -9999],
               [-9999, -9999]])
     
-    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,nodata_value=42)
+    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
     >>> y
     GeoArray([[0, 1],
               [2, 3],
@@ -538,18 +538,18 @@ def empty_like(a,*args,**kwargs):
     """
 
     try:
-        return array(np.full_like(a,a.nodata_value,*args,**kwargs),**a.header)
+        return array(np.full_like(a,a.fill_value,*args,**kwargs),**a.header)
     except AttributeError:
         return array(np.full_like(a,-9999),*args,**kwargs)
 
     # return np.empty_like(a,*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, nodata_value, cellsize, proj_params):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
     origins = ("ul","ur","ll","lr")
     if origin not in origins:
         raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
-    return GeoArray(data,yorigin,xorigin,origin,nodata_value,cellsize,proj_params)
+    return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,fill_value=fill_value)
 
 
 def fromfile(fname):
@@ -613,7 +613,7 @@ def fromfile(fname):
         data = fobj.ReadAsArray()
 
     return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
-                    origin="ul",nodata_value=rasterband.GetNoDataValue(),
+                    origin="ul",fill_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
 
 
@@ -653,7 +653,7 @@ def _tofile(fname,geogrid):
         out.SetProjection(projection)
         for n in xrange(grid.nbands):
             band = out.GetRasterBand(n+1)
-            band.SetNoDataValue(float(grid.nodata_value))
+            band.SetNoDataValue(float(grid.fill_value))
             banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
             band.WriteArray(banddata)
         out.FlushCache()
@@ -679,7 +679,7 @@ class GeoArray(np.ma.MaskedArray):
                                          #     "ur" -> upper right
                                          #     "ll" -> lower left
                                          #     "lr" -> lower right
-    nodata_value : scalar 
+    fill_value : scalar 
     cellsize     : scalar
     
     Optional Parameters
@@ -721,7 +721,7 @@ class GeoArray(np.ma.MaskedArray):
     array : construct a GeoArray.
     zeros : construct a GeoArray, each element of which is zero.
     ones  : construct a GeoArray, each element of which is one.
-    empty : construct a GeoArray, each element of which is nodata_value.
+    empty : construct a GeoArray, each element of which is fill_value.
     full  : construct a GeoArray, each element of which is a given value.
 
     Examples
@@ -738,7 +738,7 @@ class GeoArray(np.ma.MaskedArray):
     ...                  [-9 ,-9, -9, -9, -9],])
     
     >>> grid = gg.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
-    ...                    nodata_value=-9,cellsize=55)
+    ...                    fill_value=-9,cellsize=55)
 
     >>> grid
     GeoArray([[-9, -9, -9, -9, -9],
@@ -805,50 +805,95 @@ class GeoArray(np.ma.MaskedArray):
     (7, 5)
     """
    
-    def __new__(cls, data, yorigin, xorigin, origin, nodata_value,
-                cellsize, proj_params=None,mask=None):
+    def __new__(cls, data, yorigin, xorigin, origin, 
+                cellsize, proj_params=None,*args,**kwargs):
         
-        data = np.asarray(data)
 
-        obj = super(GeoArray,cls).__new__(cls,data,mask=data==nodata_value,fill_value=nodata_value)
-
-        obj.yorigin = yorigin
-        obj.xorigin = xorigin
-        obj.origin = origin
-        obj.cellsize = cellsize
-        obj.proj_params = proj_params
+        obj = super(GeoArray,cls).__new__(cls,data,*args,**kwargs)
+    
+        obj._optinfo['yorigin'] = yorigin
+        obj._optinfo['xorigin'] = xorigin
+        obj._optinfo['origin'] = origin
+        obj._optinfo['cellsize'] = cellsize
+        obj._optinfo['proj_params'] = proj_params
 
         return obj
 
-    def __array_finalize__(self,obj):
-        if obj is not None:
-            self.xorigin     = getattr(obj,'xorigin',None)
-            self.yorigin     = getattr(obj,'yorigin',None)
-            self.origin      = getattr(obj,'origin',None)
-            self.cellsize    = getattr(obj,'cellsize',None)
-            self.proj_params = getattr(obj,'proj_params',None)
-            np.ma.MaskedArray.__array_finalize__(self,obj)
-            
-    def __array_wrap__(self,result):
-        if result.shape:
-            return array(data=result,**self.header)
-        return result[0]
+    # def __array_finalize__(self,obj):
+    #     if obj is not None:
+    #         self.xorigin     = getattr(obj,'xorigin',None)
+    #         self.yorigin     = getattr(obj,'yorigin',None)
+    #         self.origin      = getattr(obj,'origin',None)
+    #         self.cellsize    = getattr(obj,'cellsize',None)
+    #         self.proj_params = getattr(obj,'proj_params',None)
+    #         np.ma.MaskedArray.__array_finalize__(self,obj)
 
-    def __getitem__(self,slc):
-        out = np.ma.MaskedArray.__getitem__(self,slc)
-        return self._update(out)
+    # def __array_wrap__(self, obj, context=None):
+    #     return super(GeoArray,self).__array_wrap__(obj,context)
 
-    def copy(self):
-        out = np.ma.MaskedArray.copy(self)
-        return self._update(out)
+    def _getOrigin(self):
+        return self._optinfo.get("origin")
+    
+    def _setOrigin(self,value):
+        self._optinfo["origin"] = value
 
-    def _update(self,obj):
-        obj.yorigin = self.yorigin
-        obj.xorigin = self.xorigin
-        obj.origin = self.origin
-        obj.cellsize = self.cellsize
-        obj.proj_params = self.proj_params
-        return obj
+    def _getYorigin(self):
+        return self._optinfo.get("yorigin")
+
+    def _setYorigin(self,value):
+        self._optinfo["yorigin"] = value
+    
+    def _getXorigin(self):
+        return self._optinfo.get("xorigin")
+
+    def _setXorigin(self,value):
+        self._optinfo["xorigin"] = value
+
+    def _getCellsize(self):
+        return self._optinfo.get("cellsize")
+
+    def _setCellsize(self,value):
+        self._optinfo["cellsize"] = value
+
+    def _getProjParams(self):
+        return self._optinfo.get("proj_params")
+
+    def _setProjParams(self,value):
+        self._optinfo["proj_params"] = value
+
+    @property
+    def mask(self):
+        if self._mask:
+            return self._mask
+        return self == self.fill_value
+
+    def _getFillValue(self):
+        return self._fill_value
+
+    def _setFillValue(self,value):
+        self[self.mask] = value
+        self._fill_value = value
+
+    # def __array_wrap__(self,result):
+    #     if result.shape:
+    #         return array(data=result,**self.header)
+    #     return result[0]
+
+    # def __getitem__(self,slc):
+    #     out = np.ma.MaskedArray.__getitem__(self,slc)
+    #     return self._update(out)
+
+    # def copy(self):
+    #     out = np.ma.MaskedArray.copy(self)
+    #     return self._update(out)
+
+    # def _update(self,obj):
+    #     obj.yorigin = self.yorigin
+    #     obj.xorigin = self.xorigin
+    #     obj.origin = self.origin
+    #     obj.cellsize = self.cellsize
+    #     obj.proj_params = self.proj_params
+    #     return obj
 
     @property
     def header(self):
@@ -873,14 +918,14 @@ class GeoArray(np.ma.MaskedArray):
         >>> x = gg.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
         >>> x.header
         {'origin': 'ur', 'proj_params': None, 'cellsize': 1,
-         'yorigin': 100, 'xorigin': 55, 'nodata_value': -9999.0}
+         'yorigin': 100, 'xorigin': 55, 'fill_value': -9999.0}
         """
 
         return {
             "yorigin"      : self.yorigin,
             "xorigin"      : self.xorigin,
             "origin"       : self.origin,
-            "nodata_value" : self.fill_value,            
+            "fill_value" : self.fill_value,            
             "cellsize"     : self.cellsize,
             "proj_params"  : self.proj_params
         }
@@ -946,74 +991,7 @@ class GeoArray(np.ma.MaskedArray):
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
             bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
         )
-                
-    def _getNodataValue(self):
-        """
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        int/float
-
-        Purpose
-        -------
-        Return the nodata_value.
-
-        Examples
-        --------
-        >>> import geogrid as gg
-        >>> x = gg.ones((4,4),nodata_value=42)
-        >>> x.nodata_value
-        42.0
-        """
-
-        if type(self._nodata_value) != self.dtype.type:
-            self._nodata_value = self.dtype.type(self._nodata_value)
-        return self._nodata_value
-
-    def _setNodataValue(self,value):
-        """
-        Parameters
-        ----------
-        value : int/float
-
-        Returns
-        -------
-        None
-
-        Purpose
-        -------
-        Set the nodata_value attribute. All nodata_values in the dataset 
-        will be changed accordingly. Stored data will be read from disk, 
-        so calling this property may be a costly operation.
-
-        Examples
-        --------
-        >>> import geogrid as gg
-        >>> x = gg.empty((4,4),nodata_value=42)
-        >>> x
-        GeoArray([[ 42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.]])
-        
-        >>> x.nodata_value = 84
-        >>> x
-        GeoArray([[ 84.,  84.,  84.,  84.],
-                  [ 84.,  84.,  84.,  84.],
-                  [ 84.,  84.,  84.,  84.],
-                  [ 84.,  84.,  84.,  84.]])
-  
-        """
-
-        if type(value) != self.dtype.type:
-            value = self.dtype.type(value)
-        self[self == self.nodata_value] = value
-        self._nodata_value = value
-        
-    
+   
     @property
     def nbands(self):
         """
@@ -1220,7 +1198,7 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Removes rows and columns from the margins of the
-        grid if they contain only nodata value.
+        grid if they contain only fill value.
         
         Examples
         --------
@@ -1233,7 +1211,7 @@ class GeoArray(np.ma.MaskedArray):
         ...                          [-9 , 1,  0,  1, -9],
         ...                          [-9 ,-9, -9, -9, -9],])
     
-        >>> grid = gg.array(data,nodata_value=-9)
+        >>> grid = gg.array(data,fill_value=-9)
         >>> grid
         GeoArray([[-9, -9, -9, -9, -9],
                   [-9,  4,  0,  2, -9],
@@ -1249,7 +1227,7 @@ class GeoArray(np.ma.MaskedArray):
                   [1, 0, 1]])
         """
 
-        y_idx, x_idx = np.where(self != self.nodata_value)
+        y_idx, x_idx = np.where(self != self.fill_value)
         try:
             return self.removeCells(
                 top=min(y_idx),bottom=self.nrows-max(y_idx)-1,
@@ -1305,7 +1283,7 @@ class GeoArray(np.ma.MaskedArray):
             yorigin     = yorigin - top*self.cellsize ,
             xorigin     = xorigin + left*self.cellsize,
             origin      = "ul", 
-            nodata_value  = self.nodata_value,
+            fill_value  = self.fill_value,
             cellsize    = self.cellsize,
             proj_params = self.proj_params,
         )
@@ -1391,7 +1369,7 @@ class GeoArray(np.ma.MaskedArray):
         -------
         >>> import geogrid as gg
 
-        >>> grid = gg.full((4,5),42,nodata_value=-9)
+        >>> grid = gg.full((4,5),42,fill_value=-9)
         >>> grid
         GeoArray([[ 42.,  42.,  42.,  42.,  42.],
                   [ 42.,  42.,  42.,  42.,  42.],
@@ -1423,7 +1401,7 @@ class GeoArray(np.ma.MaskedArray):
             yorigin      = yorigin + top*self.cellsize ,
             xorigin      = xorigin - left*self.cellsize,
             origin       = "ul",
-            nodata_value = self.nodata_value,
+            fill_value = self.fill_value,
             cellsize     = self.cellsize,
             proj_params  = self.proj_params,
         )
@@ -1447,7 +1425,7 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Enlarge the grid in a way that the given coordinates will 
         be part of the grid domain. Added rows/cols are filled with
-        the grid's nodata value.
+        the grid's fill value.
 
         Examples
         --------
@@ -1455,7 +1433,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geogrid as gg
         
         >>> x = np.arange(20).reshape((4,5))
-        >>> grid = gg.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,nodata_value=-9)
+        >>> grid = gg.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,fill_value=-9)
 
         >>> grid.bbox
         {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
@@ -1549,9 +1527,13 @@ class GeoArray(np.ma.MaskedArray):
         self.xorigin -= dx
         self.yorigin -= dy
 
-    nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
-    # _mask = property(fget = getMask, fset = setMask)
-
+    fill_value = property(fget = _getFillValue, fset = _setFillValue)
+    yorigin = property(_getYorigin,_setYorigin)
+    xorigin = property(_getXorigin,_setXorigin)
+    origin = property(_getOrigin,_setOrigin)
+    cellsize = property(_getCellsize,_setCellsize)
+    proj_params = property(_getProjParams,_setProjParams)
+    
 if __name__ == "__main__":
 
     import doctest
