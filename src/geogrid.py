@@ -2,16 +2,36 @@
 # -*- coding: utf-8 -*-
 """
 
+Purpose
+-------
 This module provides a numpy.ndarray subclass to work with arrays in a
-geographically explicit context and a number of factory functions.
+geographically explicit context.
 
-Requirements:
-    - GDAL >= 1.11
-    - numpy
+Requirements
+------------
+GDAL >= 1.11
+numpy >= 1.8
 
+License
+-------
+
+This Python module is free software: you can redistribute it and/or modify                                                                                                                             
+it under the terms of the GNU Lesser General Public License as published by                                                                                                                                
+the Free Software Foundation, either version 3 of the License, or                                                                                                                                          
+(at your option) any later version.                                                                                                                                                                        
+
+The UFZ Python package is distributed in the hope that it will be useful,                                                                                                                                  
+but WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                             
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                                                                                                               
+GNU Lesser General Public License for more details.                                                                                                                                                        
+
+
+Author
+------
+David Schaefer
 """
 
-import re, os
+import re, os, sys
 import gdal, osr
 import numpy as np
 from math import floor, ceil
@@ -544,7 +564,13 @@ def fromfile(fname):
 
     Purpose
     -------
-    Construct an GeoArray from data in a file
+    Create GeoArray from file
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import geogrid as gg
+    
     """
 
     def _openFile(fname):
@@ -568,7 +594,6 @@ def fromfile(fname):
     global _FILEREFS
     
     fobj = _openFile(fname)
-    _FILEREFS.append(fobj)
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
@@ -579,12 +604,18 @@ def fromfile(fname):
 
     dtype      = np.dtype(GDAL2DTYPE[rasterband.DataType])
 
-    data       = fobj.GetVirtualMemArray(
-        gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
-    )
+    if "linux" in sys.platform:
+        data       = fobj.GetVirtualMemArray(
+            gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
+        )
+        _FILEREFS.append(fobj)
+    else:
+        data = fobj.ReadAsArray()
+
     return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
-                     origin="ul",nodata_value=rasterband.GetNoDataValue(),
+                    origin="ul",nodata_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
+
 
 def _tofile(fname,geogrid):
     def _fnameExtension(fname):
@@ -660,18 +691,21 @@ class GeoArray(np.ndarray):
     This numpy.ndarray subclass adds geographic context to data.
     A (hopfully growing) number of operations on the data and the writing
     to different file formats (see the variable _DRIVER_DICT) is supported.
-    The Python GDAL bindings are used as backend, the GDAL virtual memory mapping
-    to read the dataset. When a file is opened only its metadata is read from
-    storage, the actual data is only accessed when needed.
     
+    Details
+    -------
+    The Python GDAL bindings are used as backend. On Linux the GDAL virtual memory 
+    mapping, i.e. data is only read from storage when it is actually accessed
+    For other OS this mechanism is not implemented by GDAL and all data is read
+    during initialization. 
+
     Restrictions
     ------------
-    1. The Gdal virtual memory mapping is only available on Linux!
-    2. A GeoArray instance can be passed to any numpy function expecting a
+    1. A GeoArray instance can be passed to any numpy function expecting a
        numpy.ndarray as argument and, in theory, all these functions should also return
        an object of the same type. In practice however not all functions do so and some
        will still return a numpy.ndarray.
-    3. Adding the geographic information to the data does (at the moment) not imply
+    2. Adding the geographic information to the data does (at the moment) not imply
        any additional logic. If the shapes of two grids allow the succesful execution 
        of a certain operator/function your program will continue. It is within the responsability
        of the user to check whether a given operation makes sense within a geographic context 
@@ -959,7 +993,7 @@ class GeoArray(np.ndarray):
             value = self.dtype.type(value)
         self[self == self.nodata_value] = value
         self._nodata_value = value
-
+        
     
     @property
     def nbands(self):
@@ -1497,6 +1531,7 @@ class GeoArray(np.ndarray):
         self.yorigin -= dy
 
     nodata_value = property(fget = _getNodataValue, fset = _setNodataValue)
+    # _mask = property(fget = getMask, fset = setMask)
 
 if __name__ == "__main__":
 

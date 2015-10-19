@@ -79,7 +79,7 @@ class TestGeoGrid(unittest.TestCase):
             shutil.rmtree(self.write_path)
         except:
             pass
-                
+    
     def test_setFillValue(self):
         rpcvalue = -2222
         checkgrid = gg.fromfile(FNAME)
@@ -109,7 +109,7 @@ class TestGeoGrid(unittest.TestCase):
             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
         )
         idx = np.arange(12,20).reshape(1,-1)
-        self.assertTrue(np.all(self.grid[idx] == self.grid[gg.array(idx)]))
+        self.assertTrue(np.all(self.grid[...,idx] == self.grid[...,gg.array(idx)]))
         for i,slc in enumerate(slices):
             self.assertTrue(np.all(grid[slc] == self.grid[slc]))
         
@@ -303,7 +303,6 @@ class TestGeoGridFuncs(unittest.TestCase):
         for idx,coord in zip(idxs,coords):
             self.assertTupleEqual(grid.coordinateIndex(*coord),idx)
 
- 
             
 if __name__== "__main__":
     unittest.main()
