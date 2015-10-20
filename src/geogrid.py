@@ -549,7 +549,10 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
     origins = ("ul","ur","ll","lr")
     if origin not in origins:
         raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
-    return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,fill_value=fill_value)
+    mask = data==fill_value
+    if not np.any(mask):
+        mask = False
+    return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,mask=mask,fill_value=fill_value)
 
 
 def fromfile(fname):
@@ -807,10 +810,8 @@ class GeoArray(np.ma.MaskedArray):
    
     def __new__(cls, data, yorigin, xorigin, origin, 
                 cellsize, proj_params=None,*args,**kwargs):
-        
 
-        obj = super(GeoArray,cls).__new__(cls,data,*args,**kwargs)
-    
+        obj = np.ma.MaskedArray.__new__(cls,data, *args, **kwargs)
         obj._optinfo['yorigin'] = yorigin
         obj._optinfo['xorigin'] = xorigin
         obj._optinfo['origin'] = origin
@@ -818,82 +819,6 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo['proj_params'] = proj_params
 
         return obj
-
-    # def __array_finalize__(self,obj):
-    #     if obj is not None:
-    #         self.xorigin     = getattr(obj,'xorigin',None)
-    #         self.yorigin     = getattr(obj,'yorigin',None)
-    #         self.origin      = getattr(obj,'origin',None)
-    #         self.cellsize    = getattr(obj,'cellsize',None)
-    #         self.proj_params = getattr(obj,'proj_params',None)
-    #         np.ma.MaskedArray.__array_finalize__(self,obj)
-
-    # def __array_wrap__(self, obj, context=None):
-    #     return super(GeoArray,self).__array_wrap__(obj,context)
-
-    def _getOrigin(self):
-        return self._optinfo.get("origin")
-    
-    def _setOrigin(self,value):
-        self._optinfo["origin"] = value
-
-    def _getYorigin(self):
-        return self._optinfo.get("yorigin")
-
-    def _setYorigin(self,value):
-        self._optinfo["yorigin"] = value
-    
-    def _getXorigin(self):
-        return self._optinfo.get("xorigin")
-
-    def _setXorigin(self,value):
-        self._optinfo["xorigin"] = value
-
-    def _getCellsize(self):
-        return self._optinfo.get("cellsize")
-
-    def _setCellsize(self,value):
-        self._optinfo["cellsize"] = value
-
-    def _getProjParams(self):
-        return self._optinfo.get("proj_params")
-
-    def _setProjParams(self,value):
-        self._optinfo["proj_params"] = value
-
-    @property
-    def mask(self):
-        if self._mask:
-            return self._mask
-        return self == self.fill_value
-
-    def _getFillValue(self):
-        return self._fill_value
-
-    def _setFillValue(self,value):
-        self[self.mask] = value
-        self._fill_value = value
-
-    # def __array_wrap__(self,result):
-    #     if result.shape:
-    #         return array(data=result,**self.header)
-    #     return result[0]
-
-    # def __getitem__(self,slc):
-    #     out = np.ma.MaskedArray.__getitem__(self,slc)
-    #     return self._update(out)
-
-    # def copy(self):
-    #     out = np.ma.MaskedArray.copy(self)
-    #     return self._update(out)
-
-    # def _update(self,obj):
-    #     obj.yorigin = self.yorigin
-    #     obj.xorigin = self.xorigin
-    #     obj.origin = self.origin
-    #     obj.cellsize = self.cellsize
-    #     obj.proj_params = self.proj_params
-    #     return obj
 
     @property
     def header(self):
@@ -1227,7 +1152,7 @@ class GeoArray(np.ma.MaskedArray):
                   [1, 0, 1]])
         """
 
-        y_idx, x_idx = np.where(self != self.fill_value)
+        y_idx, x_idx = np.where(self.data != self.fill_value)
         try:
             return self.removeCells(
                 top=min(y_idx),bottom=self.nrows-max(y_idx)-1,
@@ -1527,13 +1452,15 @@ class GeoArray(np.ma.MaskedArray):
         self.xorigin -= dx
         self.yorigin -= dy
 
-    fill_value = property(fget = _getFillValue, fset = _setFillValue)
-    yorigin = property(_getYorigin,_setYorigin)
-    xorigin = property(_getXorigin,_setXorigin)
-    origin = property(_getOrigin,_setOrigin)
-    cellsize = property(_getCellsize,_setCellsize)
-    proj_params = property(_getProjParams,_setProjParams)
-    
+    def __getattr__(self,name):
+        try:
+            return self._optinfo[name]
+        except KeyError:
+            raise AttributeError(
+                "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
+            )
+
+   
 if __name__ == "__main__":
 
     import doctest

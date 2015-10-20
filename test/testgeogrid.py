@@ -62,7 +62,7 @@ class TestInitialisation(unittest.TestCase):
         fill_value = 42
         grid = gg.empty(shape,fill_value=fill_value)
         self.assertEqual(grid.shape, shape)
-        self.assertTrue(np.all(grid == fill_value))
+        self.assertTrue(np.all(grid.data == fill_value))
 
 class TestGeoGrid(unittest.TestCase):
     
@@ -80,18 +80,14 @@ class TestGeoGrid(unittest.TestCase):
         except:
             pass
 
-   
+        
     def test_setFillValue(self):
         rpcvalue = -2222
         checkgrid = gg.fromfile(FNAME)
-        org_fill_fvalue = checkgrid.fill_value
         checkgrid.fill_value = rpcvalue
         # replacing works ...
         self.assertEqual(checkgrid.fill_value, rpcvalue)
-        # no more old fill_values ...
-        self.assertFalse(np.any(checkgrid == org_fill_fvalue))
-        # fill_value positions match ...
-        nodatapos1 = np.where(checkgrid == checkgrid.fill_value)
+        nodatapos1 = np.where(checkgrid == self.grid.fill_value)
         nodatapos2 = np.where(self.grid == self.grid.fill_value)
         for pos1,pos2 in zip(nodatapos1,nodatapos2):
             self.assertItemsEqual(pos1,pos2)
@@ -111,37 +107,40 @@ class TestGeoGrid(unittest.TestCase):
         )
         idx = np.arange(12,20)
         self.assertTrue(np.all(grid[idx] == self.grid[gg.array(idx)]))
-        for i,slc in enumerate(slices):
-            self.assertTrue(np.all(grid[slc] == self.grid[slc]))
+        for i,s in enumerate(slices):
+            slc1 = grid[s]
+            slc2 = self.grid[s]
+            self.assertTrue(np.all(slc1.data == slc2.data))
+            self.assertTrue(np.all(slc1.mask == slc2.mask))
             
     def test_setitem(self):
         
         slices = (
             np.arange(12,20).reshape(1,-1),
             self.grid < 3,
-            self.grid == 10,
             np.where(self.grid>6),
-            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+            (slice(None,None,None),slice(0,4,3)),
+            (1,1),
+            Ellipsis
         )
         value = 11
         grid = copy.deepcopy(self.grid)
         for slc in slices:
             grid = copy.deepcopy(self.grid)
             grid[slc] = value
-            self.assertTrue(np.ma.all(grid[slc] == value))
+            self.assertTrue(np.all(grid[slc] == value))
 
-#     def test_tofile(self):
+    def test_tofile(self):
         
-#         fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in gg._DRIVER_DICT)
+        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in gg._DRIVER_DICT)
 
-#         for fname in fnames:
-#             self.grid.tofile(fname)
-#             checkgrid = gg.fromfile(fname)
-#             self.assertTrue(np.all(checkgrid == self.grid))
-#             self.assertDictEqual(checkgrid.header, self.grid.header)
+        for fname in fnames:
+            self.grid.tofile(fname)
+            checkgrid = gg.fromfile(fname)
+            self.assertTrue(np.all(checkgrid == self.grid))
+            self.assertDictEqual(checkgrid.header, self.grid.header)
 
     def test_copy(self):
-        
         
         deep_copy = copy.deepcopy(self.grid)        
         self.assertTrue(self.grid.header == deep_copy.header)
@@ -154,24 +153,31 @@ class TestGeoGrid(unittest.TestCase):
         self.assertTrue(np.all(self.grid == shallow_copy))
 
 
-#     def test_numpyFunctions(self):
+    def test_numpyFunctions(self):
         
-#         # Ignore over/underflow warnings in function calls
-#         warnings.filterwarnings("ignore")
-#         # funcs tuple could be extended
-#         funcs = (np.exp,
-#                  np.sin,np.cos,np.tan,np.arcsinh,
-#                  np.around,np.rint,np.fix,
-#                  np.prod,np.sum,
-#                  np.trapz,
-#                  np.i0,np.sinc,
-#                  np.arctanh, np.gradient,                
-#         )
-#         grid = self.grid.astype(np.float64)
-#         compare = grid.copy()
-#         for f in funcs:
-#             np.testing.assert_equal(f(grid),f(compare))
-
+        # Ignore over/underflow warnings in function calls
+        warnings.filterwarnings("ignore")
+        # funcs tuple could be extended
+        funcs = (np.exp,
+                 np.sin,np.cos,np.tan,np.arcsinh,
+                 np.around,np.rint,np.fix,
+                 np.prod,np.sum,
+                 np.trapz,
+                 np.i0,np.sinc,
+                 np.arctanh,
+                 np.gradient,                
+        )
+        grid = self.grid.astype(np.float64)
+        compare = grid.copy()
+        for f in funcs:
+            r1 = f(grid)
+            r2 = f(compare)
+            try:
+                np.testing.assert_equal(r1,r2)
+            except AssertionError:
+                np.testing.assert_equal(r1.data,r2.data)
+                np.testing.assert_equal(r1.mask,r2.mask)
+            
         
     def test_reading(self):
         value          = 42
@@ -190,7 +196,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.grid = gg.fromfile(FNAME)        
 
     def test_addCells(self):
-        
+
         padgrid = self.grid.addCells(1, 1, 1, 1)
         self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
 
