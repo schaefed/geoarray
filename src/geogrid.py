@@ -1460,7 +1460,82 @@ class GeoArray(np.ma.MaskedArray):
                 "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
             )
 
-   
+    # def __getitem__(self,slc):
+
+    #     tmp = []
+    #     for i in xrange(-2,0):
+    #         try:
+    #             try:
+    #                 indices = xrange(slc[i].indices(self.shape[i]))
+    #             except AttributeError: # slc[i] is not a slice object
+    #                 if isinstance(Ellipsis,slc):
+    #                     indices = xrange(self.shape[i])
+    #                 else:
+    #                     indices = (slc,)
+    #         except (TypeError, IndexError): # slc not a tuple/has too few items
+    #             indices = xrange(self.shape[i])
+    #         tmp.append(indices)
+
+    #     origin = list(self.getOrigin("ul"))
+
+    #     for i in xrange(len(tmp)):
+    #         j = 0 if self.origin[i] == "ul"[i] else -1
+    #         origin[i] += tmp[i][j] * self.nrows
+       
+    #     out = super(GeoArray,self).__getitem__(slc)
+
+    #     try:
+    #         out.yorigin, out.xorigin = origin[0], origin[1]
+    #     except AttributeError: # out is scalar
+    #         pass
+
+    #     return out
+
+    def __getitem__(self,slc):
+
+        out = super(GeoArray,self).__getitem__(slc)
+        indices = []
+
+        try:
+            slc[0]
+        except:
+            slc = (slc,)    
+        # if isinstance(slc,(int,long)):
+        #     slc = (slc,)
+
+        for i in xrange(2):
+            # try:
+            try:
+                indices.append( xrange(*slc[i].indices(self.shape[-( i+1 )])) )
+            except IndexError: # slc[i] is Ellipsis
+                indices.append( xrange(self.shape[-( i+1 )]) )
+            except AttributeError:
+                if slc[i] == Ellipsis:
+                    indices.append( xrange(self.shape[i]) )
+                else:
+                    indices.append((slc[i],))
+            # except TypeError:
+            #     indices.append( xrange(self.shape[i]) )
+ 
+             # except AttributeError:
+            #     if slc[i] == Ellipsis:
+            #         indices.append( xrange(self.shape[i]) )
+            #     else:
+            #         indices.append((slc[i],))
+                
+        print slc
+        print indices
+        print "------------------"
+        # try:
+        #     # print indices[0][0 if self.origin[0] == "u" else -1] * self.cellsize
+        #     # print indices[0]
+        #     out.yorigin += indices[0][0 if self.origin[0] == "u" else -1] * self.cellsize
+        #     out.xorigin += indices[1][0 if self.origin[1] == "l" else -1] * self.cellsize
+        # except AttributeError: # out is scalar
+        #     pass
+
+        return out
+       
 if __name__ == "__main__":
 
     import doctest
