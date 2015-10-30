@@ -554,6 +554,29 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
         mask = False
     return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,mask=mask,fill_value=fill_value)
 
+def _getslices(slc,shape):
+    try:
+        slc[0]
+    except TypeError:
+        slc = (slc,)
+    
+    out = []
+    for i in xrange(len(shape)):
+        try:
+            out.append(xrange(*slc[i].indices(shape[i])))
+        except IndexError: # len(slc) < len(shape)
+            out.append(xrange(shape[i]))
+        except AttributeError: # not a slice object
+           try:
+                if slc[i] == Ellipsis:
+                    out.append(xrange(shape[i]))
+                else: # an integer
+                    if slc[i] >= 0:
+                        raise ValueError
+                    out.append((shape[i] + slc[i],))
+           except ValueError: # slc[i] is a sequence
+                out.append((slc[i],))
+    return out
 
 def fromfile(fname):
     """
@@ -1460,82 +1483,27 @@ class GeoArray(np.ma.MaskedArray):
                 "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
             )
 
-    # def __getitem__(self,slc):
-
-    #     tmp = []
-    #     for i in xrange(-2,0):
-    #         try:
-    #             try:
-    #                 indices = xrange(slc[i].indices(self.shape[i]))
-    #             except AttributeError: # slc[i] is not a slice object
-    #                 if isinstance(Ellipsis,slc):
-    #                     indices = xrange(self.shape[i])
-    #                 else:
-    #                     indices = (slc,)
-    #         except (TypeError, IndexError): # slc not a tuple/has too few items
-    #             indices = xrange(self.shape[i])
-    #         tmp.append(indices)
-
-    #     origin = list(self.getOrigin("ul"))
-
-    #     for i in xrange(len(tmp)):
-    #         j = 0 if self.origin[i] == "ul"[i] else -1
-    #         origin[i] += tmp[i][j] * self.nrows
-       
-    #     out = super(GeoArray,self).__getitem__(slc)
-
-    #     try:
-    #         out.yorigin, out.xorigin = origin[0], origin[1]
-    #     except AttributeError: # out is scalar
-    #         pass
-
-    #     return out
-
     def __getitem__(self,slc):
 
         out = super(GeoArray,self).__getitem__(slc)
-        indices = []
-
+        slices = ([(1,)] + _getslices(slc,self.shape))[-2:]
         try:
-            slc[0]
-        except:
-            slc = (slc,)    
-        # if isinstance(slc,(int,long)):
-        #     slc = (slc,)
+            yorigin,xorigin = self.getOrigin("ul")
+            if self.origin[0] == "u":
+                out.yorigin = yorigin - slices[-2][0] * self.cellsize
+            else:
+                out.yorigin = yorigin - ( slices[-2][-1] + 1 ) * self.cellsize 
 
-        for i in xrange(2):
-            # try:
-            try:
-                indices.append( xrange(*slc[i].indices(self.shape[-( i+1 )])) )
-            except IndexError: # slc[i] is Ellipsis
-                indices.append( xrange(self.shape[-( i+1 )]) )
-            except AttributeError:
-                if slc[i] == Ellipsis:
-                    indices.append( xrange(self.shape[i]) )
-                else:
-                    indices.append((slc[i],))
-            # except TypeError:
-            #     indices.append( xrange(self.shape[i]) )
- 
-             # except AttributeError:
-            #     if slc[i] == Ellipsis:
-            #         indices.append( xrange(self.shape[i]) )
-            #     else:
-            #         indices.append((slc[i],))
-                
-        print slc
-        print indices
-        print "------------------"
-        # try:
-        #     # print indices[0][0 if self.origin[0] == "u" else -1] * self.cellsize
-        #     # print indices[0]
-        #     out.yorigin += indices[0][0 if self.origin[0] == "u" else -1] * self.cellsize
-        #     out.xorigin += indices[1][0 if self.origin[1] == "l" else -1] * self.cellsize
-        # except AttributeError: # out is scalar
-        #     pass
+            if self.origin[1] == "l":
+                out.xorigin = xorigin + slices[-1][0] * self.cellsize
+            else:                  
+                out.xorigin = xorigin + ( slices[-1][-1] + 1 ) * self.cellsize
+
+        except AttributeError: # out is scalar
+            pass
 
         return out
-       
+      
 if __name__ == "__main__":
 
     import doctest
