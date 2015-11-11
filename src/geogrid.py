@@ -54,6 +54,20 @@ _DRIVER_DICT = {
 }
 
 # type mapping
+TYPEMAP = {
+    "uint8"      : 1,
+    "int8"       : 1,
+    "uint16"     : 2,
+    "int16"      : 3,
+    "uint32"     : 4,
+    "int32"      : 5,
+    "float32"    : 6,
+    "float64"    : 7,
+    "complex64"  : 10,
+    "complex128" : 11,
+}
+TYPEMAP.update(reversed(x) for x in TYPEMAP.items())
+
 DTYPE2GDAL = {
     "uint8"      : 1,
     "int8"       : 1,
@@ -644,7 +658,7 @@ def fromfile(fname):
     ncols      = fobj.RasterXSize
     nbands     = fobj.RasterCount
 
-    dtype      = np.dtype(GDAL2DTYPE[rasterband.DataType])
+    dtype      = np.dtype(TYPEMAP[rasterband.DataType])
 
     if "linux" in sys.platform:
         # use GDAL's virtaual memmory mappings
@@ -693,7 +707,7 @@ def _tofile(fname,geogrid):
         driver = gdal.GetDriverByName("MEM")
         out = driver.Create(
             "",grid.ncols,grid.nrows,grid.nbands,
-            DTYPE2GDAL[str(grid.dtype)]
+            TYPEMAP[str(grid.dtype)]
         )
         out.SetGeoTransform(
             (grid.xorigin, grid.cellsize,0,
