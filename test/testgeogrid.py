@@ -37,7 +37,7 @@ class TestInitialisation(unittest.TestCase):
         self.assertEqual(grid.xorigin, xorigin)
         self.assertEqual(grid.cellsize, cellsize)
         self.assertTrue(np.all(grid == data))
-
+        
     def test_zeros(self):
         shape = (2,4,6)
         grid = gg.zeros(shape)
@@ -233,7 +233,6 @@ class TestGeoGridFuncs(unittest.TestCase):
         padgrid = self.grid.addCells(-1000, -4.55, 0, -6765.222)
         self.assertTrue(np.all(padgrid == self.grid))
         
-        
     def test_enlarge(self):
         
         bbox = self.grid.bbox
@@ -244,7 +243,7 @@ class TestGeoGridFuncs(unittest.TestCase):
         enlrgrid = self.grid.enlarge(**newbbox)
         self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
-
+        
     def test_shrink(self):
         
         bbox = self.grid.bbox
