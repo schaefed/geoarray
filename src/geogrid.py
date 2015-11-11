@@ -107,7 +107,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    fill_value : inf/float             # fill or fill value
+    fill_value   : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -273,7 +273,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    fill_value : inf/float             # fill or fill value
+    fill_value   : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -375,7 +375,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    fill_value : inf/float             # fill or fill value
+    fill_value   : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -475,7 +475,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #    "ur" : upper right corner
                                          #    "ll" : lower left corner
                                          #    "lr" : lower right corner
-    fill_value : inf/float             # fill or fill value
+    fill_value   : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -868,12 +868,12 @@ class GeoArray(np.ma.MaskedArray):
 
     def __new__(cls, data, yorigin, xorigin, origin,
                 cellsize, proj_params=None,*args,**kwargs):
-
+        
         obj = np.ma.MaskedArray.__new__(cls,data, *args, **kwargs)
-        obj._optinfo['yorigin'] = yorigin
-        obj._optinfo['xorigin'] = xorigin
-        obj._optinfo['origin'] = origin
-        obj._optinfo['cellsize'] = cellsize
+        obj._optinfo['yorigin']     = yorigin
+        obj._optinfo['xorigin']     = xorigin
+        obj._optinfo['origin']      = origin
+        obj._optinfo['cellsize']    = cellsize
         obj._optinfo['proj_params'] = proj_params
 
         return obj
@@ -904,12 +904,12 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         return {
-            "yorigin"      : self.yorigin,
-            "xorigin"      : self.xorigin,
-            "origin"       : self.origin,
-            "fill_value" : self.fill_value,
-            "cellsize"     : self.cellsize,
-            "proj_params"  : self.proj_params
+            "yorigin"     : self.yorigin,
+            "xorigin"     : self.xorigin,
+            "origin"      : self.origin,
+            "fill_value"  : self.fill_value,
+            "cellsize"    : self.cellsize,
+            "proj_params" : self.proj_params
         }
 
     @property
@@ -1159,12 +1159,12 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         yorigin, xorigin = self.getOrigin("ul")
-
         y_idx = int(floor((yorigin - y_coor)/float(self.cellsize)))
-
         x_idx = int(floor((x_coor - xorigin )/float(self.cellsize)))
+        
         if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")
+
         return y_idx,x_idx
 
     def trim(self):
@@ -1212,8 +1212,9 @@ class GeoArray(np.ma.MaskedArray):
         y_idx, x_idx = np.where(self.data != self.fill_value)
         try:
             return self.removeCells(
-                top=min(y_idx),bottom=self.nrows-max(y_idx)-1,
-                left=min(x_idx),right=self.ncols-max(x_idx)-1)
+                top  = min(y_idx), bottom = self.nrows-max(y_idx)-1,
+                left = min(x_idx), right  = self.ncols-max(x_idx)-1
+            )
         except ValueError:
             return self
 
@@ -1359,14 +1360,14 @@ class GeoArray(np.ma.MaskedArray):
         yorigin,xorigin = self.getOrigin("ul")
 
         out = empty(
-            shape        = shape,
-            dtype        = self.dtype,
-            yorigin      = yorigin + top*self.cellsize ,
-            xorigin      = xorigin - left*self.cellsize,
-            origin       = "ul",
-            fill_value = self.fill_value,
-            cellsize     = self.cellsize,
-            proj_params  = self.proj_params,
+            shape       = shape,
+            dtype       = self.dtype,
+            yorigin     = yorigin + top*self.cellsize ,
+            xorigin     = xorigin - left*self.cellsize,
+            origin      = "ul",
+            fill_value  = self.fill_value,
+            cellsize    = self.cellsize,
+            proj_params = self.proj_params,
         )
 
         # the Ellipsis ensures that the function works
