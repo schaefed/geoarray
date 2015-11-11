@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
 
+"""
 Purpose
 -------
-This module provides a numpy.ndarray subclass to work with arrays in a
-geographically explicit context.
+This module provides a numpy.ma.MaskedArray subclass and a number of wrapper 
+functions to easen the work with array-like data in geographically explicit 
+context. The Python GDAL bindings are used for I/O and offer the possibility 
+for a future extension of the map projection handling.
 
 Requirements
 ------------
@@ -15,20 +17,20 @@ numpy >= 1.8
 License
 -------
 
-This Python module is free software: you can redistribute it and/or modify                                                                                                                             
-it under the terms of the GNU Lesser General Public License as published by                                                                                                                                
-the Free Software Foundation, either version 3 of the License, or                                                                                                                                          
-(at your option) any later version.                                                                                                                                                                        
+This software is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-The UFZ Python package is distributed in the hope that it will be useful,                                                                                                                                  
-but WITHOUT ANY WARRANTY; without even the implied warranty of                                                                                                                                             
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the                                                                                                                                               
-GNU Lesser General Public License for more details.                                                                                                                                                        
-
+The source code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Lesser General Public License for more details.
 
 Author
 ------
-David Schaefer
+David Schaefer 2015
+
 """
 
 import re, os, sys
@@ -36,10 +38,14 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 
-MAX_PRECISION  = 10
-ORIGINS = ("ul","ur","ll","lr")
+# Possible positions of the grid origin
+ORIGINS = ("ul",    #     "ul" -> upper left
+           "ur",    #     "ur" -> upper right
+           "ll",    #     "ll" -> lower left
+           "lr")    #     "lr" -> lower right
 
-# could be extended, for available options see:
+
+# should be extended, for available options see:
 # http://www.gdal.org/formats_list.html
 _DRIVER_DICT = {
     ".tif" : "GTiff",
@@ -61,6 +67,7 @@ DTYPE2GDAL = {
     "complex128" : 11,
 }
 
+# Invert the type mapping
 GDAL2DTYPE = {v:k for k,v in DTYPE2GDAL.items()}
 
 # The open gdal file objects need to outlive their GeoArray
@@ -97,7 +104,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     Purpose
     -------
     Create a GeoArray from data.
-    
+
     Examples
     --------
     >>> import geogrid as gg
@@ -117,9 +124,9 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     ...                          [-9 , 4,  6,  2,  4, -9],
     ...                          [-9 , 2,  1,  0,  1, -9],
     ...                          [-9 ,-9, -9, -9, -9, -9],])
-    
+
     >>> grid = gg.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
-    >>> print grid
+    >>> print(grid)
     GeoArray([[-- -- -- -- -- --]
               [-- 4 4 0 2 --]
               [-- 0 5 8 5 --]
@@ -130,17 +137,17 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
               [-- 4 6 2 4 --]
               [-- 2 1 0 1 --]
               [-- -- -- -- -- --]])
- 
+
     """
     return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
                     yorigin,xorigin,origin,fill_value,cellsize,proj_params)
-        
+
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
-    shape        : tuple          # shape of the returned grid 
+    shape        : tuple          # shape of the returned grid
 
     Optional Parameters
     -------------------
@@ -155,7 +162,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
-    
+
     Returns
     -------
     GeoArray
@@ -163,11 +170,11 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Purpose
     -------
     Return a new GeoArray of given shape and type, filled with zeros.
-    
+
     Examples
     --------
     >>> import geogrid as gg
-    >>> print gg.zeros((4,4))
+    >>> print(gg.zeros((4,4)))
     GeoArray([[0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]
@@ -180,7 +187,7 @@ def zeros_like(a,*args,**kwargs):
     """
     Parameters
     ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes 
+    a           : np.ndarray         # the array to derive the shape and dtype attributes
 
     Optional Parameters
     -------------------
@@ -196,7 +203,7 @@ def zeros_like(a,*args,**kwargs):
     Purpose
     -------
     Return a GeoArray of zeros with the same shape and type as a given array.
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -208,19 +215,19 @@ def zeros_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print gg.zeros_like(x)
+    >>> print(gg.zeros_like(x))
     GeoArray([[0 0]
               [0 0]
               [0 0]])
-   
+
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> print y
+    >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
     >>> z = gg.zeros_like(y)
-    >>> print z
+    >>> print(z)
     GeoArray([[0 0]
               [0 0]
               [0 0]])
@@ -233,14 +240,14 @@ def zeros_like(a,*args,**kwargs):
         return array(np.zeros_like(a,*args,**kwargs),**a.header)
     except AttributeError:
         return array(np.zeros_like(a,*args,**kwargs))
-        
+
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
          fill_value=-9999, cellsize=1, proj_params=None):
     """
     Parameters
     ----------
-    shape        : tuple          # shape of the returned grid 
+    shape        : tuple          # shape of the returned grid
 
     Optional Parameters
     -------------------
@@ -267,7 +274,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Examples
     --------
     >>> import geogrid as gg
-    >>> print gg.ones((4,4))
+    >>> print(gg.ones((4,4)))
     GeoArray([[1.0 1.0 1.0 1.0]
               [1.0 1.0 1.0 1.0]
               [1.0 1.0 1.0 1.0]
@@ -281,7 +288,7 @@ def ones_like(a,*args,**kwargs):
     """
     Parameters
     ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes 
+    a           : np.ndarray         # the array to derive the shape and dtype attributes
 
     Optional Parameters
     -------------------
@@ -293,7 +300,7 @@ def ones_like(a,*args,**kwargs):
     Returns
     -------
     GeoArray
-    
+
     Purpose
     -------
     Return a GeoArray of ones with the same shape and type as a given array.
@@ -309,19 +316,19 @@ def ones_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print gg.ones_like(x)
+    >>> print(gg.ones_like(x))
     GeoArray([[1 1]
               [1 1]
               [1 1]])
-   
+
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> print y
+    >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
     >>> z = gg.ones_like(y)
-    >>> print z
+    >>> print(z)
     GeoArray([[1 1]
               [1 1]
               [1 1]])
@@ -341,7 +348,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
     Parameters
     ----------
-    shape        : tuple          # shape of the returned grid  
+    shape        : tuple          # shape of the returned grid
     fill_value   : scalar         # fille value
 
     Optional Parameters
@@ -369,7 +376,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Examples
     --------
     >>> import geogrid as gg
-    >>> print gg.full((4,4), 42)
+    >>> print(gg.full((4,4), 42))
     GeoArray([[42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]
@@ -382,7 +389,7 @@ def full_like(a,fill_value,*args,**kwargs):
     """
     Parameters
     ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes 
+    a           : np.ndarray         # the array to derive the shape and dtype attributes
     fill_value  : scalar             # fill value
 
     Optional Parameters
@@ -411,19 +418,19 @@ def full_like(a,fill_value,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print gg.full_like(x,42)
+    >>> print(gg.full_like(x,42))
     GeoArray([[42 42]
               [42 42]
               [42 42]])
-    
-    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> print y
+
+    >>> y = (gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42))
+    >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
     >>> z = gg.full_like(y,42)
-    >>> print z
+    >>> print(z)
     GeoArray([[42 42]
               [42 42]
               [42 42]])
@@ -442,8 +449,8 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
     Parameters
     ----------
-    shape        : tuple          # shape of the returned grid  
- 
+    shape        : tuple          # shape of the returned grid
+
     Optional Parameters
     ------------------
     dtype        : str/np.dtype          # type of the returned grid
@@ -457,7 +464,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     fill_value : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
-    
+
     Returns
     -------
     GeoArray
@@ -470,13 +477,13 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     --------
     >>> import geogrid as gg
 
-    >>> print gg.empty((4,4))
+    >>> print(gg.empty((4,4)))
     GeoArray([[-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]])
-   
-    >>> print gg.empty((4,4),fill_value=32)
+
+    >>> print(gg.empty((4,4),fill_value=32))
     GeoArray([[-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]
@@ -490,7 +497,7 @@ def empty_like(a,*args,**kwargs):
     """
     Parameters
     ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes 
+    a           : np.ndarray         # the array to derive the shape and dtype attributes
 
     Optional Parameters
     -------------------
@@ -518,19 +525,19 @@ def empty_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print gg.empty_like(x)
+    >>> print(gg.empty_like(x))
     GeoArray([[-- --]
               [-- --]
               [-- --]])
-   
+
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
-    >>> print y
+    >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
     >>> z = gg.empty_like(y)
-    >>> print z
+    >>> print(z)
     GeoArray([[-- --]
               [-- --]
               [-- --]])
@@ -573,7 +580,7 @@ def _getslices(slc,shape):
         slc[0]
     except TypeError:
         slc = (slc,)
-    
+
     out = []
     for i in xrange(len(shape)):
         try:
@@ -612,13 +619,13 @@ def fromfile(fname):
         fobj = gdal.OpenShared(fname)
         if fobj:
             return fobj
-        raise IOError("Could not open file")    
+        raise IOError("Could not open file")
 
-    def _cellsize(geotrans):       
+    def _cellsize(geotrans):
         if abs(geotrans[1]) == abs(geotrans[5]):
             return abs(geotrans[1])
         raise NotImplementedError(
-            "Diverging cellsizes in x and y direction are not allowed yet!")    
+            "Diverging cellsizes in x and y direction are not allowed yet!")
 
     def _projParams(fobj):
         srs = osr.SpatialReference()
@@ -627,13 +634,13 @@ def fromfile(fname):
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
     global _FILEREFS
-    
+
     fobj = _openFile(fname)
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
 
-    nrows      = fobj.RasterYSize        
+    nrows      = fobj.RasterYSize
     ncols      = fobj.RasterXSize
     nbands     = fobj.RasterCount
 
@@ -658,10 +665,10 @@ def _tofile(fname,geogrid):
         return os.path.splitext(fname)[-1].lower()
 
     def _projection(grid):
-        params = None 
+        params = None
         if grid.proj_params:
             params =  "+{:}".format(" +".join(
-                ["=".join(pp) for pp in grid.proj_params.items()])                                    
+                ["=".join(pp) for pp in grid.proj_params.items()])
                 )
         srs = osr.SpatialReference()
         srs.ImportFromProj4(params)
@@ -676,9 +683,9 @@ def _tofile(fname,geogrid):
             metadata = driver.GetMetadata_Dict()
             if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
                 return driver
-            raise IOError("Datatype canot be written")            
+            raise IOError("Datatype canot be written")
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
-    
+
     def _writeGdalMemory(grid,projection):
         """
         Create GDAL memory dataset
@@ -700,7 +707,7 @@ def _tofile(fname,geogrid):
             band.WriteArray(banddata)
         out.FlushCache()
         return out
-            
+
     memset = _writeGdalMemory(geogrid, _projection(geogrid))
     outdriver = _getDriver(_fnameExtension(fname))
     out = outdriver.CreateCopy(fname,memset,0)
@@ -708,12 +715,12 @@ def _tofile(fname,geogrid):
     if errormsg or not out:
         raise IOError(errormsg)
 
-        
+
 class GeoArray(np.ma.MaskedArray):
     """
     Parameters
     ----------
-    data         : np.ndarray/list/tuple     
+    data         : np.ndarray/list/tuple
     yorigin      : scalar                # y-coordinate of origin
     xorigin      : scalar                # x-coordinate of origin
     origin       : {"ul","ur","ll","lr"} # position of the grid origin
@@ -721,25 +728,25 @@ class GeoArray(np.ma.MaskedArray):
                                          #     "ur" -> upper right
                                          #     "ll" -> lower left
                                          #     "lr" -> lower right
-    fill_value : scalar 
+    fill_value : scalar
     cellsize     : scalar
-    
+
     Optional Parameters
     -------------------
     proj_params  : dict/None             # Proj4 projection parameters
-        
+
     Purpose
     -------
     This numpy.ndarray subclass adds geographic context to data.
     A (hopfully growing) number of operations on the data and the writing
     to different file formats (see the variable _DRIVER_DICT) is supported.
-    
+
     Details
     -------
-    The Python GDAL bindings are used as backend. On Linux the GDAL virtual memory 
-    mapping, i.e. data is only read from storage when it is actually accessed
-    For other OS this mechanism is not implemented by GDAL and all data is read
-    during initialization. 
+    The Python GDAL bindings serve as backend. On Linux the GDAL virtual memory
+    mapping is available, i.e. data is only read from storage when it is actually accessed.
+    For other OS this mechanism is not implemented by GDAL and all data is read during
+    initialization.
 
     Restrictions
     ------------
@@ -748,13 +755,13 @@ class GeoArray(np.ma.MaskedArray):
        an object of the same type. In practice however not all functions do so and some
        will still return a numpy.ndarray.
     2. Adding the geographic information to the data does (at the moment) not imply
-       any additional logic. If the shapes of two grids allow the succesful execution 
+       any additional logic. If the shapes of two grids allow the succesful execution
        of a certain operator/function your program will continue. It is within the responsability
-       of the user to check whether a given operation makes sense within a geographic context 
+       of the user to check whether a given operation makes sense within a geographic context
        (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
        Overriding the __array_prepare__ method to implement the necessary checks would solve that
-       issue for all operators and most functions. But there are a few edge cases, where numpy 
-       functions are not routed through the __array_prepare__/__array_wrap__ mechanism.    
+       issue for all operators and most functions. But there are a few edge cases, where numpy
+       functions are not routed through the __array_prepare__/__array_wrap__ mechanism.
 
     See also
     --------
@@ -768,7 +775,7 @@ class GeoArray(np.ma.MaskedArray):
     --------
     >>> import numpy as np
     >>> import geogrid as gg
-    
+
     >>> data = np.array([[-9 ,-9, -9, -9, -9],
     ...                  [-9 , 0,  5,  8, -9],
     ...                  [-9 , 0,  0,  1, -9],
@@ -776,11 +783,11 @@ class GeoArray(np.ma.MaskedArray):
     ...                  [-9 , 0,  1,  0, -9],
     ...                  [-9 , 0,  3,  3, -9],
     ...                  [-9 ,-9, -9, -9, -9],])
-    
+
     >>> grid = gg.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
     ...                    fill_value=-9,cellsize=55)
 
-    >>> print grid
+    >>> print(grid)
     GeoArray([[-9 -9 -9 -9 -9]
               [-9  0  5  8 -9]
               [-9  0  0  1 -9]
@@ -788,9 +795,9 @@ class GeoArray(np.ma.MaskedArray):
               [-9  0  1  0 -9]
               [-9  0  3  3 -9]
               [-9 -9 -9 -9 -9]])
- 
+
     # all numpy operators are supported
-    >>> print grid + 5    
+    >>> print(grid + 5)
     GeoArray([[-4 -4 -4 -4 -4]
               [-4  5 10 13 -4]
               [-4  5  5  6 -4]
@@ -800,7 +807,7 @@ class GeoArray(np.ma.MaskedArray):
               [-4 -4 -4 -4 -4]])
 
     # all numpy methods are supported
-    >>> print np.exp(grid).astype(np.int64)
+    >>> print(np.exp(grid).astype(np.int64))
     GeoArray([[0 0 0 0 0]
               [0 1 148 2980 0]
               [0 1 1 2 0]
@@ -811,17 +818,17 @@ class GeoArray(np.ma.MaskedArray):
 
     >>> np.sum(grid)
     -151
-    
+
     # all np.ndarray methods are supported
     >>> grid.max()
     8
-    
+
     >>> grid.argsort()
     array([ 0, 32, 31, 30, 29, 25, 24, 20, 19, 33, 15, 14, 34, 10,  1,  9,  2,
             3,  4,  5, 23, 11, 21, 26, 12,  6, 13, 22, 16, 27, 28, 18, 17,  7,
             8])
 
-    >>> print grid.clip(0,3)
+    >>> print(grid.clip(0,3))
     GeoArray([[0 0 0 0 0]
               [0 0 3 3 0]
               [0 0 0 1 0]
@@ -831,7 +838,7 @@ class GeoArray(np.ma.MaskedArray):
               [0 0 0 0 0]])
 
     # all np.ndarray attributes are supported
-    >>> print grid.T
+    >>> print(grid.T)
     GeoArray([[-9 -9 -9 -9 -9 -9 -9]
               [-9  0  0  2  0  0 -9]
               [-9  5  0  3  1  3 -9]
@@ -844,8 +851,8 @@ class GeoArray(np.ma.MaskedArray):
     >>> grid.shape
     (7, 5)
     """
-   
-    def __new__(cls, data, yorigin, xorigin, origin, 
+
+    def __new__(cls, data, yorigin, xorigin, origin,
                 cellsize, proj_params=None,*args,**kwargs):
 
         obj = np.ma.MaskedArray.__new__(cls,data, *args, **kwargs)
@@ -873,7 +880,7 @@ class GeoArray(np.ma.MaskedArray):
         Return the basic definition of the grid. Together
         with a numpy.ndarray this information
         can be passed to any of the factory functions.
-        
+
         Examples
         --------
         >>> import geogrid as gg
@@ -886,11 +893,11 @@ class GeoArray(np.ma.MaskedArray):
             "yorigin"      : self.yorigin,
             "xorigin"      : self.xorigin,
             "origin"       : self.origin,
-            "fill_value" : self.fill_value,            
+            "fill_value" : self.fill_value,
             "cellsize"     : self.cellsize,
             "proj_params"  : self.proj_params
         }
-        
+
     @property
     def bbox(self):
         """
@@ -916,7 +923,7 @@ class GeoArray(np.ma.MaskedArray):
 
         yopp = self.nrows * self.cellsize
         xopp = self.ncols * self.cellsize
-        return { 
+        return {
             "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin - yopp,
             "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin + yopp,
             "xmin": self.xorigin if self.origin[1] == "l" else self.xorigin - xopp,
@@ -941,7 +948,7 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Return the grid's corner coordinates. Defaults to the origin
-        corner. Any other corner may be specifed with the 'origin' argument, 
+        corner. Any other corner may be specifed with the 'origin' argument,
         which should be one of: 'ul','ur','ll','lr'.
         """
 
@@ -952,7 +959,7 @@ class GeoArray(np.ma.MaskedArray):
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
             bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
         )
-   
+
     @property
     def nbands(self):
         """
@@ -973,14 +980,14 @@ class GeoArray(np.ma.MaskedArray):
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(40).reshape((2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.nbands
         2
-        
+
         >>> x = np.arange(120).reshape((3,2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
@@ -1004,7 +1011,7 @@ class GeoArray(np.ma.MaskedArray):
         Returns
         -------
         int
-        
+
         Purpose
         -------
         Return the number of rows in the dataset, i.e. the second last element
@@ -1014,14 +1021,14 @@ class GeoArray(np.ma.MaskedArray):
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(40).reshape((2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.nrows
         4
-        
+
         >>> x = np.arange(120).reshape((3,2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
@@ -1050,19 +1057,19 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Return the number of columns in the dataset, i.e. the last element
         in the shape tuple.
-        
+
         Examples
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(40).reshape((2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.ncols
         5
-        
+
         >>> x = np.arange(120).reshape((3,2,4,5))
         >>> grid = gg.array(x)
         >>> grid.shape
@@ -1075,7 +1082,7 @@ class GeoArray(np.ma.MaskedArray):
             return self.shape[-1]
         except IndexError:
             return 0
-    
+
     def tofile(self,fname):
         """
         Parameters
@@ -1092,7 +1099,7 @@ class GeoArray(np.ma.MaskedArray):
         the file name extension. See _DRIVER_DICT for implemented formats.
         """
         _tofile(fname, self)
-        
+
     def indexCoordinates(self,y_idx,x_idx):
         """
         Parameters
@@ -1112,12 +1119,12 @@ class GeoArray(np.ma.MaskedArray):
             "lr": lower-right corner
             "ul": upper-left corner
             "ur": upper-right corner
-        """        
+        """
 
         if (y_idx < 0 or x_idx < 0) or (y_idx >= self.nrows or x_idx >= self.ncols):
             raise ValueError("Index out of bounds !")
         yorigin, xorigin = self.getOrigin("ul")
-        y_coor =  yorigin - y_idx * self.cellsize        
+        y_coor =  yorigin - y_idx * self.cellsize
         x_coor =  xorigin + x_idx * self.cellsize
         return y_coor, x_coor
 
@@ -1133,13 +1140,13 @@ class GeoArray(np.ma.MaskedArray):
 
         Purpose
         -------
-        Find the grid cell into which the given coordinates 
+        Find the grid cell into which the given coordinates
         fall and return its row/column index values.
         """
 
         yorigin, xorigin = self.getOrigin("ul")
 
-        y_idx = int(floor((yorigin - y_coor)/float(self.cellsize))) 
+        y_idx = int(floor((yorigin - y_coor)/float(self.cellsize)))
 
         x_idx = int(floor((x_coor - xorigin )/float(self.cellsize)))
         if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
@@ -1160,7 +1167,7 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Removes rows and columns from the margins of the
         grid if they contain only fill value.
-        
+
         Examples
         --------
         >>> import numpy as np
@@ -1171,9 +1178,9 @@ class GeoArray(np.ma.MaskedArray):
         ...                  [-9 , 1,  0,  6, -9],
         ...                  [-9 , 1,  0,  1, -9],
         ...                  [-9 ,-9, -9, -9, -9],])
-    
+
         >>> grid = gg.array(data,fill_value=-9)
-        >>> print grid
+        >>> print(grid)
         GeoArray([[-- -- -- -- --]
                   [-- 4 0 2 --]
                   [-- 3 3 3 --]
@@ -1181,7 +1188,7 @@ class GeoArray(np.ma.MaskedArray):
                   [-- 1 0 1 --]
                   [-- -- -- -- --]])
 
-        >>> print grid.trim()
+        >>> print(grid.trim())
         GeoArray([[4 0 2]
                   [3 3 3]
                   [1 0 6]
@@ -1214,15 +1221,15 @@ class GeoArray(np.ma.MaskedArray):
         -------
         >>> import geogrid as gg
         >>> x = gg.array(np.arange(36).reshape(6,6))
-        >>> print x
+        >>> print(x)
         GeoArray([[0 1 2 3 4 5]
                   [6 7 8 9 10 11]
                   [12 13 14 15 16 17]
                   [18 19 20 21 22 23]
                   [24 25 26 27 28 29]
                   [30 31 32 33 34 35]])
-        
-        >>> print x.removeCells(top=1,left=2,bottom=2,right=1)
+
+        >>> print(x.removeCells(top=1,left=2,bottom=2,right=1))
         GeoArray([[8 9 10]
                   [14 15 16]
                   [20 21 22]])
@@ -1247,13 +1254,13 @@ class GeoArray(np.ma.MaskedArray):
 
         Purpose
         -------
-        Shrinks the grid in a way that the given bbox is still within the grid domain.        
-        
+        Shrinks the grid in a way that the given bbox is still within the grid domain.
+
         Examples
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(20).reshape((4,5))
         >>> grid = gg.array(x,origin="ll",cellsize=20)
 
@@ -1261,7 +1268,7 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 0, 'ymin': 0, 'ymax': 80, 'xmax': 100}
         >>> grid.shape
         (4, 5)
-        >>> print grid
+        >>> print(grid)
         GeoArray([[0 1 2 3 4]
                   [5 6 7 8 9]
                   [10 11 12 13 14]
@@ -1272,7 +1279,7 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 20, 'ymin': 0, 'ymax': 60, 'xmax': 100}
         >>> shrinked.shape
         (3, 4)
-        >>> print shrinked
+        >>> print(shrinked)
         GeoArray([[6 7 8 9]
                   [11 12 13 14]
                   [16 17 18 19]])
@@ -1286,22 +1293,18 @@ class GeoArray(np.ma.MaskedArray):
             }
 
         cellsize = float(self.cellsize)
-        top    = floor(round((self.bbox["ymax"] - bbox["ymax"])
-                             /cellsize, MAX_PRECISION))
-        left   = floor(round((bbox["xmin"] - self.bbox["xmin"])
-                            /cellsize, MAX_PRECISION))
-        bottom = floor(round((bbox["ymin"] - self.bbox["ymin"])
-                            /cellsize, MAX_PRECISION))
-        right  = floor(round((self.bbox["xmax"] - bbox["xmax"])
-                            /cellsize, MAX_PRECISION))
+        top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize)
+        left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize)
+        bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize)
+        right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize)
 
-        return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))        
+        return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
     def addCells(self,top=0,left=0,bottom=0,right=0):
         """
         Parameters
         ----------
-        top, left, bottom, right : int 
+        top, left, bottom, right : int
 
         Returns
         -------
@@ -1310,19 +1313,19 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Add the number of given cells to the respective margin of the grid.
-        
+
         Example
         -------
         >>> import geogrid as gg
 
         >>> grid = gg.full((4,5),42,fill_value=-9)
-        >>> print grid
+        >>> print(grid)
         GeoArray([[42.0 42.0 42.0 42.0 42.0]
                   [42.0 42.0 42.0 42.0 42.0]
                   [42.0 42.0 42.0 42.0 42.0]
                   [42.0 42.0 42.0 42.0 42.0]])
 
-        >>> print grid.addCells(top=1,left=1,bottom=2)
+        >>> print(grid.addCells(top=1,left=1,bottom=2))
         GeoArray([[-- -- -- -- -- --]
                   [-- 42.0 42.0 42.0 42.0 42.0]
                   [-- 42.0 42.0 42.0 42.0 42.0]
@@ -1343,7 +1346,7 @@ class GeoArray(np.ma.MaskedArray):
 
         out = empty(
             shape        = shape,
-            dtype        = self.dtype,        
+            dtype        = self.dtype,
             yorigin      = yorigin + top*self.cellsize ,
             xorigin      = xorigin - left*self.cellsize,
             origin       = "ul",
@@ -1352,7 +1355,7 @@ class GeoArray(np.ma.MaskedArray):
             proj_params  = self.proj_params,
         )
 
-        # the Ellipsis ensures that the function works 
+        # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
         out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
         return out
@@ -1369,7 +1372,7 @@ class GeoArray(np.ma.MaskedArray):
 
         Purpose
         -------
-        Enlarge the grid in a way that the given coordinates will 
+        Enlarge the grid in a way that the given coordinates will
         be part of the grid domain. Added rows/cols are filled with
         the grid's fill value.
 
@@ -1377,7 +1380,7 @@ class GeoArray(np.ma.MaskedArray):
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(20).reshape((4,5))
         >>> grid = gg.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,fill_value=-9)
 
@@ -1385,7 +1388,7 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
         >>> grid.shape
         (4, 5)
-        >>> print grid
+        >>> print(grid)
         GeoArray([[0 1 2 3 4]
                   [5 6 7 8 9]
                   [10 11 12 13 14]
@@ -1394,8 +1397,8 @@ class GeoArray(np.ma.MaskedArray):
         >>> enlarged = grid.enlarge(xmin=130,xmax=200,ymin=66)
         >>> enlarged.bbox
         {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
-        
-        >>> print enlarged
+
+        >>> print(enlarged)
         GeoArray([[-- -- -- -- 0 1 2 3 4]
                   [-- -- -- -- 5 6 7 8 9]
                   [-- -- -- -- 10 11 12 13 14]
@@ -1411,16 +1414,12 @@ class GeoArray(np.ma.MaskedArray):
             "xmax": xmax if xmax else self.bbox["xmax"],
             }
         cellsize = float(self.cellsize)
-        top    = ceil(round((bbox["ymax"] - self.bbox["ymax"])
-                            /cellsize,MAX_PRECISION))
-        left   = ceil(round((self.bbox["xmin"] - bbox["xmin"])
-                            /cellsize,MAX_PRECISION))
-        bottom = ceil(round((self.bbox["ymin"] - bbox["ymin"])
-                            /cellsize,MAX_PRECISION))
-        right  = ceil(round((bbox["xmax"] - self.bbox["xmax"])
-                            /cellsize,MAX_PRECISION))
+        top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize)
+        left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize)
+        bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize)
+        right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize)
 
-        return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))        
+        return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
     def snap(self,target):
         """
@@ -1431,7 +1430,7 @@ class GeoArray(np.ma.MaskedArray):
         Returns
         -------
         None
-        
+
         Purpose
         -------
         Shift the grid origin that it matches the nearest cell origin in target.
@@ -1439,19 +1438,19 @@ class GeoArray(np.ma.MaskedArray):
         Restrictions
         ------------
         The shift will only alter the grid coordinates. No changes to the
-        data will be done. In case of large shifts the physical integrety 
+        data will be done. In case of large shifts the physical integrety
         of the data might be disturbed!
-        
+
         Examples
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        
+
         >>> x = np.arange(20).reshape((4,5))
         >>> grid1 = gg.array(x,origin="ll",cellsize=25)
         >>> grid1.bbox
         {'xmin': 0, 'ymin': 0, 'ymax': 100, 'xmax': 125}
-        
+
         >>> grid2 = gg.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
         >>> grid2.bbox
         {'xmin': 1.24, 'ymin': 3, 'ymax': 77.68, 'xmax': 94.59}
@@ -1473,7 +1472,6 @@ class GeoArray(np.ma.MaskedArray):
         self.xorigin -= dx
         self.yorigin -= dy
 
-
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
@@ -1484,7 +1482,7 @@ class GeoArray(np.ma.MaskedArray):
         return "{:}({:})".format(
             name, os.linesep.join(["{:}{:}".format(pad,l) for l in out.split(os.linesep)]).strip()
             )
-       
+
     def __getattr__(self,name):
         try:
             return self._optinfo[name]
@@ -1502,20 +1500,19 @@ class GeoArray(np.ma.MaskedArray):
             if self.origin[0] == "u":
                 out.yorigin = yorigin - slices[-2][0] * self.cellsize
             else:
-                out.yorigin = yorigin - ( slices[-2][-1] + 1 ) * self.cellsize 
+                out.yorigin = yorigin - ( slices[-2][-1] + 1 ) * self.cellsize
 
             if self.origin[1] == "l":
                 out.xorigin = xorigin + slices[-1][0] * self.cellsize
-            else:                  
+            else:
                 out.xorigin = xorigin + ( slices[-1][-1] + 1 ) * self.cellsize
 
         except AttributeError: # out is scalar
             pass
 
         return out
-      
+
 if __name__ == "__main__":
 
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
-    
