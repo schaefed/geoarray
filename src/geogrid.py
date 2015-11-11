@@ -37,6 +37,7 @@ import numpy as np
 from math import floor, ceil
 
 MAX_PRECISION  = 10
+ORIGINS = ("ul","ur","ll","lr")
 
 # could be extended, for available options see:
 # http://www.gdal.org/formats_list.html
@@ -117,17 +118,18 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     ...                          [-9 , 2,  1,  0,  1, -9],
     ...                          [-9 ,-9, -9, -9, -9, -9],])
     
-    >>> gg.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
-    GeoArray([[-9, -9, -9, -9, -9, -9],
-              [-9,  4,  4,  0,  2, -9],
-              [-9,  0,  5,  8,  5, -9],
-              [-9,  0,  0,  1,  0, -9],
-              [-9,  2,  3,  3,  3, -9],
-              [-9,  0,  1,  0,  6, -9],
-              [-9,  0,  3,  3,  3, -9],
-              [-9,  4,  6,  2,  4, -9],
-              [-9,  2,  1,  0,  1, -9],
-              [-9, -9, -9, -9, -9, -9]])
+    >>> grid = gg.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
+    >>> print grid
+    GeoArray([[-- -- -- -- -- --]
+              [-- 4 4 0 2 --]
+              [-- 0 5 8 5 --]
+              [-- 0 0 1 0 --]
+              [-- 2 3 3 3 --]
+              [-- 0 1 0 6 --]
+              [-- 0 3 3 3 --]
+              [-- 4 6 2 4 --]
+              [-- 2 1 0 1 --]
+              [-- -- -- -- -- --]])
  
     """
     return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
@@ -165,11 +167,11 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Examples
     --------
     >>> import geogrid as gg
-    >>> gg.zeros((4,4))
-    GeoArray([[ 0.,  0.,  0.,  0.],
-              [ 0.,  0.,  0.,  0.],
-              [ 0.,  0.,  0.,  0.],
-              [ 0.,  0.,  0.,  0.]])
+    >>> print gg.zeros((4,4))
+    GeoArray([[0.0 0.0 0.0 0.0]
+              [0.0 0.0 0.0 0.0]
+              [0.0 0.0 0.0 0.0]
+              [0.0 0.0 0.0 0.0]])
     """
     return _factory(np.zeros(shape,dtype),yorigin,xorigin,
                     origin,fill_value,cellsize,proj_params)
@@ -206,22 +208,22 @@ def zeros_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> gg.zeros_like(x)
-    GeoArray([[0, 0],
-              [0, 0],
-              [0, 0]])
-    
+    >>> print gg.zeros_like(x)
+    GeoArray([[0 0]
+              [0 0]
+              [0 0]])
+   
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> y
-    GeoArray([[0, 1],
-              [2, 3],
-              [4, 5]])
+    >>> print y
+    GeoArray([[0 1]
+              [2 3]
+              [4 5]])
 
     >>> z = gg.zeros_like(y)
-    >>> z
-    GeoArray([[0, 0],
-              [0, 0],
-              [0, 0]])
+    >>> print z
+    GeoArray([[0 0]
+              [0 0]
+              [0 0]])
 
     >>> z.header == y.header
     True
@@ -265,11 +267,11 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Examples
     --------
     >>> import geogrid as gg
-    >>> gg.ones((4,4))
-    GeoArray([[ 1.,  1.,  1.,  1.],
-              [ 1.,  1.,  1.,  1.],
-              [ 1.,  1.,  1.,  1.],
-              [ 1.,  1.,  1.,  1.]])
+    >>> print gg.ones((4,4))
+    GeoArray([[1.0 1.0 1.0 1.0]
+              [1.0 1.0 1.0 1.0]
+              [1.0 1.0 1.0 1.0]
+              [1.0 1.0 1.0 1.0]])
     """
 
     return _factory(np.ones(shape,dtype),yorigin,xorigin,
@@ -307,22 +309,22 @@ def ones_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> gg.ones_like(x)
-    GeoArray([[1, 1],
-              [1, 1],
-              [1, 1]])
-    
+    >>> print gg.ones_like(x)
+    GeoArray([[1 1]
+              [1 1]
+              [1 1]])
+   
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> y
-    GeoArray([[0, 1],
-              [2, 3],
-              [4, 5]])
+    >>> print y
+    GeoArray([[0 1]
+              [2 3]
+              [4 5]])
 
     >>> z = gg.ones_like(y)
-    >>> z
-    GeoArray([[1, 1],
-              [1, 1],
-              [1, 1]])
+    >>> print z
+    GeoArray([[1 1]
+              [1 1]
+              [1 1]])
 
     >>> z.header == y.header
     True
@@ -367,11 +369,11 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Examples
     --------
     >>> import geogrid as gg
-    >>> gg.full((4,4), 42)
-    GeoArray([[ 42.,  42.,  42.,  42.],
-              [ 42.,  42.,  42.,  42.],
-              [ 42.,  42.,  42.,  42.],
-              [ 42.,  42.,  42.,  42.]])
+    >>> print gg.full((4,4), 42)
+    GeoArray([[42.0 42.0 42.0 42.0]
+              [42.0 42.0 42.0 42.0]
+              [42.0 42.0 42.0 42.0]
+              [42.0 42.0 42.0 42.0]])
     """
     return _factory(np.full(shape,value,dtype),yorigin,xorigin,
                     origin,fill_value,cellsize,proj_params)
@@ -409,22 +411,22 @@ def full_like(a,fill_value,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> gg.full_like(x,42)
-    GeoArray([[42, 42],
-              [42, 42],
-              [42, 42]])
+    >>> print gg.full_like(x,42)
+    GeoArray([[42 42]
+              [42 42]
+              [42 42]])
     
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> y
-    GeoArray([[0, 1],
-              [2, 3],
-              [4, 5]])
+    >>> print y
+    GeoArray([[0 1]
+              [2 3]
+              [4 5]])
 
     >>> z = gg.full_like(y,42)
-    >>> z
-    GeoArray([[42, 42],
-              [42, 42],
-              [42, 42]])
+    >>> print z
+    GeoArray([[42 42]
+              [42 42]
+              [42 42]])
 
     >>> z.header == y.header
     True
@@ -468,18 +470,18 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     --------
     >>> import geogrid as gg
 
-    >>> gg.empty((4,4))
-    GeoArray([[-9999., -9999., -9999., -9999.],
-              [-9999., -9999., -9999., -9999.],
-              [-9999., -9999., -9999., -9999.],
-              [-9999., -9999., -9999., -9999.]])
-    
-    >>> gg.empty((4,4),fill_value=32)
-    GeoArray([[ 32.,  32.,  32.,  32.],
-              [ 32.,  32.,  32.,  32.],
-              [ 32.,  32.,  32.,  32.],
-              [ 32.,  32.,  32.,  32.]])
-   """
+    >>> print gg.empty((4,4))
+    GeoArray([[-- -- -- --]
+              [-- -- -- --]
+              [-- -- -- --]
+              [-- -- -- --]])
+   
+    >>> print gg.empty((4,4),fill_value=32)
+    GeoArray([[-- -- -- --]
+              [-- -- -- --]
+              [-- -- -- --]
+              [-- -- -- --]])
+    """
 
     return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
                     origin,fill_value,cellsize,proj_params)
@@ -516,22 +518,22 @@ def empty_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> gg.empty_like(x)
-    GeoArray([[-9999, -9999],
-              [-9999, -9999],
-              [-9999, -9999]])
-    
+    >>> print gg.empty_like(x)
+    GeoArray([[-- --]
+              [-- --]
+              [-- --]])
+   
     >>> y = gg.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
-    >>> y
-    GeoArray([[0, 1],
-              [2, 3],
-              [4, 5]])
+    >>> print y
+    GeoArray([[0 1]
+              [2 3]
+              [4 5]])
 
     >>> z = gg.empty_like(y)
-    >>> z
-    GeoArray([[42, 42],
-              [42, 42],
-              [42, 42]])
+    >>> print z
+    GeoArray([[-- --]
+              [-- --]
+              [-- --]])
 
     >>> z.header == y.header
     True
@@ -542,19 +544,31 @@ def empty_like(a,*args,**kwargs):
     except AttributeError:
         return array(np.full_like(a,-9999),*args,**kwargs)
 
-    # return np.empty_like(a,*args,**kwargs)
-
 
 def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
-    origins = ("ul","ur","ll","lr")
-    if origin not in origins:
-        raise TypeError("Argument 'origin' must be on of '{:}'".format(origins))
+    if origin not in ORIGINS:
+        raise TypeError("Argument 'origin' must be on of '{:}'".format(ORIGINS))
     mask = data==fill_value
     if not np.any(mask):
         mask = False
     return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,mask=mask,fill_value=fill_value)
 
 def _getslices(slc,shape):
+    """
+    Parameters
+    -----
+    slc   : argument to __getitem__
+    shape : the shape of the np.ndarray on which __getitem__ was called
+
+    Returns
+    -------
+    tuple of sequences
+
+    Purpose
+    -------
+    Unifies the different possible arguments to the __getitem__ method
+    of a np.ndarray
+    """
     try:
         slc[0]
     except TypeError:
@@ -592,11 +606,6 @@ def fromfile(fname):
     -------
     Create GeoArray from file
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geogrid as gg
-    
     """
 
     def _openFile(fname):
@@ -631,9 +640,11 @@ def fromfile(fname):
     dtype      = np.dtype(GDAL2DTYPE[rasterband.DataType])
 
     if "linux" in sys.platform:
+        # use GDAL's virtaual memmory mappings
         data       = fobj.GetVirtualMemArray(
             gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
         )
+        # fobj needs to outlive the data
         _FILEREFS.append(fobj)
     else:
         data = fobj.ReadAsArray()
@@ -641,7 +652,6 @@ def fromfile(fname):
     return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
                     origin="ul",fill_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
-
 
 def _tofile(fname,geogrid):
     def _fnameExtension(fname):
@@ -658,6 +668,9 @@ def _tofile(fname,geogrid):
         return srs.ExportToWkt()
 
     def _getDriver(fext):
+        """
+        Guess driver from file name extension
+        """
         if fext in _DRIVER_DICT:
             driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
             metadata = driver.GetMetadata_Dict()
@@ -667,6 +680,9 @@ def _tofile(fname,geogrid):
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
     
     def _writeGdalMemory(grid,projection):
+        """
+        Create GDAL memory dataset
+        """
         driver = gdal.GetDriverByName("MEM")
         out = driver.Create(
             "",grid.ncols,grid.nrows,grid.nbands,
@@ -738,10 +754,8 @@ class GeoArray(np.ma.MaskedArray):
        (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
        Overriding the __array_prepare__ method to implement the necessary checks would solve that
        issue for all operators and most functions. But there are a few edge cases, where numpy 
-       functions are not routed through the __array_prepare__/__array_wrap__ mechanism. Implementing
-       implicit checks would still mean, that there are some unchecked calls, beside
-       pretending a (geographically) safe environment.
-    
+       functions are not routed through the __array_prepare__/__array_wrap__ mechanism.    
+
     See also
     --------
     array : construct a GeoArray.
@@ -766,34 +780,34 @@ class GeoArray(np.ma.MaskedArray):
     >>> grid = gg.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
     ...                    fill_value=-9,cellsize=55)
 
-    >>> grid
-    GeoArray([[-9, -9, -9, -9, -9],
-              [-9,  0,  5,  8, -9],
-              [-9,  0,  0,  1, -9],
-              [-9,  2,  3,  3, -9],
-              [-9,  0,  1,  0, -9],
-              [-9,  0,  3,  3, -9],
-              [-9, -9, -9, -9, -9]])
+    >>> print grid
+    GeoArray([[-9 -9 -9 -9 -9]
+              [-9  0  5  8 -9]
+              [-9  0  0  1 -9]
+              [-9  2  3  3 -9]
+              [-9  0  1  0 -9]
+              [-9  0  3  3 -9]
+              [-9 -9 -9 -9 -9]])
  
     # all numpy operators are supported
-    >>> grid + 5    
-    GeoArray([[-4, -4, -4, -4, -4],
-           [-4,  5, 10, 13, -4],
-           [-4,  5,  5,  6, -4],
-           [-4,  7,  8,  8, -4],
-           [-4,  5,  6,  5, -4],
-           [-4,  5,  8,  8, -4],
-           [-4, -4, -4, -4, -4]])
+    >>> print grid + 5    
+    GeoArray([[-4 -4 -4 -4 -4]
+              [-4  5 10 13 -4]
+              [-4  5  5  6 -4]
+              [-4  7  8  8 -4]
+              [-4  5  6  5 -4]
+              [-4  5  8  8 -4]
+              [-4 -4 -4 -4 -4]])
 
     # all numpy methods are supported
-    >>> np.exp(grid).astype(np.int64)
-    GeoArray([[   0,    0,    0,    0,    0],
-              [   0,    1,  148, 2980,    0],
-              [   0,    1,    1,    2,    0],
-              [   0,    7,   20,   20,    0],
-              [   0,    1,    2,    1,    0],
-              [   0,    1,   20,   20,    0],
-              [   0,    0,    0,    0,    0]])
+    >>> print np.exp(grid).astype(np.int64)
+    GeoArray([[0 0 0 0 0]
+              [0 1 148 2980 0]
+              [0 1 1 2 0]
+              [0 7 20 20 0]
+              [0 1 2 1 0]
+              [0 1 20 20 0]
+              [0 0 0 0 0]])
 
     >>> np.sum(grid)
     -151
@@ -801,32 +815,32 @@ class GeoArray(np.ma.MaskedArray):
     # all np.ndarray methods are supported
     >>> grid.max()
     8
+    
     >>> grid.argsort()
-    GeoArray([[0, 1, 2, 3, 4],
-              [0, 4, 1, 2, 3],
-              [0, 4, 1, 2, 3],
-              [0, 4, 1, 2, 3],
-              [0, 4, 1, 3, 2],
-              [0, 4, 1, 2, 3],
-              [0, 1, 2, 3, 4]])
-    >>> grid.clip(0,3)
-    GeoArray([[0, 0, 0, 0, 0],
-              [0, 0, 3, 3, 0],
-              [0, 0, 0, 1, 0],
-              [0, 2, 3, 3, 0],
-              [0, 0, 1, 0, 0],
-              [0, 0, 3, 3, 0],
-              [0, 0, 0, 0, 0]])
+    array([ 0, 32, 31, 30, 29, 25, 24, 20, 19, 33, 15, 14, 34, 10,  1,  9,  2,
+            3,  4,  5, 23, 11, 21, 26, 12,  6, 13, 22, 16, 27, 28, 18, 17,  7,
+            8])
+
+    >>> print grid.clip(0,3)
+    GeoArray([[0 0 0 0 0]
+              [0 0 3 3 0]
+              [0 0 0 1 0]
+              [0 2 3 3 0]
+              [0 0 1 0 0]
+              [0 0 3 3 0]
+              [0 0 0 0 0]])
 
     # all np.ndarray attributes are supported
-    >>> grid.T
-    GeoArray([[-9, -9, -9, -9, -9, -9, -9],
-              [-9,  0,  0,  2,  0,  0, -9],
-              [-9,  5,  0,  3,  1,  3, -9],
-              [-9,  8,  1,  3,  0,  3, -9],
-              [-9, -9, -9, -9, -9, -9, -9]])
+    >>> print grid.T
+    GeoArray([[-9 -9 -9 -9 -9 -9 -9]
+              [-9  0  0  2  0  0 -9]
+              [-9  5  0  3  1  3 -9]
+              [-9  8  1  3  0  3 -9]
+              [-9 -9 -9 -9 -9 -9 -9]])
+
     >>> grid.nbytes
     280
+
     >>> grid.shape
     (7, 5)
     """
@@ -865,8 +879,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geogrid as gg
         >>> x = gg.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
         >>> x.header
-        {'origin': 'ur', 'proj_params': None, 'cellsize': 1,
-         'yorigin': 100, 'xorigin': 55, 'fill_value': -9999.0}
+        {'origin': 'ur', 'fill_value': -9999.0, 'proj_params': None, 'cellsize': 1, 'yorigin': 100, 'xorigin': 55}
         """
 
         return {
@@ -1152,27 +1165,27 @@ class GeoArray(np.ma.MaskedArray):
         --------
         >>> import numpy as np
         >>> import geogrid as gg
-        >>> data         = np.array([[-9 ,-9, -9, -9, -9],
-        ...                          [-9 , 4,  0,  2, -9],
-        ...                          [-9 , 3,  3,  3, -9],
-        ...                          [-9 , 1,  0,  6, -9],
-        ...                          [-9 , 1,  0,  1, -9],
-        ...                          [-9 ,-9, -9, -9, -9],])
+        >>> data = np.array([[-9 ,-9, -9, -9, -9],
+        ...                  [-9 , 4,  0,  2, -9],
+        ...                  [-9 , 3,  3,  3, -9],
+        ...                  [-9 , 1,  0,  6, -9],
+        ...                  [-9 , 1,  0,  1, -9],
+        ...                  [-9 ,-9, -9, -9, -9],])
     
         >>> grid = gg.array(data,fill_value=-9)
-        >>> grid
-        GeoArray([[-9, -9, -9, -9, -9],
-                  [-9,  4,  0,  2, -9],
-                  [-9,  3,  3,  3, -9],
-                  [-9,  1,  0,  6, -9],
-                  [-9,  1,  0,  1, -9],
-                  [-9, -9, -9, -9, -9]])
+        >>> print grid
+        GeoArray([[-- -- -- -- --]
+                  [-- 4 0 2 --]
+                  [-- 3 3 3 --]
+                  [-- 1 0 6 --]
+                  [-- 1 0 1 --]
+                  [-- -- -- -- --]])
 
-        >>> grid.trim()
-        GeoArray([[4, 0, 2],
-                  [3, 3, 3],
-                  [1, 0, 6],
-                  [1, 0, 1]])
+        >>> print grid.trim()
+        GeoArray([[4 0 2]
+                  [3 3 3]
+                  [1 0 6]
+                  [1 0 1]])
         """
 
         y_idx, x_idx = np.where(self.data != self.fill_value)
@@ -1201,40 +1214,26 @@ class GeoArray(np.ma.MaskedArray):
         -------
         >>> import geogrid as gg
         >>> x = gg.array(np.arange(36).reshape(6,6))
-        >>> x
-        GeoArray([[ 0,  1,  2,  3,  4,  5],
-                  [ 6,  7,  8,  9, 10, 11],
-                  [12, 13, 14, 15, 16, 17],
-                  [18, 19, 20, 21, 22, 23],
-                  [24, 25, 26, 27, 28, 29],
-                  [30, 31, 32, 33, 34, 35]]) 
+        >>> print x
+        GeoArray([[0 1 2 3 4 5]
+                  [6 7 8 9 10 11]
+                  [12 13 14 15 16 17]
+                  [18 19 20 21 22 23]
+                  [24 25 26 27 28 29]
+                  [30 31 32 33 34 35]])
         
-        >>> x.removeCells(top=1,left=2,bottom=2,right=1)
-        GeoArray([[ 8,  9, 10],
-                  [14, 15, 16],
-                  [20, 21, 22]])
+        >>> print x.removeCells(top=1,left=2,bottom=2,right=1)
+        GeoArray([[8 9 10]
+                  [14 15 16]
+                  [20 21 22]])
         """
 
         top    = int(max(top,0))
         left   = int(max(left,0))
-        bottom = int(max(bottom,0))
-        right  = int(max(right,0))
+        bottom = self.nrows - int(max(bottom,0))
+        right  = self.ncols - int(max(right,0))
 
-        nrows = self.nrows - top  - bottom
-        ncols = self.ncols - left - right
-
-        yorigin, xorigin = self.getOrigin("ul")
-
-        return array(
-            data        = self[Ellipsis, top:top+nrows, left:left+ncols],
-            dtype       = self.dtype,
-            yorigin     = yorigin - top*self.cellsize ,
-            xorigin     = xorigin + left*self.cellsize,
-            origin      = "ul", 
-            fill_value  = self.fill_value,
-            cellsize    = self.cellsize,
-            proj_params = self.proj_params,
-        )
+        return self[...,top:bottom,left:right]
 
     def shrink(self,ymin=None,ymax=None,xmin=None,xmax=None):
         """
@@ -1262,22 +1261,21 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 0, 'ymin': 0, 'ymax': 80, 'xmax': 100}
         >>> grid.shape
         (4, 5)
-        >>> grid
-        GeoArray([[ 0,  1,  2,  3,  4],
-                  [ 5,  6,  7,  8,  9],
-                  [10, 11, 12, 13, 14],
-                  [15, 16, 17, 18, 19]])
-
+        >>> print grid
+        GeoArray([[0 1 2 3 4]
+                  [5 6 7 8 9]
+                  [10 11 12 13 14]
+                  [15 16 17 18 19]])
 
         >>> shrinked = grid.shrink(ymin=18,ymax=56,xmin=22,xmax=92)
         >>> shrinked.bbox
         {'xmin': 20, 'ymin': 0, 'ymax': 60, 'xmax': 100}
         >>> shrinked.shape
         (3, 4)
-        >>> shrinked
-        GeoArray([[ 6,  7,  8,  9],
-                  [11, 12, 13, 14],
-                  [16, 17, 18, 19]])
+        >>> print shrinked
+        GeoArray([[6 7 8 9]
+                  [11 12 13 14]
+                  [16 17 18 19]])
         """
 
         bbox = {
@@ -1318,21 +1316,21 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geogrid as gg
 
         >>> grid = gg.full((4,5),42,fill_value=-9)
-        >>> grid
-        GeoArray([[ 42.,  42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.,  42.],
-                  [ 42.,  42.,  42.,  42.,  42.]])
+        >>> print grid
+        GeoArray([[42.0 42.0 42.0 42.0 42.0]
+                  [42.0 42.0 42.0 42.0 42.0]
+                  [42.0 42.0 42.0 42.0 42.0]
+                  [42.0 42.0 42.0 42.0 42.0]])
 
-        >>> grid.addCells(top=1,left=1,bottom=2)
-        GeoArray([[ -9.,  -9.,  -9.,  -9.,  -9.,  -9.],
-                  [ -9.,  42.,  42.,  42.,  42.,  42.],
-                  [ -9.,  42.,  42.,  42.,  42.,  42.],
-                  [ -9.,  42.,  42.,  42.,  42.,  42.],
-                  [ -9.,  42.,  42.,  42.,  42.,  42.],
-                  [ -9.,  -9.,  -9.,  -9.,  -9.,  -9.],
-                  [ -9.,  -9.,  -9.,  -9.,  -9.,  -9.]])
-        """
+        >>> print grid.addCells(top=1,left=1,bottom=2)
+        GeoArray([[-- -- -- -- -- --]
+                  [-- 42.0 42.0 42.0 42.0 42.0]
+                  [-- 42.0 42.0 42.0 42.0 42.0]
+                  [-- 42.0 42.0 42.0 42.0 42.0]
+                  [-- 42.0 42.0 42.0 42.0 42.0]
+                  [-- -- -- -- -- --]
+                  [-- -- -- -- -- --]])
+       """
 
         top    = int(max(top,0))
         left   = int(max(left,0))
@@ -1387,24 +1385,24 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
         >>> grid.shape
         (4, 5)
-        >>> grid
-        GeoArray([[ 0,  1,  2,  3,  4],
-                  [ 5,  6,  7,  8,  9],
-                  [10, 11, 12, 13, 14],
-                  [15, 16, 17, 18, 19]])
+        >>> print grid
+        GeoArray([[0 1 2 3 4]
+                  [5 6 7 8 9]
+                  [10 11 12 13 14]
+                  [15 16 17 18 19]])
 
         >>> enlarged = grid.enlarge(xmin=130,xmax=200,ymin=66)
         >>> enlarged.bbox
         {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
         
-        >>> enlarged
-        GeoArray([[-9, -9, -9, -9,  0,  1,  2,  3,  4],
-                  [-9, -9, -9, -9,  5,  6,  7,  8,  9],
-                  [-9, -9, -9, -9, 10, 11, 12, 13, 14],
-                  [-9, -9, -9, -9, 15, 16, 17, 18, 19],
-                  [-9, -9, -9, -9, -9, -9, -9, -9, -9],
-                  [-9, -9, -9, -9, -9, -9, -9, -9, -9]])
-        """
+        >>> print enlarged
+        GeoArray([[-- -- -- -- 0 1 2 3 4]
+                  [-- -- -- -- 5 6 7 8 9]
+                  [-- -- -- -- 10 11 12 13 14]
+                  [-- -- -- -- 15 16 17 18 19]
+                  [-- -- -- -- -- -- -- -- --]
+                  [-- -- -- -- -- -- -- -- --]])
+       """
 
         bbox = {
             "ymin": ymin if ymin else self.bbox["ymin"],
@@ -1475,6 +1473,18 @@ class GeoArray(np.ma.MaskedArray):
         self.xorigin -= dx
         self.yorigin -= dy
 
+
+    def __repr__(self):
+        return super(self.__class__,self).__repr__()
+
+    def __str__(self):
+        out = super(self.__class__,self).__str__()
+        name = self.__class__.__name__
+        pad = " "*(len(name)+1)
+        return "{:}({:})".format(
+            name, os.linesep.join(["{:}{:}".format(pad,l) for l in out.split(os.linesep)]).strip()
+            )
+       
     def __getattr__(self,name):
         try:
             return self._optinfo[name]
