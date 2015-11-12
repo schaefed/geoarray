@@ -10,8 +10,9 @@ import warnings
 # python -m unittest test.test_geoarray
 
 PWD = os.path.dirname(__file__)
+
 # path to testfiles
-PATH = os.path.join(PWD,"testfiles")
+PATH = os.path.join(PWD,"files")
 
 # random projection parameters
 PROJ_PARAMS = {
