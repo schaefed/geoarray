@@ -3,10 +3,14 @@
 
 import unittest, copy, shutil, os
 import numpy as np
-import geogrid as gg
+import geoarray as ga
 import warnings
 
-FNAME = os.path.join(os.path.dirname(__file__), "dem.asc")
+PWD = os.path.dirname(__file__)
+TESTFILES = (
+    os.path.join(PWD, "testfile.tif"),
+    os.path.join(PWD, "testfile.asc"),
+)
 
 PROJ_PARAMS = {
     'lon_0' : '148.8',
@@ -26,7 +30,7 @@ class TestInitialisation(unittest.TestCase):
         yorigin = -15
         xorigin = 72
         cellsize = 33.33
-        grid = gg.array(
+        grid = ga.array(
             data=data, fill_value=fill_value,
             yorigin=yorigin, xorigin=xorigin,
             cellsize=cellsize
@@ -40,34 +44,34 @@ class TestInitialisation(unittest.TestCase):
         
     def test_zeros(self):
         shape = (2,4,6)
-        grid = gg.zeros(shape)
+        grid = ga.zeros(shape)
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid == 0))
 
     def test_ones(self):
         shape = (2,4,6)
-        grid = gg.ones(shape)
+        grid = ga.ones(shape)
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid == 1))
 
     def test_full(self):
         shape = (2,4,6)
         fill_value = 42
-        grid = gg.full(shape,fill_value)
+        grid = ga.full(shape,fill_value)
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid == fill_value))
         
     def test_empty(self):
         shape = (2,4,6)
         fill_value = 42
-        grid = gg.empty(shape,fill_value=fill_value)
+        grid = ga.empty(shape,fill_value=fill_value)
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid.data == fill_value))
 
 class TestGeoGrid(unittest.TestCase):
     
     def setUp(self):        
-        self.grid = gg.fromfile(fname=FNAME)
+        self.grid = ga.fromfile(fname=TESTFILES[0])
         self.write_path = "out"
         try:
             os.mkdir(self.write_path)
@@ -82,9 +86,10 @@ class TestGeoGrid(unittest.TestCase):
 
     def test_setFillValue(self):
         rpcvalue = -2222
-        checkgrid = gg.fromfile(FNAME)
-        checkgrid.fill_value = rpcvalue
-        self.assertEqual(checkgrid.fill_value, rpcvalue)
+        for fname in TESTFILES:
+            checkgrid = ga.fromfile(fname)
+            checkgrid.fill_value = rpcvalue
+            self.assertEqual(checkgrid.fill_value, rpcvalue)
 
     def test_setDataType(self):
         rpctype = np.int32
@@ -100,19 +105,22 @@ class TestGeoGrid(unittest.TestCase):
             (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
         )
         idx = np.arange(12,20)
-        self.assertTrue(np.all(grid[idx] == self.grid[gg.array(idx)]))
+        self.assertTrue(np.all(grid[idx] == self.grid[ga.array(idx)]))
         for i,s in enumerate(slices):
             slc1 = grid[s]
             slc2 = self.grid[s]
             self.assertTrue(np.all(slc1.data == slc2.data))
-            self.assertTrue(np.all(slc1.mask == slc2.mask))
-
+            try:
+                self.assertTrue(np.all(slc1.mask == slc2.mask))
+            except AttributeError: # __getitem__ returned a scalar
+                pass 
+                
     def test_getitemOrigin(self):
         grids = (
-            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
-            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
-            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
-            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
         )
         slices = (
             ( slice(3,4) ),
@@ -147,11 +155,11 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(np.all(grid[slc] == value))
 
     def test_tofile(self):
-        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in gg._DRIVER_DICT)
+        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in ga._DRIVER_DICT)
 
         for fname in fnames:
             self.grid.tofile(fname)
-            checkgrid = gg.fromfile(fname)
+            checkgrid = ga.fromfile(fname)
             self.assertTrue(np.all(checkgrid == self.grid))
             self.assertDictEqual(checkgrid.header, self.grid.header)
 
@@ -204,7 +212,7 @@ class TestGeoGrid(unittest.TestCase):
 class TestGeoGridFuncs(unittest.TestCase):
     
     def setUp(self):        
-        self.grid = gg.fromfile(FNAME)        
+        self.grid = ga.fromfile(TESTFILES[0])        
 
     def test_addCells(self):
         padgrid = self.grid.addCells(1, 1, 1, 1)
