@@ -113,7 +113,7 @@ class TestGeoGrid(unittest.TestCase):
                 (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
             )
             idx = np.arange(12,20)
-            self.assertTrue(np.all(grid[idx] == base[ga.array(idx)]))
+            self.assertTrue(np.all(grid[idx].data == base[ga.array(idx)].data))
             for i,s in enumerate(slices):
                 slc1 = grid[s]
                 slc2 = base[s]

@@ -110,7 +110,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
 
     Examples
     --------
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> yorigin      = 63829.3
     >>> xorigin      = 76256.6
@@ -128,7 +128,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     ...                          [-9 , 2,  1,  0,  1, -9],
     ...                          [-9 ,-9, -9, -9, -9, -9],])
 
-    >>> grid = gg.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
+    >>> grid = ga.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
     >>> print(grid)
     GeoArray([[-- -- -- -- -- --]
               [-- 4 4 0 2 --]
@@ -176,8 +176,8 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Examples
     --------
-    >>> import geogrid as gg
-    >>> print(gg.zeros((4,4)))
+    >>> import geoarray as ga
+    >>> print(ga.zeros((4,4)))
     GeoArray([[0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]
@@ -210,7 +210,7 @@ def zeros_like(a,*args,**kwargs):
     Examples
     --------
     >>> import numpy as np
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> x = np.arange(6).reshape((3,2))
     >>> x
@@ -218,18 +218,18 @@ def zeros_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print(gg.zeros_like(x))
+    >>> print(ga.zeros_like(x))
     GeoArray([[0 0]
               [0 0]
               [0 0]])
 
-    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
+    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
     >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
-    >>> z = gg.zeros_like(y)
+    >>> z = ga.zeros_like(y)
     >>> print(z)
     GeoArray([[0 0]
               [0 0]
@@ -276,8 +276,8 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Examples
     --------
-    >>> import geogrid as gg
-    >>> print(gg.ones((4,4)))
+    >>> import geoarray as ga
+    >>> print(ga.ones((4,4)))
     GeoArray([[1.0 1.0 1.0 1.0]
               [1.0 1.0 1.0 1.0]
               [1.0 1.0 1.0 1.0]
@@ -311,7 +311,7 @@ def ones_like(a,*args,**kwargs):
     Examples
     --------
     >>> import numpy as np
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> x = np.arange(6).reshape((3,2))
     >>> x
@@ -319,18 +319,18 @@ def ones_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print(gg.ones_like(x))
+    >>> print(ga.ones_like(x))
     GeoArray([[1 1]
               [1 1]
               [1 1]])
 
-    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
+    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
     >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
-    >>> z = gg.ones_like(y)
+    >>> z = ga.ones_like(y)
     >>> print(z)
     GeoArray([[1 1]
               [1 1]
@@ -378,8 +378,8 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Examples
     --------
-    >>> import geogrid as gg
-    >>> print(gg.full((4,4), 42))
+    >>> import geoarray as ga
+    >>> print(ga.full((4,4), 42))
     GeoArray([[42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]
@@ -413,7 +413,7 @@ def full_like(a,fill_value,*args,**kwargs):
     Examples
     --------
     >>> import numpy as np
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> x = np.arange(6).reshape((3,2))
     >>> x
@@ -421,18 +421,18 @@ def full_like(a,fill_value,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print(gg.full_like(x,42))
+    >>> print(ga.full_like(x,42))
     GeoArray([[42 42]
               [42 42]
               [42 42]])
 
-    >>> y = (gg.array(x,yorigin=-5555,xorigin=4444,cellsize=42))
+    >>> y = (ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42))
     >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
-    >>> z = gg.full_like(y,42)
+    >>> z = ga.full_like(y,42)
     >>> print(z)
     GeoArray([[42 42]
               [42 42]
@@ -478,15 +478,15 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Examples
     --------
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
-    >>> print(gg.empty((4,4)))
+    >>> print(ga.empty((4,4)))
     GeoArray([[-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]])
 
-    >>> print(gg.empty((4,4),fill_value=32))
+    >>> print(ga.empty((4,4),fill_value=32))
     GeoArray([[-- -- -- --]
               [-- -- -- --]
               [-- -- -- --]
@@ -520,7 +520,7 @@ def empty_like(a,*args,**kwargs):
     Examples
     --------
     >>> import numpy as np
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> x = np.arange(6).reshape((3,2))
     >>> x
@@ -528,18 +528,18 @@ def empty_like(a,*args,**kwargs):
            [2, 3],
            [4, 5]])
 
-    >>> print(gg.empty_like(x))
+    >>> print(ga.empty_like(x))
     GeoArray([[-- --]
               [-- --]
               [-- --]])
 
-    >>> y = gg.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
+    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
     >>> print(y)
     GeoArray([[0 1]
               [2 3]
               [4 5]])
 
-    >>> z = gg.empty_like(y)
+    >>> z = ga.empty_like(y)
     >>> print(z)
     GeoArray([[-- --]
               [-- --]
@@ -663,7 +663,7 @@ def fromfile(fname):
                     origin="ul",fill_value=rasterband.GetNoDataValue(),
                     cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
 
-def _tofile(fname,geogrid):
+def _tofile(fname,geoarray):
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
@@ -711,7 +711,7 @@ def _tofile(fname,geogrid):
         out.FlushCache()
         return out
 
-    memset = _writeGdalMemory(geogrid, _projection(geogrid))
+    memset = _writeGdalMemory(geoarray, _projection(geoarray))
     outdriver = _getDriver(_fnameExtension(fname))
     out = outdriver.CreateCopy(fname,memset,0)
     errormsg = gdal.GetLastErrorMsg()
@@ -777,7 +777,7 @@ class GeoArray(np.ma.MaskedArray):
     Examples
     --------
     >>> import numpy as np
-    >>> import geogrid as gg
+    >>> import geoarray as ga
 
     >>> data = np.array([[-9 ,-9, -9, -9, -9],
     ...                  [-9 , 0,  5,  8, -9],
@@ -787,7 +787,7 @@ class GeoArray(np.ma.MaskedArray):
     ...                  [-9 , 0,  3,  3, -9],
     ...                  [-9 ,-9, -9, -9, -9],])
 
-    >>> grid = gg.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
+    >>> grid = ga.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
     ...                    fill_value=-9,cellsize=55)
 
     >>> print(grid)
@@ -886,8 +886,8 @@ class GeoArray(np.ma.MaskedArray):
 
         Examples
         --------
-        >>> import geogrid as gg
-        >>> x = gg.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
+        >>> import geoarray as ga
+        >>> x = ga.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
         >>> x.header
         {'origin': 'ur', 'fill_value': -9999.0, 'proj_params': None, 'cellsize': 1, 'yorigin': 100, 'xorigin': 55}
         """
@@ -918,8 +918,8 @@ class GeoArray(np.ma.MaskedArray):
 
         Examples
         --------
-        >>> import geogrid as gg
-        >>> x = gg.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
+        >>> import geoarray as ga
+        >>> x = ga.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
         >>> x.bbox
         {'xmin': 51, 'ymin': 96, 'ymax': 100, 'xmax': 55}
         """
@@ -982,17 +982,17 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.nbands
         2
 
         >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (3, 2, 4, 5)
         >>> grid.nbands
@@ -1023,17 +1023,17 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.nrows
         4
 
         >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (3, 2, 4, 5)
         >>> grid.nrows
@@ -1064,17 +1064,17 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (2, 4, 5)
         >>> grid.ncols
         5
 
         >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = gg.array(x)
+        >>> grid = ga.array(x)
         >>> grid.shape
         (3, 2, 4, 5)
         >>> grid.ncols
@@ -1174,7 +1174,7 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
         >>> data = np.array([[-9 ,-9, -9, -9, -9],
         ...                  [-9 , 4,  0,  2, -9],
         ...                  [-9 , 3,  3,  3, -9],
@@ -1182,7 +1182,7 @@ class GeoArray(np.ma.MaskedArray):
         ...                  [-9 , 1,  0,  1, -9],
         ...                  [-9 ,-9, -9, -9, -9],])
 
-        >>> grid = gg.array(data,fill_value=-9)
+        >>> grid = ga.array(data,fill_value=-9)
         >>> print(grid)
         GeoArray([[-- -- -- -- --]
                   [-- 4 0 2 --]
@@ -1223,8 +1223,8 @@ class GeoArray(np.ma.MaskedArray):
 
         Example
         -------
-        >>> import geogrid as gg
-        >>> x = gg.array(np.arange(36).reshape(6,6))
+        >>> import geoarray as ga
+        >>> x = ga.array(np.arange(36).reshape(6,6))
         >>> print(x)
         GeoArray([[0 1 2 3 4 5]
                   [6 7 8 9 10 11]
@@ -1263,10 +1263,10 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(20).reshape((4,5))
-        >>> grid = gg.array(x,origin="ll",cellsize=20)
+        >>> grid = ga.array(x,origin="ll",cellsize=20)
 
         >>> grid.bbox
         {'xmin': 0, 'ymin': 0, 'ymax': 80, 'xmax': 100}
@@ -1320,9 +1320,9 @@ class GeoArray(np.ma.MaskedArray):
 
         Example
         -------
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
-        >>> grid = gg.full((4,5),42,fill_value=-9)
+        >>> grid = ga.full((4,5),42,fill_value=-9)
         >>> print(grid)
         GeoArray([[42.0 42.0 42.0 42.0 42.0]
                   [42.0 42.0 42.0 42.0 42.0]
@@ -1383,10 +1383,10 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(20).reshape((4,5))
-        >>> grid = gg.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,fill_value=-9)
+        >>> grid = ga.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,fill_value=-9)
 
         >>> grid.bbox
         {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
@@ -1448,14 +1448,14 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import numpy as np
-        >>> import geogrid as gg
+        >>> import geoarray as ga
 
         >>> x = np.arange(20).reshape((4,5))
-        >>> grid1 = gg.array(x,origin="ll",cellsize=25)
+        >>> grid1 = ga.array(x,origin="ll",cellsize=25)
         >>> grid1.bbox
         {'xmin': 0, 'ymin': 0, 'ymax': 100, 'xmax': 125}
 
-        >>> grid2 = gg.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
+        >>> grid2 = ga.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
         >>> grid2.bbox
         {'xmin': 1.24, 'ymin': 3, 'ymax': 77.68, 'xmax': 94.59}
 
