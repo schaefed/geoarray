@@ -6,8 +6,12 @@ import numpy as np
 import geoarray as ga
 import warnings
 
+# from parent directory run 
+# python -m unittest test.test_geoarray
+
+PWD = os.path.dirname(__file__)
 # path to testfiles
-PATH = "testfiles"
+PATH = os.path.join(PWD,"testfiles")
 
 # random projection parameters
 PROJ_PARAMS = {
