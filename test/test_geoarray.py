@@ -6,11 +6,8 @@ import numpy as np
 import geoarray as ga
 import warnings
 
-PWD = os.path.dirname(__file__)
-TESTFILES = (
-    os.path.join(PWD, "testfile.tif"),
-    os.path.join(PWD, "testfile.asc"),
-)
+# path to testfiles
+PATH = "testfiles"
 
 # random projection parameters
 PROJ_PARAMS = {
@@ -22,6 +19,9 @@ PROJ_PARAMS = {
     'proj'  : 'laea',
     'ellps' : 'WGS84'
 }
+
+def readTestFiles():
+    return [ga.fromfile(os.path.join(PATH,f)) for f in os.listdir(PATH)]
 
 class TestInitialisation(unittest.TestCase):
 
@@ -72,7 +72,7 @@ class TestInitialisation(unittest.TestCase):
 class TestGeoGrid(unittest.TestCase):
     
     def setUp(self):
-        self.grids = [ga.fromfile(fname) for fname in TESTFILES]
+        self.grids = readTestFiles()
         self.write_path = "out"
 
         try:
@@ -208,7 +208,7 @@ class TestGeoGrid(unittest.TestCase):
 class TestGeoGridFuncs(unittest.TestCase):
     
     def setUp(self):        
-        self.grids = [ga.fromfile(fname) for fname in TESTFILES]        
+        self.grids = readTestFiles()
 
     def test_addCells(self):
         for base in self.grids:
