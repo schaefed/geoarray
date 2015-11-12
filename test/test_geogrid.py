@@ -12,6 +12,7 @@ TESTFILES = (
     os.path.join(PWD, "testfile.asc"),
 )
 
+# random projection parameters
 PROJ_PARAMS = {
     'lon_0' : '148.8',
     'lat_0' : '0',
@@ -70,9 +71,10 @@ class TestInitialisation(unittest.TestCase):
 
 class TestGeoGrid(unittest.TestCase):
     
-    def setUp(self):        
-        self.grid = ga.fromfile(fname=TESTFILES[0])
+    def setUp(self):
+        self.grids = [ga.fromfile(fname) for fname in TESTFILES]
         self.write_path = "out"
+
         try:
             os.mkdir(self.write_path)
         except OSError:
@@ -86,35 +88,36 @@ class TestGeoGrid(unittest.TestCase):
 
     def test_setFillValue(self):
         rpcvalue = -2222
-        for fname in TESTFILES:
-            checkgrid = ga.fromfile(fname)
-            checkgrid.fill_value = rpcvalue
-            self.assertEqual(checkgrid.fill_value, rpcvalue)
+        for base in self.grids:
+            base.fill_value = rpcvalue
+            self.assertEqual(base.fill_value, rpcvalue)
 
     def test_setDataType(self):
         rpctype = np.int32
-        checkgrid = self.grid.astype(rpctype)
-        self.assertEqual(checkgrid.dtype,rpctype)
+        for base in self.grids:
+            grid = base.astype(rpctype)
+            self.assertEqual(grid.dtype,rpctype)
         
     def test_getitem(self):        
-        grid = self.grid.copy()
-        slices = (
-            self.grid < 3,
-            self.grid == 10,
-            np.where(self.grid>6),
-            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
-        )
-        idx = np.arange(12,20)
-        self.assertTrue(np.all(grid[idx] == self.grid[ga.array(idx)]))
-        for i,s in enumerate(slices):
-            slc1 = grid[s]
-            slc2 = self.grid[s]
-            self.assertTrue(np.all(slc1.data == slc2.data))
-            try:
-                self.assertTrue(np.all(slc1.mask == slc2.mask))
-            except AttributeError: # __getitem__ returned a scalar
-                pass 
-                
+        for base in self.grids:
+            grid = base.copy()
+            slices = (
+                base < 3,
+                base == 10,
+                np.where(base>6),
+                (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+            )
+            idx = np.arange(12,20)
+            self.assertTrue(np.all(grid[idx] == base[ga.array(idx)]))
+            for i,s in enumerate(slices):
+                slc1 = grid[s]
+                slc2 = base[s]
+                self.assertTrue(np.all(slc1.data == slc2.data))
+                try:
+                    self.assertTrue(np.all(slc1.mask == slc2.mask))
+                except AttributeError: # __getitem__ returned a scalar
+                    pass 
+
     def test_getitemOrigin(self):
         grids = (
             ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
@@ -139,40 +142,43 @@ class TestGeoGrid(unittest.TestCase):
                 self.assertTupleEqual( exp, grid[slc].getOrigin() )
 
     def test_setitem(self):
-        slices = (
-            np.arange(12,20).reshape(1,-1),
-            self.grid < 3,
-            np.where(self.grid>6),
-            (slice(None,None,None),slice(0,4,3)),
-            (1,1),
-            Ellipsis
-        )
-        value = 11
-        grid = copy.deepcopy(self.grid)
-        for slc in slices:
-            grid = copy.deepcopy(self.grid)
-            grid[slc] = value
-            self.assertTrue(np.all(grid[slc] == value))
+        for base in self.grids:
+            slices = (
+                np.arange(12,20).reshape(1,-1),
+                base < 3,
+                np.where(base>6),
+                (slice(None,None,None),slice(0,4,3)),
+                (1,1),
+                Ellipsis
+            )
+            value = 11
+            grid = copy.deepcopy(base)
+            for slc in slices:
+                grid = copy.deepcopy(base)
+                grid[slc] = value
+                self.assertTrue(np.all(grid[slc] == value))
 
     def test_tofile(self):
-        fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in ga._DRIVER_DICT)
+        outfiles = ("{:}/testout{:}".format(self.write_path,ext) for ext in ga._DRIVER_DICT)
 
-        for fname in fnames:
-            self.grid.tofile(fname)
-            checkgrid = ga.fromfile(fname)
-            self.assertTrue(np.all(checkgrid == self.grid))
-            self.assertDictEqual(checkgrid.header, self.grid.header)
+        for base in self.grids:
+            for outfile in outfiles:
+                base.tofile(outfile)
+                checkgrid = ga.fromfile(outfile)
+                self.assertTrue(np.all(checkgrid == base))
+                self.assertDictEqual(checkgrid.header, base.header)
 
     def test_copy(self):
-        deep_copy = copy.deepcopy(self.grid)        
-        self.assertTrue(self.grid.header == deep_copy.header)
-        self.assertNotEqual(id(self.grid),id(deep_copy))
-        self.assertTrue(np.all(self.grid == deep_copy))
+        for base in self.grids:
+            deep_copy = copy.deepcopy(base)        
+            self.assertTrue(base.header == deep_copy.header)
+            self.assertNotEqual(id(base),id(deep_copy))
+            self.assertTrue(np.all(base == deep_copy))
 
-        shallow_copy = copy.copy(self.grid)
-        self.assertTrue(self.grid.header == shallow_copy.header)
-        self.assertNotEqual(id(self.grid),id(shallow_copy))
-        self.assertTrue(np.all(self.grid == shallow_copy))
+            shallow_copy = copy.copy(base)
+            self.assertTrue(base.header == shallow_copy.header)
+            self.assertNotEqual(id(base),id(shallow_copy))
+            self.assertTrue(np.all(base == shallow_copy))
 
     def test_numpyFunctions(self):
         # Ignore over/underflow warnings in function calls
@@ -187,138 +193,129 @@ class TestGeoGrid(unittest.TestCase):
                  np.arctanh,
                  np.gradient,                
         )
-        grid = self.grid.astype(np.float64)
-        compare = grid.copy()
-        for f in funcs:
-            r1 = f(grid)
-            r2 = f(compare)
-            try:
-                np.testing.assert_equal(r1,r2)
-            except AssertionError:
-                np.testing.assert_equal(r1.data,r2.data)
-                np.testing.assert_equal(r1.mask,r2.mask)
-            
-    def test_reading(self):
-        value          = 42
-        maxrow         = 10
-        mincol         = 100
-        checkgrid      = copy.deepcopy(self.grid)
-        idx            = (slice(0,maxrow),slice(mincol,None))
-        idx_inv        = (slice(maxrow,None),slice(0,mincol))
-        self.grid[idx] = value
-        self.assertTrue(np.all(self.grid[idx] == value))
-        self.assertTrue(np.all(self.grid[idx_inv] == checkgrid[idx_inv]))
-        
+        for base in self.grids:
+            grid = base.copy()
+            for f in funcs:
+                r1 = f(grid)
+                r2 = f(grid)
+                try:
+                    np.testing.assert_equal(r1,r2)
+                except AssertionError:
+                    np.testing.assert_equal(r1.data,r2.data)
+                    np.testing.assert_equal(r1.mask,r2.mask)
+
+       
 class TestGeoGridFuncs(unittest.TestCase):
     
     def setUp(self):        
-        self.grid = ga.fromfile(TESTFILES[0])        
+        self.grids = [ga.fromfile(fname) for fname in TESTFILES]        
 
     def test_addCells(self):
-        padgrid = self.grid.addCells(1, 1, 1, 1)
-        self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
+        for base in self.grids:
+            padgrid = base.addCells(1, 1, 1, 1)
+            self.assertTrue(np.sum(padgrid[1:-1,1:-1] == base))
 
-        padgrid = self.grid.addCells(0, 0, 0, 0)
-        self.assertTrue(np.sum(padgrid[:] == self.grid))
+            padgrid = base.addCells(0, 0, 0, 0)
+            self.assertTrue(np.sum(padgrid[:] == base))
 
-        padgrid = self.grid.addCells(0, 99, 0, 4000)
-        self.assertTrue(np.sum(padgrid[...,99:-4000] == self.grid))
+            padgrid = base.addCells(0, 99, 0, 4000)
+            self.assertTrue(np.sum(padgrid[...,99:-4000] == base))
 
-        padgrid = self.grid.addCells(-1000, -4.55, 0, -6765.222)
-        self.assertTrue(np.all(padgrid == self.grid))
-        
+            padgrid = base.addCells(-1000, -4.55, 0, -6765.222)
+            self.assertTrue(np.all(padgrid == base))
+
     def test_enlarge(self):
-        bbox = self.grid.bbox
-        newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
-                   "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
-                   "xmax" : bbox["xmax"] +  .1 * self.grid.cellsize,
-                   "ymax" : bbox["ymax"] + 6.1 * self.grid.cellsize,}
-        enlrgrid = self.grid.enlarge(**newbbox)
-        self.assertEqual(enlrgrid.nrows, self.grid.nrows + 1 + 7)
-        self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
-        
+        for base in self.grids:
+            bbox = base.bbox
+            newbbox = {"xmin" : bbox["xmin"] - 2.5 * base.cellsize,
+                    "ymin" : bbox["ymin"] -  .7 * base.cellsize,
+                    "xmax" : bbox["xmax"] +  .1 * base.cellsize,
+                    "ymax" : bbox["ymax"] + 6.1 * base.cellsize,}
+            enlrgrid = base.enlarge(**newbbox)
+            self.assertEqual(enlrgrid.nrows, base.nrows + 1 + 7)
+            self.assertEqual(enlrgrid.ncols, base.ncols + 3 + 1)
+
     def test_shrink(self):
-        bbox = self.grid.bbox
-        newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
-                   "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
-                   "xmax" : bbox["xmax"] -  .1 * self.grid.cellsize,
-                   "ymax" : bbox["ymax"] - 6.1 * self.grid.cellsize,}
-        shrgrid = self.grid.shrink(**newbbox)        
-        self.assertEqual(shrgrid.nrows, self.grid.nrows - 0 - 6)
-        self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
+        for base in self.grids:
+            bbox = base.bbox
+            newbbox = {"xmin" : bbox["xmin"] + 2.5 * base.cellsize,
+                    "ymin" : bbox["ymin"] +  .7 * base.cellsize,
+                    "xmax" : bbox["xmax"] -  .1 * base.cellsize,
+                    "ymax" : bbox["ymax"] - 6.1 * base.cellsize,}
+            shrgrid = base.shrink(**newbbox)        
+            self.assertEqual(shrgrid.nrows, base.nrows - 0 - 6)
+            self.assertEqual(shrgrid.ncols, base.ncols - 2 - 0)
 
     def test_removeCells(self):
-        rmgrid = self.grid.removeCells(1,1,1,1)
-        self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
-        rmgrid = self.grid.removeCells(0,0,0,0)
-        self.assertEqual(np.sum(rmgrid - self.grid) , 0)
-        
+        for base in self.grids:
+            rmgrid = base.removeCells(1,1,1,1)
+            self.assertEqual(np.sum(rmgrid - base[1:-1,1:-1]) , 0)
+            rmgrid = base.removeCells(0,0,0,0)
+            self.assertEqual(np.sum(rmgrid - base) , 0)
+
     def test_trim(self):
-        trimgrid = self.grid.trim()
-        self.assertTrue(np.any(trimgrid[0,...]  != self.grid.fill_value))
-        self.assertTrue(np.any(trimgrid[-1,...] != self.grid.fill_value))
-        self.assertTrue(np.any(trimgrid[...,0]  != self.grid.fill_value))
-        self.assertTrue(np.any(trimgrid[...,-1] != self.grid.fill_value))
+        for base in self.grids:
+            trimgrid = base.trim()
+            self.assertTrue(np.any(trimgrid[0,...]  != base.fill_value))
+            self.assertTrue(np.any(trimgrid[-1,...] != base.fill_value))
+            self.assertTrue(np.any(trimgrid[...,0]  != base.fill_value))
+            self.assertTrue(np.any(trimgrid[...,-1] != base.fill_value))
 
     def test_snap(self):
+        for base in self.grids:
+            offsets = (
+                (-75,-30),
+                (base.cellsize *.9,base.cellsize *20),
+                (base.yorigin * -1.1, base.xorigin * 1.89),
+            )
 
-        def test(grid,target):
-            yorg,xorg = grid.getOrigin()
-            grid.snap(target)            
+            for yoff,xoff in offsets:            
+                grid = copy.deepcopy(base)
+                grid.yorigin -= yoff
+                grid.xorigin -= xoff
+                yorg,xorg = grid.getOrigin()
+                grid.snap(base)            
 
-            xdelta = abs(grid.xorigin - xorg)
-            ydelta = abs(grid.yorigin - yorg)
+                xdelta = abs(grid.xorigin - xorg)
+                ydelta = abs(grid.yorigin - yorg)
 
-            # asure the shift to the next cell
-            self.assertLessEqual(xdelta,target.cellsize/2)
-            self.assertLessEqual(ydelta,target.cellsize/2)
-            
-            # grid origin is shifted to a cell multiple of self.grid.origin
-            self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize,0)
-            self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize,0)
+                # asure the shift to the next cell
+                self.assertLessEqual(xdelta,base.cellsize/2)
+                self.assertLessEqual(ydelta,base.cellsize/2)
 
-        offsets = (
-            (-75,-30),
-            (self.grid.cellsize *.9,self.grid.cellsize *20),
-            (self.grid.yorigin * -1.1, self.grid.xorigin * 1.89),
-        )
-
-        for yoff,xoff in offsets:            
-            checkgrid = copy.deepcopy(self.grid)
-            checkgrid.yorigin -= yoff
-            checkgrid.xorigin -= xoff
-            test(checkgrid,self.grid)
+                # grid origin is shifted to a cell multiple of self.grid.origin
+                self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize,0)
+                self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize,0)
 
     def test_indexCoordinates(self):
-        grid = self.grid
-        offset = grid.cellsize
-        ulyorigin, ulxorigin = grid.getOrigin("ul")
-        uryorigin, urxorigin = grid.getOrigin("ur")
-        llyorigin, llxorigin = grid.getOrigin("ll")
-        lryorigin, lrxorigin = grid.getOrigin("lr")
+        for base in self.grids:
+            offset = base.cellsize
+            ulyorigin, ulxorigin = base.getOrigin("ul")
+            uryorigin, urxorigin = base.getOrigin("ur")
+            llyorigin, llxorigin = base.getOrigin("ll")
+            lryorigin, lrxorigin = base.getOrigin("lr")
 
-        idxs = ((0,0),(grid.nrows-1, grid.ncols-1), (0,grid.ncols-1), (grid.nrows-1,0))
-        coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
-                  (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
+            idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
+            coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
+                    (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
 
-        for idx,coord in zip(idxs,coords):
-            self.assertTupleEqual(grid.indexCoordinates(*idx),coord)
-
+            for idx,coord in zip(idxs,coords):
+                self.assertTupleEqual(base.indexCoordinates(*idx),coord)
 
     def test_coordinateIndex(self):
-        grid = self.grid
-        offset = grid.cellsize
-        ulyorigin, ulxorigin = grid.getOrigin("ul")
-        uryorigin, urxorigin = grid.getOrigin("ur")
-        llyorigin, llxorigin = grid.getOrigin("ll")
-        lryorigin, lrxorigin = grid.getOrigin("lr")
+        for base in self.grids:
+            offset = base.cellsize
+            ulyorigin, ulxorigin = base.getOrigin("ul")
+            uryorigin, urxorigin = base.getOrigin("ur")
+            llyorigin, llxorigin = base.getOrigin("ll")
+            lryorigin, lrxorigin = base.getOrigin("lr")
 
-        idxs = ((0,0),(grid.nrows-1, grid.ncols-1), (0,grid.ncols-1), (grid.nrows-1,0))
-        coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
-                  (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
+            idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
+            coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
+                    (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
 
-        for idx,coord in zip(idxs,coords):
-            self.assertTupleEqual(grid.coordinateIndex(*coord),idx)
+            for idx,coord in zip(idxs,coords):
+                self.assertTupleEqual(base.coordinateIndex(*coord),idx)
 
             
 if __name__== "__main__":
