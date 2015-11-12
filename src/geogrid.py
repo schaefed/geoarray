@@ -38,6 +38,11 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 
+try:
+    xrange
+except NameError: # python 3
+    xrange = range
+
 # Possible positions of the grid origin
 ORIGINS = ("ul",    #     "ul" -> upper left
            "ur",    #     "ur" -> upper right
@@ -66,23 +71,7 @@ TYPEMAP = {
     "complex64"  : 10,
     "complex128" : 11,
 }
-TYPEMAP.update(reversed(x) for x in TYPEMAP.items())
-
-DTYPE2GDAL = {
-    "uint8"      : 1,
-    "int8"       : 1,
-    "uint16"     : 2,
-    "int16"      : 3,
-    "uint32"     : 4,
-    "int32"      : 5,
-    "float32"    : 6,
-    "float64"    : 7,
-    "complex64"  : 10,
-    "complex128" : 11,
-}
-
-# Invert the type mapping
-GDAL2DTYPE = {v:k for k,v in DTYPE2GDAL.items()}
+TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globally.
@@ -173,7 +162,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                          #     "ur" : upper right corner
                                          #     "ll" : lower left corner
                                          #     "lr" : lower right corner
-    fill_value : inf/float             # fill or fill value
+    fill_value   : inf/float             # fill or fill value
     cellsize     : int/float             # cellsize
     proj_params  : dict/None             # proj4 projection parameters
 
@@ -644,7 +633,7 @@ def fromfile(fname):
     def _projParams(fobj):
         srs = osr.SpatialReference()
         srs.ImportFromWkt(fobj.GetProjection())
-        proj_params = filter(None,re.split("[+= ]",srs.ExportToProj4()))
+        proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
     global _FILEREFS

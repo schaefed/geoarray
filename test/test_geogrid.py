@@ -80,18 +80,12 @@ class TestGeoGrid(unittest.TestCase):
         except:
             pass
 
-        
     def test_setFillValue(self):
         rpcvalue = -2222
         checkgrid = gg.fromfile(FNAME)
         checkgrid.fill_value = rpcvalue
-        # replacing works ...
         self.assertEqual(checkgrid.fill_value, rpcvalue)
-        nodatapos1 = np.where(checkgrid == self.grid.fill_value)
-        nodatapos2 = np.where(self.grid == self.grid.fill_value)
-        for pos1,pos2 in zip(nodatapos1,nodatapos2):
-            self.assertItemsEqual(pos1,pos2)
-        
+
     def test_setDataType(self):
         rpctype = np.int32
         checkgrid = self.grid.astype(rpctype)
@@ -101,9 +95,9 @@ class TestGeoGrid(unittest.TestCase):
         grid = self.grid.copy()
         slices = (
             self.grid < 3,
-            # self.grid == 10,
-            # np.where(self.grid>6),
-            # (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+            self.grid == 10,
+            np.where(self.grid>6),
+            (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
         )
         idx = np.arange(12,20)
         self.assertTrue(np.all(grid[idx] == self.grid[gg.array(idx)]))
@@ -114,31 +108,29 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(np.all(slc1.mask == slc2.mask))
 
     def test_getitemOrigin(self):
-        grid1 = gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ul")
-        grid2 = gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ll")
-        grid3 = gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ur")
-        grid4 = gg.ones((100,100),yorigin=1000,xorigin=1200,origin="lr")
-
+        grids = (
+            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
+            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
+            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
+            gg.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
+        )
         slices = (
             ( slice(3,4) ),
             ( slice(3,4),slice(55,77,None) ),
             ( slice(None,None,7),slice(55,77,None) ),
             ( -1, ),
         )
-
-        grids = {
-            grid1: ( (997,  1200), (997,  1255), (1000, 1255), (901,  1200) ),
-            grid2: ( (1096, 1200), (1096, 1255), (1001, 1255), (1000, 1200) ),
-            grid3: ( (997,  1200), (997,  1177), (1000, 1177), (901,  1200) ),
-            grid4: ( (1096, 1200), (1096, 1177), (1001, 1177), (1000, 1200) )
-        }
-
-        for grid in grids:
-            for slc,expected in zip( slices, grids[grid] ):
-                self.assertTupleEqual( expected, grid[slc].getOrigin() )
+        expected = (
+            ( (997,  1200), (997,  1255), (1000, 1255), (901,  1200) ),
+            ( (1096, 1200), (1096, 1255), (1001, 1255), (1000, 1200) ),
+            ( (997,  1200), (997,  1177), (1000, 1177), (901,  1200) ),
+            ( (1096, 1200), (1096, 1177), (1001, 1177), (1000, 1200) )
+        )
+        for i,grid in enumerate(grids):
+            for slc,exp in zip(slices,expected[i]):
+                self.assertTupleEqual( exp, grid[slc].getOrigin() )
 
     def test_setitem(self):
-        
         slices = (
             np.arange(12,20).reshape(1,-1),
             self.grid < 3,
@@ -155,7 +147,6 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(np.all(grid[slc] == value))
 
     def test_tofile(self):
-        
         fnames = ("{:}/testout{:}".format(self.write_path,ext) for ext in gg._DRIVER_DICT)
 
         for fname in fnames:
@@ -165,7 +156,6 @@ class TestGeoGrid(unittest.TestCase):
             self.assertDictEqual(checkgrid.header, self.grid.header)
 
     def test_copy(self):
-        
         deep_copy = copy.deepcopy(self.grid)        
         self.assertTrue(self.grid.header == deep_copy.header)
         self.assertNotEqual(id(self.grid),id(deep_copy))
@@ -176,9 +166,7 @@ class TestGeoGrid(unittest.TestCase):
         self.assertNotEqual(id(self.grid),id(shallow_copy))
         self.assertTrue(np.all(self.grid == shallow_copy))
 
-
     def test_numpyFunctions(self):
-        
         # Ignore over/underflow warnings in function calls
         warnings.filterwarnings("ignore")
         # funcs tuple could be extended
@@ -202,7 +190,6 @@ class TestGeoGrid(unittest.TestCase):
                 np.testing.assert_equal(r1.data,r2.data)
                 np.testing.assert_equal(r1.mask,r2.mask)
             
-        
     def test_reading(self):
         value          = 42
         maxrow         = 10
@@ -220,7 +207,6 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.grid = gg.fromfile(FNAME)        
 
     def test_addCells(self):
-
         padgrid = self.grid.addCells(1, 1, 1, 1)
         self.assertTrue(np.sum(padgrid[1:-1,1:-1] == self.grid))
 
@@ -234,7 +220,6 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertTrue(np.all(padgrid == self.grid))
         
     def test_enlarge(self):
-        
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] - 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] -  .7 * self.grid.cellsize,
@@ -245,7 +230,6 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(enlrgrid.ncols, self.grid.ncols + 3 + 1)
         
     def test_shrink(self):
-        
         bbox = self.grid.bbox
         newbbox = {"xmin" : bbox["xmin"] + 2.5 * self.grid.cellsize,
                    "ymin" : bbox["ymin"] +  .7 * self.grid.cellsize,
@@ -256,15 +240,12 @@ class TestGeoGridFuncs(unittest.TestCase):
         self.assertEqual(shrgrid.ncols, self.grid.ncols - 2 - 0)
 
     def test_removeCells(self):
-        
         rmgrid = self.grid.removeCells(1,1,1,1)
         self.assertEqual(np.sum(rmgrid - self.grid[1:-1,1:-1]) , 0)
         rmgrid = self.grid.removeCells(0,0,0,0)
         self.assertEqual(np.sum(rmgrid - self.grid) , 0)
-
         
     def test_trim(self):
-        
         trimgrid = self.grid.trim()
         self.assertTrue(np.any(trimgrid[0,...]  != self.grid.fill_value))
         self.assertTrue(np.any(trimgrid[-1,...] != self.grid.fill_value))
@@ -301,7 +282,6 @@ class TestGeoGridFuncs(unittest.TestCase):
             test(checkgrid,self.grid)
 
     def test_indexCoordinates(self):
-
         grid = self.grid
         offset = grid.cellsize
         ulyorigin, ulxorigin = grid.getOrigin("ul")
@@ -318,7 +298,6 @@ class TestGeoGridFuncs(unittest.TestCase):
 
 
     def test_coordinateIndex(self):
-
         grid = self.grid
         offset = grid.cellsize
         ulyorigin, ulxorigin = grid.getOrigin("ul")
