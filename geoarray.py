@@ -38,6 +38,7 @@ import re, os, sys
 import gdal, osr
 import numpy as np
 from math import floor, ceil
+from slicing import getSlices
 
 try:
     xrange
@@ -564,44 +565,6 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
         mask = False
     return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,mask=mask,fill_value=fill_value)
 
-def _getslices(slc,shape):
-    """
-    Parameters
-    -----
-    slc   : argument to __getitem__
-    shape : the shape of the np.ndarray on which __getitem__ was called
-
-    Returns
-    -------
-    tuple of sequences
-
-    Purpose
-    -------
-    Unifies the different possible arguments to the __getitem__ method
-    of a np.ndarray
-    """
-    try:
-        slc[0]
-    except TypeError:
-        slc = (slc,)
-
-    out = []
-    for i in xrange(len(shape)):
-        try:
-            out.append(xrange(*slc[i].indices(shape[i])))
-        except IndexError: # len(slc) < len(shape)
-            out.append(xrange(shape[i]))
-        except AttributeError: # not a slice object
-           try:
-                if slc[i] == Ellipsis:
-                    out.append(xrange(shape[i]))
-                else: # an integer
-                    if slc[i] >= 0:
-                        raise ValueError
-                    out.append((shape[i] + slc[i],))
-           except ValueError: # slc[i] is a sequence
-                out.append((slc[i],))
-    return out
 
 def fromfile(fname):
     """
@@ -1497,20 +1460,18 @@ class GeoArray(np.ma.MaskedArray):
             )
 
     def __getitem__(self,slc):
-
         out = super(GeoArray,self).__getitem__(slc)
-        slices = ([(1,)] + _getslices(slc,self.shape))[-2:]
+        slices = getSlices(slc,self.shape)
         try:
             yorigin,xorigin = self.getOrigin("ul")
             if self.origin[0] == "u":
-                out.yorigin = yorigin - slices[-2][0] * self.cellsize
+                out.yorigin = yorigin - slices[-2].first * self.cellsize
             else:
-                out.yorigin = yorigin - ( slices[-2][-1] + 1 ) * self.cellsize
-
+                out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize
             if self.origin[1] == "l":
-                out.xorigin = xorigin + slices[-1][0] * self.cellsize
+                out.xorigin = xorigin + slices[-1].first * self.cellsize
             else:
-                out.xorigin = xorigin + ( slices[-1][-1] + 1 ) * self.cellsize
+                out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize
 
         except AttributeError: # out is scalar
             pass

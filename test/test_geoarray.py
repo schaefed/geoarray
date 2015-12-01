@@ -97,11 +97,11 @@ class TestGeoGrid(unittest.TestCase):
             base.fill_value = rpcvalue
             self.assertEqual(base.fill_value, rpcvalue)
 
-    def test_setDataType(self):
-        rpctype = np.int32
-        for base in self.grids:
-            grid = base.astype(rpctype)
-            self.assertEqual(grid.dtype,rpctype)
+    # def test_setDataType(self):
+    #     rpctype = np.int32
+    #     for base in self.grids:
+    #         grid = base.astype(rpctype)
+    #         self.assertEqual(grid.dtype,rpctype)
         
     def test_getitem(self):        
         for base in self.grids:
