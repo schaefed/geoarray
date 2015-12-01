@@ -37,7 +37,10 @@ class Slice(object):
         try:
             idx = obj.indices(self.length)
             idxrange = xrange(*idx)
-            slc = slice(idxrange[0], idxrange[-1], idx[-1])
+            try:
+                slc = slice(idxrange[0], idxrange[-1], idx[-1])
+            except IndexError: # invalid slice like slice(55,119,-4)
+                raise TypeError("Empty slice cannot be queried!")
         except AttributeError: # not a slice object
             slc = np.array(obj,ndmin=1).ravel()
             if slc[0] == Ellipsis:
@@ -54,18 +57,8 @@ class Slice(object):
     def __str__(self):
         return "Slice({}, {}, {})".format(self.first, self.last, self.step)
     
-# ADVANCED_INDEXING_TYPES = (list, np.ndarray)
-# INT_TYPES = (int, np.int, np.int32, np.int64, np.uint, np.uint32, np.uint64)
-
 def getSlices(slices,shape):
    
-    # if ((isinstance(slices, INT_TYPES))
-    #     or (isinstance(slices, slice))
-    #     or (isinstance(slices, ADVANCED_INDEXING_TYPES))
-    #     or (slices is Ellipsis)
-    # ):
-    #     slices = (slices,)
-
     try:
         slices = tuple(slices)
     except TypeError:
@@ -109,7 +102,7 @@ TESTCASES = (
     slice(3,-1,None),
     slice(5,44,5),
     slice(None,-1,None),
-    slice(-65,-1,-4),
+    #slice(-65,-1,-4),
     slice(100,10,-2),
     (5,3,1,3,88,54,-55), # failing in test_use by design
 )
@@ -120,7 +113,7 @@ class TestSlice(unittest.TestCase):
         self.length = 120
         self.array = np.arange(self.length)
 
-    def test_start(self):
+    def test_first(self):
         results = (
             # Ellipsis
             0,
@@ -131,34 +124,34 @@ class TestSlice(unittest.TestCase):
             # np.arange
             0, 4, 110, 4, 100,
             # slices
-            3, 117, 3, 5, 0, 55, 100,
+            3, 117, 3, 5, 0, 100,
             # list
             1,
         )
         
         for date,expected in zip(TESTCASES,results):
             slc = Slice(date,self.length)
-            self.assertEqual(slc.start,expected)
+            self.assertEqual(slc.first,expected)
 
-    def test_stop(self):
+    def test_last(self):
         results = (
             # Ellipsis
-            120,
+            119,
             # Integers
-            1, 13, 120, 119, 111,
+            0, 12, 119, 118, 110,
             # range
-            4, 10, 119, 104, 10,
+            3, 9, 118, 79, 12,
             # np.arange
-            4, 10, 119, 104, 10,
+            3, 9, 118, 79, 12,
             # slices
-            120, 120, 119, 44, 119, 119, 10,
-            # list
-            89
+            119, 119, 118, 40, 118, 12,
+            # # list
+            88
         )
 
         for date,expected in zip(TESTCASES,results):
             slc = Slice(date,self.length)
-            self.assertEqual(slc.stop,expected)
+            self.assertEqual(slc.last,expected)
  
             
     def test_step(self):
@@ -172,7 +165,7 @@ class TestSlice(unittest.TestCase):
             # np.arange
             1, 1, 1, 25, -2,
             # slices
-            1, 1, 1, 5, 1, -4, -2,
+            1, 1, 1, 5, 1, -2,
             # list
             1,
         )
