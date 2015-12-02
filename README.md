@@ -1,7 +1,7 @@
 #geoarray
 
 #Purpose
-This module provides a numpy.ma.MaskedArray subclass and a number of wrapper 
+This python module provides a numpy.ma.MaskedArray subclass and a number of wrapper 
 functions to facilitate the work with array-like data in a geographically explicit 
 context. The Python GDAL bindings are used for I/O.
 
