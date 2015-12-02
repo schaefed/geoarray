@@ -50,7 +50,5 @@ rect.tofile("test.asc")
 For more examples see the doctests in geoarray.py
 
 #Restrictions
-Although GeoArray has an attribute proj_params, which might hold projection parameters as a proj4
-compatible dictionary, this information is currently unused. The only restriction when doing
-calculations with GeoArray instances are those of numpy: if two objects have the same shape or are broadcastable,
-these computations will be done, regardless of mismatching map projections. 
+- Although GeoArray has an attribute proj_params, which might hold projection parameters as a proj4 compatible dictionary, this information is currently unused. The only restriction when doing calculations with GeoArray instances are those of numpy: if two objects have the same shape or are broadcastable, these computations will be done, regardless of mismatching map projections. 
+- GDAL supports many different raster data formats, but only the Geotiff, Arc/Info Ascii Grid and Erdas Imagine formats are currently supported by geoarray.
