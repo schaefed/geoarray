@@ -97,11 +97,11 @@ class TestGeoGrid(unittest.TestCase):
             base.fill_value = rpcvalue
             self.assertEqual(base.fill_value, rpcvalue)
 
-    # def test_setDataType(self):
-    #     rpctype = np.int32
-    #     for base in self.grids:
-    #         grid = base.astype(rpctype)
-    #         self.assertEqual(grid.dtype,rpctype)
+    def test_setDataType(self):
+        rpctype = np.int32
+        for base in self.grids:
+            grid = base.astype(rpctype)
+            self.assertEqual(grid.dtype,rpctype)
         
     def test_getitem(self):        
         for base in self.grids:
@@ -150,7 +150,7 @@ class TestGeoGrid(unittest.TestCase):
         for base in self.grids:
             slices = (
                 np.arange(12,20).reshape(1,-1),
-                base < 3,
+                base.data < 3,
                 np.where(base>6),
                 (slice(None,None,None),slice(0,4,3)),
                 (1,1),

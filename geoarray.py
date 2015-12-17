@@ -1460,18 +1460,24 @@ class GeoArray(np.ma.MaskedArray):
             )
 
     def __getitem__(self,slc):
+
         out = super(GeoArray,self).__getitem__(slc)
         slices = getSlices(slc,self.shape)
+
         try:
             yorigin,xorigin = self.getOrigin("ul")
             if self.origin[0] == "u":
-                out.yorigin = yorigin - slices[-2].first * self.cellsize
+                if slices[-2].first:
+                    out.yorigin = yorigin - slices[-2].first * self.cellsize
             else:
-                out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize
+                if slices[-2].last:
+                    out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize
             if self.origin[1] == "l":
-                out.xorigin = xorigin + slices[-1].first * self.cellsize
+                if slices[-1].first:
+                    out.xorigin = xorigin + slices[-1].first * self.cellsize
             else:
-                out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize
+                if slices[-1].last:
+                    out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize
 
         except AttributeError: # out is scalar
             pass

@@ -4,69 +4,11 @@
 import unittest
 import numpy as np
 
-# class Slice(object):
-#     """
-#     Abstracts all possible __getitem__ arguments to a numpy.ndarray into 
-#     an Object follwing the slice-notation of start/stop/step attributes.
-
-#     The idea is to be able to extract this basic slicing information in 
-#     an unique way for all the different index types.
+try:
+    xrange
+except NameError:
+    xrange = range
     
-#     In order to actually index your object you should however use the
-#     original argument to __getitem__ !!
-#     """
-    
-#     def __init__(self,obj,length):
-#         self.obj    = obj
-#         self.length = length
-#         self.data   = self._prepare(obj)
-        
-#     @property
-#     def first(self):
-#         return self.data.start
-
-#     @property
-#     def last(self):
-#        return self.data.stop
-
-#     @property
-#     def step(self):
-#         return self.data.step
-       
-#     def _prepare(self,obj):
-#         try:
-#             # slice object
-#             idx = obj.indices(self.length)
-#             idxrange = xrange(*idx)
-#             try:
-#                 slc = slice(idxrange[0], idxrange[-1], idx[-1])
-#             except IndexError: # invalid slice like slice(55,119,-4)
-#                 raise TypeError("Empty slice cannot be queried!")
-#         except AttributeError: # not a slice object
-#             slc = np.array(obj,ndmin=1).ravel()
-            
-#             if slc[0] == Ellipsis:
-#                 slc = slice(0, self.length-1, 1)
-#             else:
-#                 base = slc.copy()
-#                 slc[slc < 0] += self.length 
-                
-#                 illegal =  np.where((slc > self.length) | (slc < 0))[0]
-#                 if len(illegal):
-#                     raise IndexError("index {:} out of bounds for axis with size {:}".format(base[illegal[0]],self.length))
-
-#                 diff = np.unique(np.diff(slc))
-#                 if len(diff) == 1: # equally spaced elements -> sorted
-#                     slc = slice(slc[0],slc[-1],diff[0])
-#                 else:
-#                     slc = slice(min(slc),max(slc),1)                    
-
-#         return slc
-
-           
-#     def __str__(self):
-#         return "Slice({}, {}, {})".format(self.first, self.last, self.step)
-
 class Slice(object):
     
     def __init__(self, obj, length):
@@ -135,9 +77,9 @@ class Slice(object):
         elif isinstance(obj,(int,np.int,np.int32,np.int64,
                              np.uint,np.uint32,np.uint64)):
             tmp = np.array(obj,ndmin=1)
-        elif not isinstance(obj,np.ndarray):
-            raise TypeError("Unexpected argument type: {:}".format(type(obj)))
-        
+        elif isinstance(obj,np.ma.MaskedArray):
+            tmp = obj.data[~obj.mask]
+
         out = tmp.copy()
         out[out < 0] += self.length
 
@@ -149,7 +91,7 @@ class Slice(object):
         
 
 def _tupelizeSlices(slices):
-
+    
     if isinstance(slices,list):
         try:
             slices = np.asarray(slices)
@@ -161,7 +103,7 @@ def _tupelizeSlices(slices):
             slices = tuple(slices)
         else: # homogenous array -> indices for first dimension
             slices = (slices,)
-
+            
     if not isinstance(slices,tuple): # integer, slice, Ellipsis
         slices = (slices,)
 
@@ -170,48 +112,37 @@ def _tupelizeSlices(slices):
 def _handleEllipsis(slices,shape):
 
     out = []
+    found = False
     for i,slc in enumerate(slices):
-        if slc is Ellipsis:
+        if slc is Ellipsis and not found:
             for _ in xrange((len(shape)-len(slices))+1):
                 out.append(Ellipsis)
-        else:
-            out.append(slc)
+            found = True
+            continue
+        out.append(slc)
     return out
     
 def getSlices(slices,shape):
-
     slices = _tupelizeSlices(slices)
     slices = _handleEllipsis(slices,shape)
     
     if len(slices) > len(shape):
         raise IndexError("too many indices")
 
-    print slices
     slices += [Ellipsis]*len(shape)
-    
-    # if isinstance(slices,tuple):
-    #     if len(slices) > len(shape):
-    #         raise IndexError("too many indices")
-    # else: # integer, slice, Ellipsis
-    #     slices = (slices,)
-
-    # slices = list(slices) + [Ellipsis,]*len(shape)
-        
     out = []
     for i in xrange(len(shape)):
         slc = slices[i]
-
         if isinstance(slc,np.ndarray):
-            if slc.ndim > 1:
-                raise TypeError("Non-boolean arrays with more than one dimension are not supported yet!")
-
             if slc.dtype is np.dtype("bool"):
-                this,other = np.nonzero(slices)
-                slc = this
-                slices.insert(i+1,other)
-
+                idx = np.nonzero(slc)
+                slc = idx[0]
+                for j,other in enumerate(slc[1:]):
+                    slices.insert(i+j+1,other)
+            if slc.ndim > 1:
+                slc = slc.ravel()
+                
         out.append(Slice(slc,shape[i]))
-       
     return tuple(out)
         
 TESTCASES = (
@@ -311,8 +242,8 @@ class TestSlice(unittest.TestCase):
         dates = (
             ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
         )
-        for (date, expected) in dates:
-            print _handleEllipsis(_tupelizeSlices(date))
+        for (date, shape) in dates:
+            print _handleEllipsis(_tupelizeSlices(date),shape)
   
 if __name__== "__main__":
 
