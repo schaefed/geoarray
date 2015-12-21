@@ -66,20 +66,21 @@ class Slice(object):
         - tuple
         - array
         - int
+        - range/xrange
         """
         tmp = obj
         if isinstance(obj,slice):
             tmp = np.arange(*obj.indices(self.length))
         elif obj is Ellipsis:
             tmp = np.arange(self.length)
-        elif isinstance(obj,(list,tuple)):
-            tmp = np.asarray(obj)
         elif isinstance(obj,(int,np.int,np.int32,np.int64,
                              np.uint,np.uint32,np.uint64)):
             tmp = np.array(obj,ndmin=1)
         elif isinstance(obj,np.ma.MaskedArray):
             tmp = obj.data[~obj.mask]
-
+        else:
+            tmp = np.asarray(obj)
+            
         out = tmp.copy()
         out[out < 0] += self.length
 
@@ -169,7 +170,7 @@ TESTCASES = (
     slice(None,-1,None),
     #slice(-65,-1,-4),
     slice(100,10,-2),
-    #(5,3,1,3,88,54,-55), # failing in test_use by design
+    #(5,3,1,3,88,54,-55), 
 )
         
 class TestSlice(unittest.TestCase):
@@ -238,18 +239,12 @@ class TestSlice(unittest.TestCase):
             slc = Slice(date, self.length)
             self.assertEqual(slc.step, expected)
 
-    def test_handleEllipsis(self):
-        dates = (
-            ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
-        )
-        for (date, shape) in dates:
-            print _handleEllipsis(_tupelizeSlices(date),shape)
+    # def test_handleEllipsis(self):
+    #     dates = (
+    #         ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
+    #     )
   
 if __name__== "__main__":
 
     unittest.main()
-    # getSlices((Ellipsis,1,2),(10,12))
-    # getSlices((Ellipsis,2),(1,4,10,12))
-    # getSlices((1,Ellipsis,2),(1,4,10,12))
-    # getSlices((1,Ellipsis,2,Ellipsis,Ellipsis),(1,4,10,12))
     
