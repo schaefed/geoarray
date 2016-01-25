@@ -720,17 +720,14 @@ class GeoArray(np.ma.MaskedArray):
     1. A GeoArray instance can be passed to any numpy function expecting a
        numpy.ndarray as argument and, in theory, all these functions should also return
        an object of the same type. In practice however not all functions do so and some
-       will still return a numpy.ndarray.
+       will return a numpy.ndarray.
     2. Adding the geographic information to the data does (at the moment) not imply
        any additional logic. If the shapes of two grids allow the succesful execution
        of a certain operator/function your program will continue. It is within the responsability
        of the user to check whether a given operation makes sense within a geographic context
        (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
-       Overriding the __array_prepare__ method to implement the necessary checks would solve that
-       issue for all operators and most functions. But there are a few edge cases, where numpy
-       functions are not routed through the __array_prepare__/__array_wrap__ mechanism.
-
-    See also
+       Overriding the operators could fix this.
+    
     --------
     array : construct a GeoArray.
     zeros : construct a GeoArray, each element of which is zero.
@@ -822,7 +819,7 @@ class GeoArray(np.ma.MaskedArray):
     def __new__(cls, data, yorigin, xorigin, origin,
                 cellsize, proj_params=None,*args,**kwargs):
         
-        obj = np.ma.MaskedArray.__new__(cls,data, *args, **kwargs)
+        obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
         obj._optinfo['yorigin']     = yorigin
         obj._optinfo['xorigin']     = xorigin
         obj._optinfo['origin']      = origin
