@@ -179,7 +179,6 @@ class TestGeoGrid(unittest.TestCase):
             self.assertTrue(base.header == deep_copy.header)
             self.assertNotEqual(id(base),id(deep_copy))
             self.assertTrue(np.all(base == deep_copy))
-
             shallow_copy = copy.copy(base)
             self.assertTrue(base.header == shallow_copy.header)
             self.assertNotEqual(id(base),id(shallow_copy))
@@ -198,17 +197,18 @@ class TestGeoGrid(unittest.TestCase):
                  np.arctanh,
                  np.gradient,                
         )
+        
         for base in self.grids:
             grid = base.copy()
             for f in funcs:
-                r1 = f(grid)
+                r1 = f(base)
                 r2 = f(grid)
                 try:
                     np.testing.assert_equal(r1,r2)
                 except AssertionError:
                     np.testing.assert_equal(r1.data,r2.data)
                     np.testing.assert_equal(r1.mask,r2.mask)
-
+            break
        
 class TestGeoGridFuncs(unittest.TestCase):
     
