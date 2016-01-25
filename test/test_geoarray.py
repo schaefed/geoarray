@@ -103,6 +103,17 @@ class TestGeoGrid(unittest.TestCase):
             grid = base.astype(rpctype)
             self.assertEqual(grid.dtype,rpctype)
         
+    def test_basicMatch(self):
+        for base in self.grids:
+            grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
+            grid2.xorigin -= 1
+            grid3.cellsize += 1
+            grid4.proj_params = {"invalid":"key"}
+            self.assertTrue(base.basicMatch(grid1))
+            self.assertFalse(base.basicMatch(grid2))
+            self.assertFalse(base.basicMatch(grid3))
+            self.assertFalse(base.basicMatch(grid4))
+           
     def test_getitem(self):        
         for base in self.grids:
             grid = base.copy()

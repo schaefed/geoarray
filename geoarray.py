@@ -1437,6 +1437,27 @@ class GeoArray(np.ma.MaskedArray):
         self.xorigin -= dx
         self.yorigin -= dy
 
+    def basicMatch(self, grid):
+        """
+        Parameters
+        ----------
+        grid : GeoArray
+
+        Returns
+        -------
+        bool
+
+        Purpose
+        -------
+        Checks if two grids match in are somehow identical. The idea is to
+        call this method before any numpy based broadcasting 
+        """
+        return (
+            (self.proj_params == grid.proj_params) and
+            (self.getOrigin() == grid.getOrigin(self.origin)) and
+            (self.cellsize == grid.cellsize)
+        )
+
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
