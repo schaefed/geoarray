@@ -566,6 +566,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
     return GeoArray(data, yorigin, xorigin, origin, cellsize, proj_params, mask=mask, fill_value=fill_value, fobj=fobj)
 
 
+
 def fromfile(fname):
     """
     Parameters
@@ -582,27 +583,37 @@ def fromfile(fname):
 
     """
 
-    def _openFile(fname):
-        fobj = gdal.OpenShared(fname)
-        if fobj:
-            return fobj
-        raise IOError("Could not open file")
+    fobj = gdal.OpenShared(fname)
+    if fobj:
+        return _fromDataset(fobj)
+    raise IOError("Could not open file")
+
+def _proj2Gdal(proj_params):
+    params = None
+    if proj_params:
+        params =  "+{:}".format(" +".join(
+            ["=".join(map(str, pp)) for pp in proj_params.items()])
+        )
+    srs = osr.SpatialReference()
+    srs.ImportFromProj4(params)
+    return srs.ExportToWkt()
+
+def _gdal2Proj(fobj):
+    """
+    Move out...
+    """
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(fobj.GetProjection())
+    proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
+    return dict(zip(proj_params[0::2],proj_params[1::2]))
+
+def _fromDataset(fobj):
 
     def _cellsize(geotrans):
         if abs(geotrans[1]) == abs(geotrans[5]):
             return abs(geotrans[1])
         raise NotImplementedError(
             "Diverging cellsizes in x and y direction are not allowed yet!")
-
-    def _projParams(fobj):
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(fobj.GetProjection())
-        proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
-        return dict(zip(proj_params[0::2],proj_params[1::2]))
-
-    # global _FILEREFS
-
-    fobj = _openFile(fname)
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
@@ -618,34 +629,24 @@ def fromfile(fname):
         data       = fobj.GetVirtualMemArray(
             gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
         )
-        # fobj needs to outlive the data
-        # _FILEREFS.append(fobj)
     else:
         data = fobj.ReadAsArray()
 
-    return _factory(data=data, yorigin=geotrans[3], xorigin=geotrans[0],
-                    origin="ul", fill_value=rasterband.GetNoDataValue(),
-                    cellsize=_cellsize(geotrans), proj_params=_projParams(fobj),
-                    fobj=fobj)
+    return _factory(
+        data=data, yorigin=geotrans[3], xorigin=geotrans[0],
+        origin="ul", fill_value=rasterband.GetNoDataValue(),
+        cellsize=_cellsize(geotrans), proj_params=_gdal2Proj(fobj),
+        fobj=fobj
+    )
 
-def _proj2Gdal(proj_params):
-    params = None
-    if proj_params:
-        params =  "+{:}".format(" +".join(
-            ["=".join(map(str, pp)) for pp in proj_params.items()])
-        )
-    srs = osr.SpatialReference()
-    srs.ImportFromProj4(params)
-    return srs.ExportToWkt()
 
-def _writeGdalMemory(grid, projection):
+def _gdalMemory(grid, projection):
     """
     Create GDAL memory dataset
     """
     driver = gdal.GetDriverByName("MEM")
     out = driver.Create(
-        "",grid.ncols,grid.nrows,grid.nbands,
-        TYPEMAP[str(grid.dtype)]
+        "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
     out.SetGeoTransform(
         (grid.xorigin, grid.cellsize,0,
@@ -659,7 +660,6 @@ def _writeGdalMemory(grid, projection):
         band.WriteArray(banddata)
     out.FlushCache()
     return out
-
 
 
 def _tofile(fname,geoarray):
@@ -678,29 +678,7 @@ def _tofile(fname,geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
-    # def _writeGdalMemory(grid, projection):
-    #     """
-    #     Create GDAL memory dataset
-    #     """
-    #     driver = gdal.GetDriverByName("MEM")
-    #     out = driver.Create(
-    #         "",grid.ncols,grid.nrows,grid.nbands,
-    #         TYPEMAP[str(grid.dtype)]
-    #     )
-    #     out.SetGeoTransform(
-    #         (grid.xorigin, grid.cellsize,0,
-    #          grid.yorigin, 0, grid.cellsize)
-    #     )
-    #     out.SetProjection(projection)
-    #     for n in xrange(grid.nbands):
-    #         band = out.GetRasterBand(n+1)
-    #         band.SetNoDataValue(float(grid.fill_value))
-    #         banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
-    #         band.WriteArray(banddata)
-    #     out.FlushCache()
-    #     return out
-
-    memset = _writeGdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
+    memset = _gdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
     out = outdriver.CreateCopy(fname, memset, 0)
     errormsg = gdal.GetLastErrorMsg()
@@ -1485,20 +1463,22 @@ class GeoArray(np.ma.MaskedArray):
         )
 
     def transform(self, proj_params):
-        this = _proj2Gdal(self.proj_params)
+        # this = _proj2Gdal(self.proj_params)
         that = _proj2Gdal(proj_params)
 
         error_threshold = 0.125  # error threshold --> use same value as in gdalwarp
         resampling = gdal.GRA_NearestNeighbour
 
         if self._fobj is None:
-            pass
+            self._fobj = _gdalMemory(self, _proj2Gdal(self.proj_params))
         
-        tmp = gdal.AutoCreateWarpedVRT( src_ds,
-                                        None, # src_wkt : left to default value --> will use the one from source
-                                        dst_wkt,
-                                        resampling,
-                                        error_threshold )
+        tmp = gdal.AutoCreateWarpedVRT(
+            self._fobj,
+            None, # src_wkt : left to default value --> will use the one from source
+            _proj2Gdal(proj_params),
+            resampling,
+            error_threshold
+        )
         
         
     def __repr__(self):
