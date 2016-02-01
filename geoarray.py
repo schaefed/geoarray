@@ -144,8 +144,8 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
               [-- -- -- -- -- --]])
 
     """
-    return _factory(np.asarray(data) if not dtype else np.asarray(data,dtype),
-                    yorigin,xorigin,origin,fill_value,cellsize,proj_params)
+    return _factory(np.asarray(data) if not dtype else np.asarray(data, dtype),
+                    yorigin, xorigin, origin, fill_value, cellsize, proj_params, None)
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=-9999, cellsize=1, proj_params=None):
@@ -185,8 +185,8 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]])
     """
-    return _factory(np.zeros(shape,dtype),yorigin,xorigin,
-                    origin,fill_value,cellsize,proj_params)
+    return _factory(np.zeros(shape, dtype), yorigin, xorigin,
+                    origin, fill_value, cellsize, proj_params, None)
 
 def zeros_like(a,*args,**kwargs):
     """
@@ -242,9 +242,9 @@ def zeros_like(a,*args,**kwargs):
 
     """
     try:
-        return array(np.zeros_like(a,*args,**kwargs),**a.header)
+        return array(np.zeros_like(a, *args, **kwargs), **a.header)
     except AttributeError:
-        return array(np.zeros_like(a,*args,**kwargs))
+        return array(np.zeros_like(a, *args, **kwargs))
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -286,8 +286,8 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [1.0 1.0 1.0 1.0]])
     """
 
-    return _factory(np.ones(shape,dtype),yorigin,xorigin,
-                    origin,fill_value,cellsize,proj_params)
+    return _factory(np.ones(shape,dtype), yorigin, xorigin,
+                    origin, fill_value, cellsize, proj_params, None)
 
 def ones_like(a,*args,**kwargs):
     """
@@ -387,8 +387,8 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]])
     """
-    return _factory(np.full(shape,value,dtype),yorigin,xorigin,
-                    origin,fill_value,cellsize,proj_params)
+    return _factory(np.full(shape, value, dtype), yorigin, xorigin,
+                    origin, fill_value, cellsize, proj_params, None)
 
 def full_like(a,fill_value,*args,**kwargs):
     """
@@ -495,8 +495,8 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [-- -- -- --]])
     """
 
-    return _factory(np.full(shape,fill_value,dtype),yorigin,xorigin,
-                    origin,fill_value,cellsize,proj_params)
+    return _factory(np.full(shape, fill_value, dtype), yorigin, xorigin,
+                    origin, fill_value, cellsize, proj_params, None)
 
 def empty_like(a,*args,**kwargs):
     """
@@ -557,13 +557,13 @@ def empty_like(a,*args,**kwargs):
         return array(np.full_like(a,-9999),*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, fobj):
     if origin not in ORIGINS:
-        raise TypeError("Argument 'origin' must be on of '{:}'".format(ORIGINS))
+        raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     mask = data==fill_value
     if not np.any(mask):
         mask = False
-    return GeoArray(data,yorigin,xorigin,origin,cellsize,proj_params,mask=mask,fill_value=fill_value)
+    return GeoArray(data, yorigin, xorigin, origin, cellsize, proj_params, mask=mask, fill_value=fill_value, fobj=fobj)
 
 
 def fromfile(fname):
@@ -600,7 +600,7 @@ def fromfile(fname):
         proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
         return dict(zip(proj_params[0::2],proj_params[1::2]))
 
-    global _FILEREFS
+    # global _FILEREFS
 
     fobj = _openFile(fname)
 
@@ -614,32 +614,33 @@ def fromfile(fname):
     dtype      = np.dtype(TYPEMAP[rasterband.DataType])
 
     if "linux" in sys.platform:
-        # use GDAL's virtaual memmory mappings
+        # use GDAL's virtual memmory mappings
         data       = fobj.GetVirtualMemArray(
             gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
         )
         # fobj needs to outlive the data
-        _FILEREFS.append(fobj)
+        # _FILEREFS.append(fobj)
     else:
         data = fobj.ReadAsArray()
 
-    return _factory(data=data,yorigin=geotrans[3],xorigin=geotrans[0],
-                    origin="ul",fill_value=rasterband.GetNoDataValue(),
-                    cellsize=_cellsize(geotrans),proj_params=_projParams(fobj))
+    return _factory(data=data, yorigin=geotrans[3], xorigin=geotrans[0],
+                    origin="ul", fill_value=rasterband.GetNoDataValue(),
+                    cellsize=_cellsize(geotrans), proj_params=_projParams(fobj),
+                    fobj=fobj)
+
+def _proj2Gdal(proj_params):
+    params = None
+    if proj_params:
+        params =  "+{:}".format(" +".join(
+            ["=".join(map(str, pp)) for pp in proj_params.items()])
+        )
+    srs = osr.SpatialReference()
+    srs.ImportFromProj4(params)
+    return srs.ExportToWkt()
 
 def _tofile(fname,geoarray):
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
-
-    def _projection(grid):
-        params = None
-        if grid.proj_params:
-            params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in grid.proj_params.items()])
-                )
-        srs = osr.SpatialReference()
-        srs.ImportFromProj4(params)
-        return srs.ExportToWkt()
 
     def _getDriver(fext):
         """
@@ -675,7 +676,7 @@ def _tofile(fname,geoarray):
         out.FlushCache()
         return out
 
-    memset = _writeGdalMemory(geoarray, _projection(geoarray))
+    memset = _writeGdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
     out = outdriver.CreateCopy(fname, memset, 0)
     errormsg = gdal.GetLastErrorMsg()
@@ -695,9 +696,10 @@ class GeoArray(np.ma.MaskedArray):
                                          #     "ur" -> upper right
                                          #     "ll" -> lower left
                                          #     "lr" -> lower right
-    fill_value : scalar
+    fill_value   : scalar
     cellsize     : scalar
-
+    fobj         : return object from gdal.Open or None
+    
     Optional Parameters
     -------------------
     proj_params  : dict/None             # Proj4 projection parameters
@@ -817,14 +819,15 @@ class GeoArray(np.ma.MaskedArray):
     """
 
     def __new__(cls, data, yorigin, xorigin, origin,
-                cellsize, proj_params=None,*args,**kwargs):
+                cellsize, proj_params=None, fobj=None, *args,**kwargs):
         
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
-        obj._optinfo['yorigin']     = yorigin
-        obj._optinfo['xorigin']     = xorigin
-        obj._optinfo['origin']      = origin
-        obj._optinfo['cellsize']    = cellsize
-        obj._optinfo['proj_params'] = proj_params
+        obj._optinfo["yorigin"]     = yorigin
+        obj._optinfo["xorigin"]     = xorigin
+        obj._optinfo["origin"]      = origin
+        obj._optinfo["cellsize"]    = cellsize
+        obj._optinfo["_fobj"]       = fobj
+        obj._optinfo["proj_params"] = proj_params
 
         return obj
 
@@ -1449,8 +1452,7 @@ class GeoArray(np.ma.MaskedArray):
 
         Purpose
         -------
-        Checks if two grids match in are somehow identical. The idea is to
-        call this method before any numpy based broadcasting 
+        Check if two grids are broadcastable.
         """
         return (
             (self.proj_params == grid.proj_params) and
@@ -1458,6 +1460,20 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
+    def transform(self, proj_params):
+        this = _proj2Gdal(self.proj_params)
+        that = _proj2Gdal(proj_params)
+
+        error_threshold = 0.125  # error threshold --> use same value as in gdalwarp
+        resampling = gdal.GRA_NearestNeighbour
+
+        tmp = gdal.AutoCreateWarpedVRT( src_ds,
+                                        None, # src_wkt : left to default value --> will use the one from source
+                                        dst_wkt,
+                                        resampling,
+                                        error_threshold )
+        
+        
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
@@ -1469,7 +1485,7 @@ class GeoArray(np.ma.MaskedArray):
             name, os.linesep.join(["{:}{:}".format(pad,l) for l in out.split(os.linesep)]).strip()
             )
 
-    def __getattr__(self,name):
+    def __getattr__(self, name):
         try:
             return self._optinfo[name]
         except KeyError:
@@ -1477,7 +1493,11 @@ class GeoArray(np.ma.MaskedArray):
                 "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
             )
 
-    def __getitem__(self,slc):
+    def __deepcopy__(self, memo):
+        return array(self.data.copy(), self.dtype, self.yorigin, self.xorigin, self.origin,
+                     self.fill_value, self.cellsize, self.proj_params)
+        
+    def __getitem__(self, slc):
 
         out = super(GeoArray,self).__getitem__(slc)
         slices = getSlices(slc,self.shape)
