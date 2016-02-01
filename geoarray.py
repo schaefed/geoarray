@@ -1462,24 +1462,41 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
-    def transform(self, proj_params):
-        # this = _proj2Gdal(self.proj_params)
-        that = _proj2Gdal(proj_params)
+    def warp(self, proj_params, max_error=.125):
+        """
+        Arguments
+        ---------
+        proj_params: dict   -> proj4 parameters of the target coordinate system
+        max_error  : float  -> Maximum error (in pixels) allowed in transformation
+                                approximation (default: value of gdalwarp)
+        Note
+        ----
+        GDAL provides another function seemingly doing the same:
+        gdal.ReprojectImage(). It might be worth to investigate the
+        differences...
 
-        error_threshold = 0.125  # error threshold --> use same value as in gdalwarp
+        TODO
+        ----
+        - Make the resampling strategy an optional argument
+        - Allow for an explicit target grid
+        - Implement a test against gdalwarp
+        """
+        
         resampling = gdal.GRA_NearestNeighbour
 
         if self._fobj is None:
             self._fobj = _gdalMemory(self, _proj2Gdal(self.proj_params))
-        
+
         tmp = gdal.AutoCreateWarpedVRT(
             self._fobj,
-            None, # src_wkt : left to default value --> will use the one from source
+            None, # src_wkt : None -> use the one from source
             _proj2Gdal(proj_params),
             resampling,
-            error_threshold
+            max_error
         )
-        
+        if not tmp:
+            raise RuntimeError("Transformation failed!")
+        return _fromDataset(tmp)
         
     def __repr__(self):
         return super(self.__class__,self).__repr__()
