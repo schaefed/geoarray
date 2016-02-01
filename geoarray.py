@@ -76,8 +76,8 @@ TYPEMAP = {
 TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
 # The open gdal file objects need to outlive their GeoArray
-# instance. Therefore they are stored globally.
-_FILEREFS = []
+# instance. Therefore they are stored globaly.
+# _FILEREFS = []
 
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -638,6 +638,30 @@ def _proj2Gdal(proj_params):
     srs.ImportFromProj4(params)
     return srs.ExportToWkt()
 
+def _writeGdalMemory(grid, projection):
+    """
+    Create GDAL memory dataset
+    """
+    driver = gdal.GetDriverByName("MEM")
+    out = driver.Create(
+        "",grid.ncols,grid.nrows,grid.nbands,
+        TYPEMAP[str(grid.dtype)]
+    )
+    out.SetGeoTransform(
+        (grid.xorigin, grid.cellsize,0,
+         grid.yorigin, 0, grid.cellsize)
+    )
+    out.SetProjection(projection)
+    for n in xrange(grid.nbands):
+        band = out.GetRasterBand(n+1)
+        band.SetNoDataValue(float(grid.fill_value))
+        banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
+        band.WriteArray(banddata)
+    out.FlushCache()
+    return out
+
+
+
 def _tofile(fname,geoarray):
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
@@ -654,27 +678,27 @@ def _tofile(fname,geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
-    def _writeGdalMemory(grid, projection):
-        """
-        Create GDAL memory dataset
-        """
-        driver = gdal.GetDriverByName("MEM")
-        out = driver.Create(
-            "",grid.ncols,grid.nrows,grid.nbands,
-            TYPEMAP[str(grid.dtype)]
-        )
-        out.SetGeoTransform(
-            (grid.xorigin, grid.cellsize,0,
-             grid.yorigin, 0, grid.cellsize)
-        )
-        out.SetProjection(projection)
-        for n in xrange(grid.nbands):
-            band = out.GetRasterBand(n+1)
-            band.SetNoDataValue(float(grid.fill_value))
-            banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
-            band.WriteArray(banddata)
-        out.FlushCache()
-        return out
+    # def _writeGdalMemory(grid, projection):
+    #     """
+    #     Create GDAL memory dataset
+    #     """
+    #     driver = gdal.GetDriverByName("MEM")
+    #     out = driver.Create(
+    #         "",grid.ncols,grid.nrows,grid.nbands,
+    #         TYPEMAP[str(grid.dtype)]
+    #     )
+    #     out.SetGeoTransform(
+    #         (grid.xorigin, grid.cellsize,0,
+    #          grid.yorigin, 0, grid.cellsize)
+    #     )
+    #     out.SetProjection(projection)
+    #     for n in xrange(grid.nbands):
+    #         band = out.GetRasterBand(n+1)
+    #         band.SetNoDataValue(float(grid.fill_value))
+    #         banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
+    #         band.WriteArray(banddata)
+    #     out.FlushCache()
+    #     return out
 
     memset = _writeGdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
@@ -1467,6 +1491,9 @@ class GeoArray(np.ma.MaskedArray):
         error_threshold = 0.125  # error threshold --> use same value as in gdalwarp
         resampling = gdal.GRA_NearestNeighbour
 
+        if self._fobj is None:
+            pass
+        
         tmp = gdal.AutoCreateWarpedVRT( src_ds,
                                         None, # src_wkt : left to default value --> will use the one from source
                                         dst_wkt,
