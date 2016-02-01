@@ -336,8 +336,8 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def test_transform(self):
         for base in self.grids:
             if base.proj_params:
-                proj = base.transform({"init":"epsg:3857"})
-                
+                proj = base.warp({"init":"epsg:3857"})
+
             
 if __name__== "__main__":
     unittest.main()
