@@ -74,7 +74,7 @@ class TestInitialisation(unittest.TestCase):
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid.data == fill_value))
 
-class TestGeoGrid(unittest.TestCase):
+class TestGeoArray(unittest.TestCase):
     
     def setUp(self):
         self.grids = readTestFiles()
@@ -221,7 +221,7 @@ class TestGeoGrid(unittest.TestCase):
                     np.testing.assert_equal(r1.mask,r2.mask)
             break
        
-class TestGeoGridFuncs(unittest.TestCase):
+class TestGeoArrayFuncs(unittest.TestCase):
     
     def setUp(self):        
         self.grids = readTestFiles()
@@ -336,7 +336,6 @@ class TestGeoGridFuncs(unittest.TestCase):
     def test_transform(self):
         for base in self.grids:
             if base.proj_params:
-                # print base.proj_params
                 proj = base.transform({"init":"epsg:3857"})
                 
             
