@@ -79,6 +79,7 @@ TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 # instance. Therefore they are stored globaly.
 # _FILEREFS = []
 
+gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
@@ -649,7 +650,7 @@ def _gdalMemory(grid, projection):
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
     out.SetGeoTransform(
-        (grid.xorigin, grid.cellsize,0,
+        (grid.xorigin, grid.cellsize, 0,
          grid.yorigin, 0, grid.cellsize)
     )
     out.SetProjection(projection)
@@ -1474,19 +1475,24 @@ class GeoArray(np.ma.MaskedArray):
         GDAL provides another function seemingly doing the same:
         gdal.ReprojectImage(). It might be worth to investigate the
         differences...
-
-        TODO
+        The GDAL warping routine returns an array with origin upper left,
+        i.e. the data is upsidedown
+        
+        
+        Todo
         ----
         - Make the resampling strategy an optional argument
         - Allow for an explicit target grid
         - Implement a test against gdalwarp
+        - Revert data inversion
+        - Clean added nodata values
         """
         
         resampling = gdal.GRA_NearestNeighbour
 
         if self._fobj is None:
             self._fobj = _gdalMemory(self, _proj2Gdal(self.proj_params))
-
+           
         tmp = gdal.AutoCreateWarpedVRT(
             self._fobj,
             None, # src_wkt : None -> use the one from source
@@ -1494,9 +1500,10 @@ class GeoArray(np.ma.MaskedArray):
             resampling,
             max_error
         )
-        if not tmp:
-            raise RuntimeError("Transformation failed!")
+
         return _fromDataset(tmp)
+        
+        
         
     def __repr__(self):
         return super(self.__class__,self).__repr__()
