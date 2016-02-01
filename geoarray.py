@@ -635,7 +635,7 @@ def _tofile(fname,geoarray):
         params = None
         if grid.proj_params:
             params =  "+{:}".format(" +".join(
-                ["=".join(pp) for pp in grid.proj_params.items()])
+                ["=".join(map(str, pp)) for pp in grid.proj_params.items()])
                 )
         srs = osr.SpatialReference()
         srs.ImportFromProj4(params)
@@ -653,7 +653,7 @@ def _tofile(fname,geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filenmae extension '{:}'".format(fext))
 
-    def _writeGdalMemory(grid,projection):
+    def _writeGdalMemory(grid, projection):
         """
         Create GDAL memory dataset
         """
@@ -677,7 +677,7 @@ def _tofile(fname,geoarray):
 
     memset = _writeGdalMemory(geoarray, _projection(geoarray))
     outdriver = _getDriver(_fnameExtension(fname))
-    out = outdriver.CreateCopy(fname,memset,0)
+    out = outdriver.CreateCopy(fname, memset, 0)
     errormsg = gdal.GetLastErrorMsg()
     if errormsg or not out:
         raise IOError(errormsg)
