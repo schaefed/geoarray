@@ -1506,7 +1506,6 @@ class GeoArray(np.ma.MaskedArray):
         ----
         - Make the resampling strategy an optional argument
         - Allow for an explicit target grid
-        - Implement a test against gdalwarp
         """
         if not self.proj_params:
             raise AttributeError("No projection information available for source grid!")

@@ -16,6 +16,8 @@ PWD = os.path.dirname(__file__)
 PATH = os.path.join(PWD, "files")
 FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
 
+TMPPATH = os.path.join(PATH,"out")
+
 # random projection parameters
 PROJ_PARAMS = {
     'lon_0' : '148.8',
@@ -80,16 +82,15 @@ class TestGeoArray(unittest.TestCase):
     
     def setUp(self):
         self.grids = readTestFiles()
-        self.write_path = "out"
 
         try:
-            os.mkdir(self.write_path)
+            os.mkdir(TMPPATH)
         except OSError:
             pass
         
     def tearDown(self):        
         try:
-            shutil.rmtree(self.write_path)
+            shutil.rmtree(TMPPATH)
         except:
             pass
 
@@ -177,7 +178,7 @@ class TestGeoArray(unittest.TestCase):
                 self.assertTrue(np.all(grid[slc] == value))
 
     def test_tofile(self):
-        outfiles = ("{:}/testout{:}".format(self.write_path,ext) for ext in ga._DRIVER_DICT)
+        outfiles = ("{:}/testout{:}".format(TMPPATH, ext) for ext in ga._DRIVER_DICT)
 
         for base in self.grids:
             for outfile in outfiles:
@@ -220,15 +221,27 @@ class TestGeoArray(unittest.TestCase):
                 try:
                     np.testing.assert_equal(r1,r2)
                 except AssertionError:
+                    # masked array
                     np.testing.assert_equal(r1.data,r2.data)
                     np.testing.assert_equal(r1.mask,r2.mask)
             break
        
 class TestGeoArrayFuncs(unittest.TestCase):
-    
-    def setUp(self):        
+
+    def setUp(self):
         self.grids = readTestFiles()
 
+        try:
+            os.mkdir(TMPPATH)
+        except OSError:
+            pass
+        
+    def tearDown(self):        
+        try:
+            shutil.rmtree(TMPPATH)
+        except:
+            pass
+        
     def test_addCells(self):
         for base in self.grids:
             padgrid = base.addCells(1, 1, 1, 1)
@@ -296,7 +309,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
                 grid = copy.deepcopy(base)
                 grid.yorigin -= yoff
                 grid.xorigin -= xoff
-                yorg,xorg = grid.getOrigin()
+                yorg, xorg = grid.getOrigin()
                 grid.snap(base)            
 
                 xdelta = abs(grid.xorigin - xorg)
@@ -343,7 +356,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def test_warp(self):
 
         epsg = 3857
-        tmpfile = "tmp.tif"
+        tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
         for fname, base in zip(FILES, self.grids):
             if base.proj_params:
@@ -361,7 +374,6 @@ class TestGeoArrayFuncs(unittest.TestCase):
                 # unprotected as it is supposed to raise
                 # if the fail is not existing the test
                 # basically fails.
-                os.remove(tmpfile)
             else:
                 self.assertRaises(AttributeError)
                 
