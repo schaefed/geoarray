@@ -75,11 +75,6 @@ TYPEMAP = {
 }
 TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
-_OPEN_MODES = {
-    "r": gdalconst.GA_ReadOnly,
-    "a": gdalconst.GA_Update,
-}
-
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globaly.
 # _FILEREFS = []
@@ -578,13 +573,11 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
 
 
 
-def fromfile(fname, mode="r"):
+def fromfile(fname):
     """
     Parameters
     ----------
     fname : str  # file name
-    mode: str {r: readonly
-               a: read/write}
     
     Returns
     -------
@@ -596,7 +589,7 @@ def fromfile(fname, mode="r"):
 
     """
     
-    fobj = gdal.OpenShared(fname, _OPEN_MODES[mode])
+    fobj = gdal.OpenShared(fname)
     if fobj:
         return _fromDataset(fobj)
     raise IOError("Could not open file")
