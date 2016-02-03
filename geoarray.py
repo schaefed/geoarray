@@ -35,7 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import re, os, sys
-import gdal, osr
+import gdal, osr, gdalconst
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
@@ -74,6 +74,11 @@ TYPEMAP = {
     "complex128" : 11,
 }
 TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
+
+_OPEN_MODES = {
+    "r": gdalconst.GA_ReadOnly,
+    "a": gdalconst.GA_Update,
+}
 
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globaly.
@@ -568,12 +573,14 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
 
 
 
-def fromfile(fname):
+def fromfile(fname, mode="r"):
     """
     Parameters
     ----------
     fname : str  # file name
-
+    mode: str {r: readonly
+               a: read/write}
+    
     Returns
     -------
     GeoArray
@@ -583,8 +590,8 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
-
-    fobj = gdal.OpenShared(fname)
+    
+    fobj = gdal.OpenShared(fname, _OPEN_MODES[mode])
     if fobj:
         return _fromDataset(fobj)
     raise IOError("Could not open file")
@@ -616,6 +623,7 @@ def _fromDataset(fobj):
         raise NotImplementedError(
             "Diverging cellsizes in x and y direction are not allowed yet!")
 
+    # _FILEREFS.append(fobj)
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
 
@@ -625,17 +633,19 @@ def _fromDataset(fobj):
 
     dtype      = np.dtype(TYPEMAP[rasterband.DataType])
 
-    if "linux" in sys.platform:
-        # use GDAL's virtual memmory mappings
-        data       = fobj.GetVirtualMemArray(
-            gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
-        )
-    else:
-        data = fobj.ReadAsArray()
+    # if "linux" in sys.platform:
+    #     # use GDAL's virtual memmory mappings
+    #     data       = fobj.GetVirtualMemArray(
+    #         gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
+    #     )
+    # else:
+    #     data = fobj.ReadAsArray()
+
+    data = fobj.ReadAsArray()
 
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
-        origin="ul", fill_value=rasterband.GetNoDataValue(),
+        origin="ul" if geotrans[5] > 0 else "ll", fill_value=rasterband.GetNoDataValue(),
         cellsize=_cellsize(geotrans), proj_params=_gdal2Proj(fobj),
         fobj=fobj
     )
@@ -681,10 +691,11 @@ def _tofile(fname,geoarray):
 
     memset = _gdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
-    out = outdriver.CreateCopy(fname, memset, 0)
-    errormsg = gdal.GetLastErrorMsg()
-    if errormsg or not out:
-        raise IOError(errormsg)
+    outdriver.CreateCopy(fname, memset, 0)
+    # out = outdriver.CreateCopy(fname, memset, 0)
+    # errormsg = gdal.GetLastErrorMsg()
+    # if errormsg or not out:
+    #     raise IOError(errormsg)
 
 
 class GeoArray(np.ma.MaskedArray):
@@ -1463,6 +1474,13 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
+    @property
+    def _fobj(self):
+        if self._optinfo["_fobj"] is None:
+            self._optinfo["_fobj"] = _gdalMemory(self, _proj2Gdal(self.proj_params))
+        return self._optinfo["_fobj"]
+        # return  _gdalMemory(self, _proj2Gdal(self.proj_params))
+    
     def warp(self, proj_params, max_error=.125):
         """
         Arguments
@@ -1475,35 +1493,48 @@ class GeoArray(np.ma.MaskedArray):
         GDAL provides another function seemingly doing the same:
         gdal.ReprojectImage(). It might be worth to investigate the
         differences...
-        The GDAL warping routine returns an array with origin upper left,
-        i.e. the data is upsidedown
-        
+
+        The transformation is done twice, as the fill value information is
+        lost during warping. In order to have the padded space correctly
+        set to the file's original fill value a dummy mask is warped seperately
+        and later on applyed to the warped data. This is for sure not the
+        most efficient procedure, but for the moment the only way to ensure
+        the expecteded behaviour
+
+        Unlike the gdalwarp utility the data is not inverted upsidedown after
+        warping
         
         Todo
         ----
         - Make the resampling strategy an optional argument
         - Allow for an explicit target grid
         - Implement a test against gdalwarp
-        - Revert data inversion
-        - Clean added nodata values
         """
         
         resampling = gdal.GRA_NearestNeighbour
+        target_proj = _proj2Gdal(proj_params)
 
-        if self._fobj is None:
-            self._fobj = _gdalMemory(self, _proj2Gdal(self.proj_params))
-           
-        tmp = gdal.AutoCreateWarpedVRT(
-            self._fobj,
-            None, # src_wkt : None -> use the one from source
-            _proj2Gdal(proj_params),
-            resampling,
-            max_error
+        mask = _fromDataset(
+            gdal.AutoCreateWarpedVRT(
+                ones_like(self)._fobj,
+                None, # src_wkt : None -> use the one from source
+                target_proj,
+                resampling,
+                max_error
+            )
         )
-
-        return _fromDataset(tmp)
+        out = _fromDataset(
+            gdal.AutoCreateWarpedVRT(
+                self._fobj,
+                None, # src_wkt : None -> use the one from source
+                target_proj,
+                resampling,
+                max_error
+            )
+        )
         
-        
+        out[mask.data != 1] = self.fill_value
+        return out[::-1]
         
     def __repr__(self):
         return super(self.__class__,self).__repr__()

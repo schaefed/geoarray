@@ -333,11 +333,11 @@ class TestGeoArrayFuncs(unittest.TestCase):
             for idx,coord in zip(idxs,coords):
                 self.assertTupleEqual(base.coordinateIndex(*coord),idx)
 
-    def test_transform(self):
+    def test_warp(self):
         for base in self.grids:
             if base.proj_params:
                 proj = base.warp({"init":"epsg:3857"})
 
-            
+                
 if __name__== "__main__":
     unittest.main()
