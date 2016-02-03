@@ -35,7 +35,7 @@ class TestInitialisation(unittest.TestCase):
         fill_value = -42
         yorigin = -15
         xorigin = 72
-        cellsize = 33.33
+        cellsize = (33.33, 33.33)
         grid = ga.array(
             data=data, fill_value=fill_value,
             yorigin=yorigin, xorigin=xorigin,
@@ -107,7 +107,7 @@ class TestGeoArray(unittest.TestCase):
         for base in self.grids:
             grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
             grid2.xorigin -= 1
-            grid3.cellsize += 1
+            grid3.cellsize = (grid3.cellsize[0] + 1, grid3.cellsize[0] + 1)
             grid4.proj_params = {"invalid":"key"}
             self.assertTrue(base.basicMatch(grid1))
             self.assertFalse(base.basicMatch(grid2))
@@ -182,8 +182,9 @@ class TestGeoArray(unittest.TestCase):
                 base.tofile(outfile)
                 checkgrid = ga.fromfile(outfile)
                 self.assertTrue(np.all(checkgrid == base))
-                self.assertDictEqual(checkgrid.header, base.header)
+                self.assertDictEqual(checkgrid.bbox, base.bbox)
 
+                
     def test_copy(self):
         for base in self.grids:
             deep_copy = copy.deepcopy(base)        
@@ -243,10 +244,12 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def test_enlarge(self):
         for base in self.grids:
             bbox = base.bbox
-            newbbox = {"xmin" : bbox["xmin"] - 2.5 * base.cellsize,
-                    "ymin" : bbox["ymin"] -  .7 * base.cellsize,
-                    "xmax" : bbox["xmax"] +  .1 * base.cellsize,
-                    "ymax" : bbox["ymax"] + 6.1 * base.cellsize,}
+            newbbox = {
+                "ymin" : bbox["ymin"] -  .7 * base.cellsize[0],
+                "xmin" : bbox["xmin"] - 2.5 * base.cellsize[1],
+                "ymax" : bbox["ymax"] + 6.1 * base.cellsize[0],
+                "xmax" : bbox["xmax"] +  .1 * base.cellsize[1]
+            }
             enlrgrid = base.enlarge(**newbbox)
             self.assertEqual(enlrgrid.nrows, base.nrows + 1 + 7)
             self.assertEqual(enlrgrid.ncols, base.ncols + 3 + 1)
@@ -254,10 +257,12 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def test_shrink(self):
         for base in self.grids:
             bbox = base.bbox
-            newbbox = {"xmin" : bbox["xmin"] + 2.5 * base.cellsize,
-                    "ymin" : bbox["ymin"] +  .7 * base.cellsize,
-                    "xmax" : bbox["xmax"] -  .1 * base.cellsize,
-                    "ymax" : bbox["ymax"] - 6.1 * base.cellsize,}
+            newbbox = {
+                "ymin" : bbox["ymin"] +  .7 * base.cellsize[0],
+                "xmin" : bbox["xmin"] + 2.5 * base.cellsize[1],
+                "ymax" : bbox["ymax"] - 6.1 * base.cellsize[0],
+                "xmax" : bbox["xmax"] -  .1 * base.cellsize[1],
+            }
             shrgrid = base.shrink(**newbbox)        
             self.assertEqual(shrgrid.nrows, base.nrows - 0 - 6)
             self.assertEqual(shrgrid.ncols, base.ncols - 2 - 0)
@@ -281,7 +286,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
         for base in self.grids:
             offsets = (
                 (-75,-30),
-                (base.cellsize *.9,base.cellsize *20),
+                (np.array(base.cellsize) *.9, np.array(base.cellsize) *20),
                 (base.yorigin * -1.1, base.xorigin * 1.89),
             )
 
@@ -296,12 +301,12 @@ class TestGeoArrayFuncs(unittest.TestCase):
                 ydelta = abs(grid.yorigin - yorg)
 
                 # asure the shift to the next cell
-                self.assertLessEqual(xdelta,base.cellsize/2)
-                self.assertLessEqual(ydelta,base.cellsize/2)
+                self.assertLessEqual(ydelta, base.cellsize[0]/2)
+                self.assertLessEqual(xdelta, base.cellsize[1]/2)
 
                 # grid origin is shifted to a cell multiple of self.grid.origin
-                self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize,0)
-                self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize,0)
+                self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize[0], 0)
+                self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize[1], 0)
 
     def test_indexCoordinates(self):
         for base in self.grids:
@@ -312,8 +317,8 @@ class TestGeoArrayFuncs(unittest.TestCase):
             lryorigin, lrxorigin = base.getOrigin("lr")
 
             idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
-            coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
-                    (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
+            coords = ((ulyorigin,ulxorigin),(lryorigin+offset[0], lrxorigin-offset[1]),
+                    (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
 
             for idx,coord in zip(idxs,coords):
                 self.assertTupleEqual(base.indexCoordinates(*idx),coord)
@@ -327,8 +332,8 @@ class TestGeoArrayFuncs(unittest.TestCase):
             lryorigin, lrxorigin = base.getOrigin("lr")
 
             idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
-            coords = ((ulyorigin,ulxorigin),(lryorigin+offset, lrxorigin-offset),
-                    (uryorigin, urxorigin-offset),(llyorigin+offset, llxorigin))
+            coords = ((ulyorigin,ulxorigin),(lryorigin+offset[0], lrxorigin-offset[1]),
+                    (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
 
             for idx,coord in zip(idxs,coords):
                 self.assertTupleEqual(base.coordinateIndex(*coord),idx)

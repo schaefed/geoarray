@@ -88,7 +88,7 @@ gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=(1,1), proj_params=None):
     """
     Parameters
     ----------
@@ -96,17 +96,17 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
 
     Optional Parameters
     -------------------
-    dtype        : str/np.dtype          # type of the returned grid
-    yorigin      : int/float             # y-value of the grid's origin
-    xorigin      : int/float             # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"} # position of the origin. One of:
-                                         #     "ul" : upper left corner
-                                         #     "ur" : upper right corner
-                                         #     "ll" : lower left corner
-                                         #     "lr" : lower right corner
-    fill_value   : inf/float             # fill or fill value
-    cellsize     : int/float             # cellsize
-    proj_params  : dict/None             # proj4 projection parameters
+    dtype        : str/np.dtype                  # type of the returned grid
+    yorigin      : int/float                     # y-value of the grid's origin
+    xorigin      : int/float                     # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
+                                                 #     "ul" : upper left corner
+                                                 #     "ur" : upper right corner
+                                                 #     "ll" : lower left corner
+                                                 #     "lr" : lower right corner
+    fill_value   : inf/float                     # fill or fill value
+    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
+    proj_params  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -162,17 +162,17 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Optional Parameters
     -------------------
-    dtype        : str/np.dtype          # type of the returned grid
-    yorigin      : int/float             # y-value of the grid's origin
-    xorigin      : int/float             # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"} # position of the origin. One of:
-                                         #     "ul" : upper left corner
-                                         #     "ur" : upper right corner
-                                         #     "ll" : lower left corner
-                                         #     "lr" : lower right corner
-    fill_value   : inf/float             # fill or fill value
-    cellsize     : int/float             # cellsize
-    proj_params  : dict/None             # proj4 projection parameters
+    dtype        : str/np.dtype                  # type of the returned grid
+    yorigin      : int/float                     # y-value of the grid's origin
+    xorigin      : int/float                     # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
+                                                 #     "ul" : upper left corner
+                                                 #     "ur" : upper right corner
+                                                 #     "ll" : lower left corner
+                                                 #     "lr" : lower right corner
+    fill_value   : inf/float                     # fill or fill value
+    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
+    proj_params  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -262,17 +262,17 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Optional Parameters
     -------------------
-    dtype        : str/np.dtype          # type of the returned grid
-    yorigin      : int/float             # y-value of the grid's origin
-    xorigin      : int/float             # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"} # position of the origin. One of:
-                                         #     "ul" : upper left corner
-                                         #     "ur" : upper right corner
-                                         #     "ll" : lower left corner
-                                         #     "lr" : lower right corner
-    fill_value   : inf/float             # fill or fill value
-    cellsize     : int/float             # cellsize
-    proj_params  : dict/None             # proj4 projection parameters
+    dtype        : str/np.dtype                  # type of the returned grid
+    yorigin      : int/float                     # y-value of the grid's origin
+    xorigin      : int/float                     # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
+                                                 #     "ul" : upper left corner
+                                                 #     "ur" : upper right corner
+                                                 #     "ll" : lower left corner
+                                                 #     "lr" : lower right corner
+    fill_value   : inf/float                     # fill or fill value
+    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
+    proj_params  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -364,17 +364,17 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Optional Parameters
     -------------------
-    dtype        : str/np.dtype          # type of the returned grid
-    yorigin      : int/float             # y-value of the grid's origin
-    xorigin      : int/float             # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"} # position of the origin. One of:
-                                         #     "ul" : upper left corner
-                                         #     "ur" : upper right corner
-                                         #     "ll" : lower left corner
-                                         #     "lr" : lower right corner
-    fill_value   : inf/float             # fill or fill value
-    cellsize     : int/float             # cellsize
-    proj_params  : dict/None             # proj4 projection parameters
+    dtype        : str/np.dtype                  # type of the returned grid
+    yorigin      : int/float                     # y-value of the grid's origin
+    xorigin      : int/float                     # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
+                                                 #     "ul" : upper left corner
+                                                 #     "ur" : upper right corner
+                                                 #     "ll" : lower left corner
+                                                 #     "lr" : lower right corner
+    fill_value   : inf/float                     # fill or fill value
+    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
+    proj_params  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -464,17 +464,17 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Optional Parameters
     ------------------
-    dtype        : str/np.dtype          # type of the returned grid
-    yorigin      : int/float             # y-value of the grid's origin
-    xorigin      : int/float             # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"} # position of the origin. One of:
-                                         #    "ul" : upper left corner
-                                         #    "ur" : upper right corner
-                                         #    "ll" : lower left corner
-                                         #    "lr" : lower right corner
-    fill_value   : inf/float             # fill or fill value
-    cellsize     : int/float             # cellsize
-    proj_params  : dict/None             # proj4 projection parameters
+    dtype        : str/np.dtype                  # type of the returned grid
+    yorigin      : int/float                     # y-value of the grid's origin
+    xorigin      : int/float                     # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
+                                                 #    "ul" : upper left corner
+                                                 #    "ur" : upper right corner
+                                                 #    "ll" : lower left corner
+                                                 #    "lr" : lower right corner
+    fill_value   : inf/float                     # fill or fill value
+    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
+    proj_params  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -566,6 +566,11 @@ def empty_like(a,*args,**kwargs):
 def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, fobj):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
+    try:
+        cellsize[0]
+    except TypeError:
+        cellsize = (cellsize, cellsize)
+        
     mask = data==fill_value
     if not np.any(mask):
         mask = False
@@ -617,11 +622,11 @@ def _gdal2Proj(fobj):
 
 def _fromDataset(fobj):
 
-    def _cellsize(geotrans):
-        if abs(geotrans[1]) == abs(geotrans[5]):
-            return abs(geotrans[1])
-        raise NotImplementedError(
-            "Diverging cellsizes in x and y direction are not allowed yet!")
+    # def _cellsize(geotrans):
+    #     if abs(geotrans[1]) == abs(geotrans[5]):
+    #         return abs(geotrans[1])
+    #     raise NotImplementedError(
+    #         "Diverging cellsizes in x and y direction are not allowed yet!")
 
     # _FILEREFS.append(fobj)
     rasterband = fobj.GetRasterBand(1)
@@ -642,11 +647,10 @@ def _fromDataset(fobj):
     #     data = fobj.ReadAsArray()
 
     data = fobj.ReadAsArray()
-
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
-        origin="ul" if geotrans[5] > 0 else "ll", fill_value=rasterband.GetNoDataValue(),
-        cellsize=_cellsize(geotrans), proj_params=_gdal2Proj(fobj),
+        origin="ul", fill_value=rasterband.GetNoDataValue(),
+        cellsize=(geotrans[5], geotrans[1]), proj_params=_gdal2Proj(fobj),
         fobj=fobj
     )
 
@@ -660,8 +664,8 @@ def _gdalMemory(grid, projection):
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
     out.SetGeoTransform(
-        (grid.xorigin, grid.cellsize, 0,
-         grid.yorigin, 0, grid.cellsize)
+        (grid.xorigin, grid.cellsize[1], 0,
+         grid.yorigin, 0, grid.cellsize[0])
     )
     out.SetProjection(projection)
     for n in xrange(grid.nbands):
@@ -711,7 +715,7 @@ class GeoArray(np.ma.MaskedArray):
                                          #     "ll" -> lower left
                                          #     "lr" -> lower right
     fill_value   : scalar
-    cellsize     : scalar
+    cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
     
     Optional Parameters
@@ -765,7 +769,7 @@ class GeoArray(np.ma.MaskedArray):
     ...                  [-9 ,-9, -9, -9, -9],])
 
     >>> grid = ga.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
-    ...                    fill_value=-9,cellsize=55)
+    ...                    fill_value=-9,cellsize=(55, 55))
 
     >>> print(grid)
     GeoArray([[-9 -9 -9 -9 -9]
@@ -867,7 +871,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geoarray as ga
         >>> x = ga.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
         >>> x.header
-        {'origin': 'ur', 'fill_value': -9999.0, 'proj_params': None, 'cellsize': 1, 'yorigin': 100, 'xorigin': 55}
+        {'origin': 'ur', 'fill_value': -9999.0, 'proj_params': None, 'cellsize': (1, 1), 'yorigin': 100, 'xorigin': 55}
         """
 
         return {
@@ -902,8 +906,8 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 51, 'ymin': 96, 'ymax': 100, 'xmax': 55}
         """
 
-        yopp = self.nrows * self.cellsize
-        xopp = self.ncols * self.cellsize
+        yopp = self.nrows * self.cellsize[0]
+        xopp = self.ncols * self.cellsize[1]
         return {
             "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin - yopp,
             "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin + yopp,
@@ -1105,8 +1109,8 @@ class GeoArray(np.ma.MaskedArray):
         if (y_idx < 0 or x_idx < 0) or (y_idx >= self.nrows or x_idx >= self.ncols):
             raise ValueError("Index out of bounds !")
         yorigin, xorigin = self.getOrigin("ul")
-        y_coor =  yorigin - y_idx * self.cellsize
-        x_coor =  xorigin + x_idx * self.cellsize
+        y_coor =  yorigin - y_idx * self.cellsize[0]
+        x_coor =  xorigin + x_idx * self.cellsize[1]
         return y_coor, x_coor
 
     def coordinateIndex(self,y_coor,x_coor):
@@ -1126,8 +1130,8 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         yorigin, xorigin = self.getOrigin("ul")
-        y_idx = int(floor((yorigin - y_coor)/float(self.cellsize)))
-        x_idx = int(floor((x_coor - xorigin )/float(self.cellsize)))
+        y_idx = int(floor((yorigin - y_coor)/float(self.cellsize[0])))
+        x_idx = int(floor((x_coor - xorigin )/float(self.cellsize[1])))
         
         if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")
@@ -1274,11 +1278,11 @@ class GeoArray(np.ma.MaskedArray):
             "xmax": xmax if xmax else self.bbox["xmax"],
             }
 
-        cellsize = float(self.cellsize)
-        top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize)
-        left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize)
-        bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize)
-        right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize)
+        cellsize = map(float, self.cellsize)
+        top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
+        left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
+        bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
+        right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
 
         return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
@@ -1329,8 +1333,8 @@ class GeoArray(np.ma.MaskedArray):
         out = empty(
             shape       = shape,
             dtype       = self.dtype,
-            yorigin     = yorigin + top*self.cellsize ,
-            xorigin     = xorigin - left*self.cellsize,
+            yorigin     = yorigin + top*self.cellsize[0] ,
+            xorigin     = xorigin - left*self.cellsize[1],
             origin      = "ul",
             fill_value  = self.fill_value,
             cellsize    = self.cellsize,
@@ -1395,11 +1399,11 @@ class GeoArray(np.ma.MaskedArray):
             "xmin": xmin if xmin else self.bbox["xmin"],
             "xmax": xmax if xmax else self.bbox["xmax"],
             }
-        cellsize = float(self.cellsize)
-        top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize)
-        left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize)
-        bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize)
-        right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize)
+        cellsize = map(float, self.cellsize)
+        top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize[0])
+        left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize[1])
+        bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize[0])
+        right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize[1])
 
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
@@ -1443,13 +1447,14 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
-        dy,dx = abs(diff)%target.cellsize * np.sign(diff)
+        dy, dx = abs(diff)%target.cellsize * np.sign(diff)
+        # dx = abs(diff)%target.cellsize[1] * np.sign(diff)
 
-        if abs(dx) > self.cellsize/2.:
-            dx += self.cellsize
+        if abs(dy) > self.cellsize[0]/2.:
+            dy += self.cellsize[0]
 
-        if abs(dy) > self.cellsize/2.:
-            dy += self.cellsize
+        if abs(dx) > self.cellsize[1]/2.:
+            dx += self.cellsize[1]
 
         self.xorigin -= dx
         self.yorigin -= dy
@@ -1568,16 +1573,16 @@ class GeoArray(np.ma.MaskedArray):
             yorigin,xorigin = self.getOrigin("ul")
             if self.origin[0] == "u":
                 if slices[-2].first:
-                    out.yorigin = yorigin - slices[-2].first * self.cellsize
+                    out.yorigin = yorigin - slices[-2].first * self.cellsize[0]
             else:
                 if slices[-2].last:
-                    out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize
+                    out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize[0]
             if self.origin[1] == "l":
                 if slices[-1].first:
-                    out.xorigin = xorigin + slices[-1].first * self.cellsize
+                    out.xorigin = xorigin + slices[-1].first * self.cellsize[1]
             else:
                 if slices[-1].last:
-                    out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize
+                    out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize[1]
 
         except AttributeError: # out is scalar
             pass
