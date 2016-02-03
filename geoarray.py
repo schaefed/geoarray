@@ -60,7 +60,7 @@ _DRIVER_DICT = {
     ".img" : "HFA",
 }
 
-# type mapping
+# type mapping: there is no boolean data type in GDAL
 TYPEMAP = {
     "uint8"      : 1,
     "int8"       : 1,
@@ -1508,31 +1508,27 @@ class GeoArray(np.ma.MaskedArray):
         - Allow for an explicit target grid
         - Implement a test against gdalwarp
         """
+        if not self.proj_params:
+            raise AttributeError("No projection information available for source grid!")
         
         resampling = gdal.GRA_NearestNeighbour
         target_proj = _proj2Gdal(proj_params)
 
         mask = _fromDataset(
             gdal.AutoCreateWarpedVRT(
-                ones_like(self)._fobj,
-                None, # src_wkt : None -> use the one from source
-                target_proj,
-                resampling,
-                max_error
+                ones_like(self)._fobj, None, 
+                target_proj, resampling, max_error
             )
         )
         out = _fromDataset(
             gdal.AutoCreateWarpedVRT(
-                self._fobj,
-                None, # src_wkt : None -> use the one from source
-                target_proj,
-                resampling,
-                max_error
+                self._fobj, None, # src_wkt : None -> use the one from source
+                target_proj, resampling, max_error
             )
         )
         
         out[mask.data != 1] = self.fill_value
-        return out[::-1]
+        return out[...,::-1,:]
         
     def __repr__(self):
         return super(self.__class__,self).__repr__()

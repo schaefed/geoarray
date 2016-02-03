@@ -5,6 +5,7 @@ import unittest, copy, shutil, os
 import numpy as np
 import geoarray as ga
 import warnings
+import subprocess
 
 # from parent directory run 
 # python -m unittest test.test_geoarray
@@ -12,7 +13,8 @@ import warnings
 PWD = os.path.dirname(__file__)
 
 # path to testfiles
-PATH = os.path.join(PWD,"files")
+PATH = os.path.join(PWD, "files")
+FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
 
 # random projection parameters
 PROJ_PARAMS = {
@@ -26,7 +28,7 @@ PROJ_PARAMS = {
 }
 
 def readTestFiles():
-    return [ga.fromfile(os.path.join(PATH,f)) for f in os.listdir(PATH)]
+    return [ga.fromfile(f) for f in FILES]
 
 class TestInitialisation(unittest.TestCase):
 
@@ -339,10 +341,29 @@ class TestGeoArrayFuncs(unittest.TestCase):
                 self.assertTupleEqual(base.coordinateIndex(*coord),idx)
 
     def test_warp(self):
-        for base in self.grids:
-            if base.proj_params:
-                proj = base.warp({"init":"epsg:3857"})
 
+        epsg = 3857
+        tmpfile = "tmp.tif"
+
+        for fname, base in zip(FILES, self.grids):
+            if base.proj_params:
+                proj = base.warp({"init":"epsg:{:}".format(epsg)})
+                # check against gdalwarp
+                subprocess.check_output(
+                    "gdalwarp -t_srs 'EPSG:{:}' {:} {:}".format(
+                        epsg, fname, tmpfile
+                    ),
+                    shell=True
+                )
+                compare = ga.fromfile(tmpfile)[::-1]
+                self.assertTrue(np.all(proj == compare))
+                self.assertDictEqual(proj.bbox, compare.bbox)
+                # unprotected as it is supposed to raise
+                # if the fail is not existing the test
+                # basically fails.
+                os.remove(tmpfile)
+            else:
+                self.assertRaises(AttributeError)
                 
 if __name__== "__main__":
     unittest.main()
