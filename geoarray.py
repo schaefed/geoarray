@@ -189,7 +189,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     return _factory(np.zeros(shape, dtype), yorigin, xorigin,
                     origin, fill_value, cellsize, proj_params, None)
 
-def zeros_like(a,*args,**kwargs):
+def zeros_like(a, *args, **kwargs):
     """
     Parameters
     ----------
@@ -290,7 +290,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     return _factory(np.ones(shape,dtype), yorigin, xorigin,
                     origin, fill_value, cellsize, proj_params, None)
 
-def ones_like(a,*args,**kwargs):
+def ones_like(a, *args, **kwargs):
     """
     Parameters
     ----------
@@ -391,7 +391,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     return _factory(np.full(shape, value, dtype), yorigin, xorigin,
                     origin, fill_value, cellsize, proj_params, None)
 
-def full_like(a,fill_value,*args,**kwargs):
+def full_like(a, fill_value, *args, **kwargs):
     """
     Parameters
     ----------
@@ -830,7 +830,7 @@ class GeoArray(np.ma.MaskedArray):
     """
 
     def __new__(cls, data, yorigin, xorigin, origin,
-                cellsize, proj_params=None, fobj=None, *args,**kwargs):
+                cellsize, proj_params=None, fobj=None, *args, **kwargs):
         
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
         obj._optinfo["yorigin"]     = yorigin
@@ -909,7 +909,7 @@ class GeoArray(np.ma.MaskedArray):
         }
 
 
-    def getOrigin(self,origin=None):
+    def getOrigin(self, origin=None):
         """
         Parameters
         ----------
@@ -1078,7 +1078,7 @@ class GeoArray(np.ma.MaskedArray):
         """
         _tofile(fname, self)
 
-    def indexCoordinates(self,y_idx,x_idx):
+    def indexOf(self, y_idx, x_idx):
         """
         Parameters
         ----------
@@ -1106,7 +1106,7 @@ class GeoArray(np.ma.MaskedArray):
         x_coor =  xorigin + x_idx * self.cellsize[1]
         return y_coor, x_coor
 
-    def coordinateIndex(self,y_coor,x_coor):
+    def coordinatesOf(self, y_coor, x_coor):
         """
         Parameters
         ----------
@@ -1182,7 +1182,7 @@ class GeoArray(np.ma.MaskedArray):
         except ValueError:
             return self
 
-    def removeCells(self,top=0,left=0,bottom=0,right=0):
+    def removeCells(self, top=0, left=0, bottom=0, right=0):
         """
         Parameters
         ----------
@@ -1221,7 +1221,7 @@ class GeoArray(np.ma.MaskedArray):
 
         return self[...,top:bottom,left:right]
 
-    def shrink(self,ymin=None,ymax=None,xmin=None,xmax=None):
+    def shrink(self, ymin=None, ymax=None, xmin=None, xmax=None):
         """
         Parameters
         ----------
@@ -1279,7 +1279,7 @@ class GeoArray(np.ma.MaskedArray):
 
         return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
-    def addCells(self,top=0,left=0,bottom=0,right=0):
+    def addCells(self, top=0, left=0, bottom=0, right=0):
         """
         Parameters
         ----------
@@ -1339,7 +1339,7 @@ class GeoArray(np.ma.MaskedArray):
         out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
         return out
 
-    def enlarge(self,ymin=None,ymax=None,xmin=None,xmax=None):
+    def enlarge(self, ymin=None, ymax=None, xmin=None, xmax=None):
         """
         Parameters
         ----------

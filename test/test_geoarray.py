@@ -323,7 +323,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
                 self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize[0], 0)
                 self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize[1], 0)
 
-    def test_indexCoordinates(self):
+    def test_indexOf(self):
         for base in self.grids:
             offset = base.cellsize
             ulyorigin, ulxorigin = base.getOrigin("ul")
@@ -336,9 +336,9 @@ class TestGeoArrayFuncs(unittest.TestCase):
                     (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
 
             for idx,coord in zip(idxs,coords):
-                self.assertTupleEqual(base.indexCoordinates(*idx),coord)
+                self.assertTupleEqual(base.indexOf(*idx),coord)
 
-    def test_coordinateIndex(self):
+    def test_coordinatesOf(self):
         for base in self.grids:
             offset = base.cellsize
             ulyorigin, ulxorigin = base.getOrigin("ul")
@@ -351,7 +351,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
                     (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
 
             for idx,coord in zip(idxs,coords):
-                self.assertTupleEqual(base.coordinateIndex(*coord),idx)
+                self.assertTupleEqual(base.coordinatesOf(*coord),idx)
 
     def test_warp(self):
 
