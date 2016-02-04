@@ -79,7 +79,7 @@ TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globaly.
-# _FILEREFS = []
+_FILEREFS = []
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -569,8 +569,8 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
         cellsize = (cellsize, cellsize)
         
     mask = data==fill_value
-    if not np.any(mask):
-        mask = False
+    # if not np.any(mask):
+    #     mask = None
     return GeoArray(data, yorigin, xorigin, origin, cellsize, proj_params, mask=mask, fill_value=fill_value, fobj=fobj)
 
 
@@ -617,7 +617,7 @@ def _gdal2Proj(fobj):
 
 def _fromDataset(fobj):
 
-    # _FILEREFS.append(fobj)
+    _FILEREFS.append(fobj)
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
@@ -635,8 +635,9 @@ def _fromDataset(fobj):
     #     )
     # else:
     #     data = fobj.ReadAsArray()
-    data = fobj.ReadAsArray()
 
+    data = fobj.ReadAsArray()
+   
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
         origin="ul", fill_value=rasterband.GetNoDataValue(),
@@ -663,7 +664,6 @@ def _gdalMemory(grid, projection):
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
-        # band.SetNoDataValue(float(grid.fill_value))
         band.WriteArray(
             grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
         )
@@ -832,8 +832,9 @@ class GeoArray(np.ma.MaskedArray):
 
     def __new__(cls, data, yorigin, xorigin, origin,
                 cellsize, proj_params=None, fobj=None, *args, **kwargs):
-        
+
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
+
         obj._optinfo["yorigin"]     = yorigin
         obj._optinfo["xorigin"]     = xorigin
         obj._optinfo["origin"]      = origin
@@ -1480,7 +1481,7 @@ class GeoArray(np.ma.MaskedArray):
         return self._optinfo["_fobj"]
         # return  _gdalMemory(self, _proj2Gdal(self.proj_params))
     
-    def warp(self, proj_params, max_error=0):
+    def warp(self, proj_params, max_error=0.125):
         """
         Arguments
         ---------
@@ -1504,22 +1505,43 @@ class GeoArray(np.ma.MaskedArray):
         
         resampling = gdal.GRA_NearestNeighbour
         target_proj = _proj2Gdal(proj_params)
-        
+
         vrt = gdal.AutoCreateWarpedVRT(
             self._fobj, None, 
-            target_proj, resampling, 0
+            target_proj, resampling, max_error
         )
 
-        for i in xrange(self.nbands):
-            vrt.GetRasterBand(i+1).Fill(float(self.fill_value)) 
+        # The vrt xml file needs to be modified directly
+        # in order to set the fill_value correctly.
+        # This should be moved to a seperate function
+        with tempfile.NamedTemporaryFile(suffix=".vrt") as tf:
+            vrt.GetDriver().CreateCopy(tf.name, vrt)
 
-        gdal.ReprojectImage(
-            self._fobj,
-            vrt
-        )
-        
-        return _fromDataset(vrt) #[...,::-1,:]
+            string = tf.read()
+ 
+            tree = ET.ElementTree(file=tf.name)
+            bmapping = tuple(tree.iter("BandMapping"))[0]
 
+            for opt in tree.iter("Option"):
+                if opt.attrib.get("name") == "INIT_DEST":
+                    opt.text = str(self.fill_value)
+                    
+            add = {
+                "SrcNoDataReal": str(self.fill_value),
+                "DstNoDataReal": str(self.fill_value),
+                "SrcNoDataImag": "0",
+                "DstNoDataImag": "0",
+            }
+
+            for k, v in add.items():
+                node = ET.SubElement(bmapping, k)
+                node.text = v
+
+            tree.write(tf.name)
+
+            out = gdal.OpenShared(tf.name)
+                
+        return _fromDataset(out)
    
     def __repr__(self):
         return super(self.__class__,self).__repr__()
@@ -1530,7 +1552,7 @@ class GeoArray(np.ma.MaskedArray):
         pad = " "*(len(name)+1)
         return "{:}({:})".format(
             name, os.linesep.join(["{:}{:}".format(pad,l) for l in out.split(os.linesep)]).strip()
-            )
+        )
 
     def __getattr__(self, name):
         try:
