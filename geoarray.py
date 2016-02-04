@@ -35,7 +35,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import re, os, sys
-import gdal, osr, gdalconst
+import tempfile
+import xml.etree.ElementTree as ET
+import gdal, osr
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
@@ -615,12 +617,6 @@ def _gdal2Proj(fobj):
 
 def _fromDataset(fobj):
 
-    # def _cellsize(geotrans):
-    #     if abs(geotrans[1]) == abs(geotrans[5]):
-    #         return abs(geotrans[1])
-    #     raise NotImplementedError(
-    #         "Diverging cellsizes in x and y direction are not allowed yet!")
-
     # _FILEREFS.append(fobj)
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
@@ -638,8 +634,8 @@ def _fromDataset(fobj):
     #     )
     # else:
     #     data = fobj.ReadAsArray()
-
     data = fobj.ReadAsArray()
+
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
         origin="ul", fill_value=rasterband.GetNoDataValue(),
@@ -649,9 +645,11 @@ def _fromDataset(fobj):
 
 
 def _gdalMemory(grid, projection):
+
     """
     Create GDAL memory dataset
     """
+    
     driver = gdal.GetDriverByName("MEM")
     out = driver.Create(
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
@@ -666,11 +664,11 @@ def _gdalMemory(grid, projection):
         band.SetNoDataValue(float(grid.fill_value))
         banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
         band.WriteArray(banddata)
-    out.FlushCache()
+    # out.FlushCache()
     return out
 
 
-def _tofile(fname,geoarray):
+def _tofile(fname, geoarray):
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
@@ -684,7 +682,7 @@ def _tofile(fname,geoarray):
             if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
                 return driver
             raise IOError("Datatype canot be written")
-        raise IOError("No driver found for filenmae extension '{:}'".format(fext))
+        raise IOError("No driver found for filename extension '{:}'".format(fext))
 
     memset = _gdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
@@ -1507,28 +1505,32 @@ class GeoArray(np.ma.MaskedArray):
         - Make the resampling strategy an optional argument
         - Allow for an explicit target grid
         """
+
+        
         if not self.proj_params:
             raise AttributeError("No projection information available for source grid!")
         
         resampling = gdal.GRA_NearestNeighbour
         target_proj = _proj2Gdal(proj_params)
+        
+        vrt = gdal.AutoCreateWarpedVRT(
+            self._fobj, None, # src_wkt : None -> use the one from source
+            target_proj, resampling, max_error
+        )
 
-        mask = _fromDataset(
-            gdal.AutoCreateWarpedVRT(
-                ones_like(self)._fobj, None, 
-                target_proj, resampling, max_error
-            )
-        )
-        out = _fromDataset(
-            gdal.AutoCreateWarpedVRT(
-                self._fobj, None, # src_wkt : None -> use the one from source
-                target_proj, resampling, max_error
-            )
-        )
-        
-        out[mask.data != 1] = self.fill_value
-        return out[...,::-1,:]
-        
+        # Need to change the VRT-XML file as the direct changing of
+        # warping options seems to be unsupported in the SWIG interfaces
+        with tempfile.NamedTemporaryFile() as vrtin:
+            vrt.GetDriver().CreateCopy(vrtin.name, vrt)
+            tree = ET.parse(vrtin)
+            for opt in tree.find("GDALWarpOptions").iter("Option"):
+                if opt.attrib.get("name") == "INIT_DEST":
+                    opt.text = "NO_DATA"
+
+            with tempfile.NamedTemporaryFile() as vrtout:
+                tree.write(vrtout.name)
+                return fromfile(vrtout.name)[...,::-1,:]
+       
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
