@@ -1490,13 +1490,6 @@ class GeoArray(np.ma.MaskedArray):
         gdal.ReprojectImage(). It might be worth to investigate the
         differences...
 
-        The transformation is done twice, as the fill value information is
-        lost during warping. In order to have the padded space correctly
-        set to the file's original fill value a dummy mask is warped seperately
-        and later on applyed to the warped data. This is for sure not the
-        most efficient procedure, but for the moment the only way to ensure
-        the expecteded behaviour
-
         Unlike the gdalwarp utility the data is not inverted upsidedown after
         warping
         
