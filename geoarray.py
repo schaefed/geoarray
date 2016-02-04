@@ -618,6 +618,7 @@ def _gdal2Proj(fobj):
 def _fromDataset(fobj):
 
     # _FILEREFS.append(fobj)
+
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
 
@@ -662,8 +663,10 @@ def _gdalMemory(grid, projection):
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
-        banddata = grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
-        band.WriteArray(banddata)
+        # band.SetNoDataValue(float(grid.fill_value))
+        band.WriteArray(
+            grid[(n,Ellipsis) if grid.nbands > 1 else (Ellipsis)]
+        )
     # out.FlushCache()
     return out
 
@@ -1477,21 +1480,17 @@ class GeoArray(np.ma.MaskedArray):
         return self._optinfo["_fobj"]
         # return  _gdalMemory(self, _proj2Gdal(self.proj_params))
     
-    def warp(self, proj_params, max_error=.125):
+    def warp(self, proj_params, max_error=0):
         """
         Arguments
         ---------
         proj_params: dict   -> proj4 parameters of the target coordinate system
         max_error  : float  -> Maximum error (in pixels) allowed in transformation
                                 approximation (default: value of gdalwarp)
-        Note
-        ----
-        GDAL provides another function seemingly doing the same:
-        gdal.ReprojectImage(). It might be worth to investigate the
-        differences...
-
-        Unlike the gdalwarp utility the data is not inverted upsidedown after
-        warping
+       
+        Return
+        ------
+        GeoArray
         
         Todo
         ----
@@ -1507,23 +1506,21 @@ class GeoArray(np.ma.MaskedArray):
         target_proj = _proj2Gdal(proj_params)
         
         vrt = gdal.AutoCreateWarpedVRT(
-            self._fobj, None, # src_wkt : None -> use the one from source
-            target_proj, resampling, max_error
+            self._fobj, None, 
+            target_proj, resampling, 0
         )
 
-        # Need to change the VRT-XML file as the direct changing of
-        # warping options seems to be unsupported in the SWIG interfaces
-        with tempfile.NamedTemporaryFile() as vrtin:
-            vrt.GetDriver().CreateCopy(vrtin.name, vrt)
-            tree = ET.parse(vrtin)
-            for opt in tree.find("GDALWarpOptions").iter("Option"):
-                if opt.attrib.get("name") == "INIT_DEST":
-                    opt.text = "NO_DATA"
+        for i in xrange(self.nbands):
+            vrt.GetRasterBand(i+1).Fill(float(self.fill_value)) 
 
-            with tempfile.NamedTemporaryFile() as vrtout:
-                tree.write(vrtout.name)
-                return fromfile(vrtout.name)[...,::-1,:]
-       
+        gdal.ReprojectImage(
+            self._fobj,
+            vrt
+        )
+        
+        return _fromDataset(vrt) #[...,::-1,:]
+
+   
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 

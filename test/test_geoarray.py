@@ -6,6 +6,7 @@ import numpy as np
 import geoarray as ga
 import warnings
 import subprocess
+import tempfile
 
 # from parent directory run 
 # python -m unittest test.test_geoarray
@@ -16,7 +17,7 @@ PWD = os.path.dirname(__file__)
 PATH = os.path.join(PWD, "files")
 FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
 
-TMPPATH = os.path.join(PATH,"out")
+TMPPATH = os.path.join(PWD, "out")
 
 # random projection parameters
 PROJ_PARAMS = {
@@ -231,16 +232,16 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def setUp(self):
         self.grids = readTestFiles()
 
-        try:
-            os.mkdir(TMPPATH)
-        except OSError:
-            pass
+    #     try:
+    #         os.mkdir(TMPPATH)
+    #     except OSError:
+    #         pass
         
-    def tearDown(self):        
-        try:
-            shutil.rmtree(TMPPATH)
-        except:
-            pass
+    # def tearDown(self):        
+    #     try:
+    #         shutil.rmtree(TMPPATH)
+    #     except:
+    #         pass
         
     def test_addCells(self):
         for base in self.grids:
@@ -361,19 +362,17 @@ class TestGeoArrayFuncs(unittest.TestCase):
         for fname, base in zip(FILES, self.grids):
             if base.proj_params:
                 proj = base.warp({"init":"epsg:{:}".format(epsg)})
-                # check against gdalwarp
-                subprocess.check_output(
-                    "gdalwarp -t_srs 'EPSG:{:}' {:} {:}".format(
-                        epsg, fname, tmpfile
-                    ),
-                    shell=True
-                )
-                compare = ga.fromfile(tmpfile)[::-1]
-                self.assertTrue(np.all(proj == compare))
-                self.assertDictEqual(proj.bbox, compare.bbox)
-                # unprotected as it is supposed to raise
-                # if the fail is not existing the test
-                # basically fails.
+                with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
+                    subprocess.check_output(
+                        "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
+                            epsg, fname, tf.name
+                        ),
+                        shell=True
+                    )
+                    compare = ga.fromfile(tf.name)
+                    self.assertTrue(np.all(proj.data == compare.data))
+                    self.assertTrue(np.all(proj.mask == compare.mask))
+                    self.assertDictEqual(proj.bbox, compare.bbox)
             else:
                 self.assertRaises(AttributeError)
                 
