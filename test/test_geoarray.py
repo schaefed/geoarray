@@ -363,6 +363,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
     #     for fname, base in zip(FILES, self.grids):
     #         if base.proj_params:
     #             proj = base.warp2({"init":"epsg:{:}".format(epsg)}, 0)
+                
     #             with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
     #                 subprocess.check_output(
     #                     "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
@@ -371,10 +372,13 @@ class TestGeoArrayFuncs(unittest.TestCase):
     #                     shell=True
     #                 )
     #                 compare = ga.fromfile(tf.name)
-    #                 print np.sum(np.abs(proj.data - compare.data))
-    #                 self.assertTrue(np.all(proj.data == compare.data))
-    #                 self.assertTrue(np.all(proj.mask == compare.mask))
-    #                 self.assertDictEqual(proj.bbox, compare.bbox)
+    #                 print compare.data
+    #                 print "proj: ", proj.shape, proj.trim().shape
+    #                 print "compare: ",compare.shape, compare.trim().shape
+    #                 # print np.sum(np.abs(proj.trim().data - compare.trim().data))
+    #                 # self.assertTrue(np.all(proj.data == compare.data))
+    #                 # self.assertTrue(np.all(proj.mask == compare.mask))
+    #                 # self.assertDictEqual(proj.bbox, compare.bbox)
     #         else:
     #             self.assertRaises(AttributeError)
                  

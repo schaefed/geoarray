@@ -1489,7 +1489,7 @@ class GeoArray(np.ma.MaskedArray):
 
     #     This can also be used to warp a grid like it is done in
     #     warp. The missing bit to get an consistent experience with
-    #     gdalwarp is the calculation of the output cellsize. In
+    #     gdalwarp is the calculation of the padding of the grid. In
     #     gdalwarp this is done with the function GDALSuggestedWarpOutput
     #     which I think is not exposed through SWIG. Some hints
     #     on the cellsize estimation is found on:
@@ -1518,20 +1518,29 @@ class GeoArray(np.ma.MaskedArray):
     #         trans[3] + trans[5]*self.nrows
     #     )
 
+    #     # Calcultae terget cellsize, i.e. same number of
+    #     # cells along the diagonal.
+    #     sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
+    #     tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
+    #     tcellsize = tdiag/sdiag
+        
     #     driver = gdal.GetDriverByName("MEM")
     #     out = driver.Create(
-    #         '', int((lrx - ulx)/self.cellsize[1]), 
-    #         abs(int((uly - lry)/self.cellsize[0])), 1, TYPEMAP[str(self.dtype)]
+    #         '', int((lrx - ulx)/tcellsize), 
+    #         abs(int((uly - lry)/tcellsize)), 1, TYPEMAP[str(self.dtype)]
     #     )
 
     #     out.SetGeoTransform(
-    #         (ulx, self.cellsize[1], trans[2], 
-    #          uly, trans[4], -self.cellsize[0])
+    #         (ulx, tcellsize, trans[2], 
+    #          uly, trans[4], -tcellsize)
     #     )
     #     out.SetProjection(tproj.ExportToWkt())
     #     for i in xrange(self.nbands):
-    #         out.GetRasterBand(i+1).Fill(float(self.fill_value))
-        
+    #         band = out.GetRasterBand(i+1)
+    #         band.Fill(float(self.fill_value))
+    #         band.SetNoDataValue(float(self.fill_value))
+            
+            
     #     res = gdal.ReprojectImage(
     #         self._fobj, out,
     #         fproj.ExportToWkt(), tproj.ExportToWkt(),
