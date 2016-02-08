@@ -343,18 +343,24 @@ class TestGeoArrayFuncs(unittest.TestCase):
 
     def test_indexOf(self):
         for base in self.grids:
-            offset = base.cellsize
-            ulyorigin, ulxorigin = base.getOrigin("ul")
-            uryorigin, urxorigin = base.getOrigin("ur")
-            llyorigin, llxorigin = base.getOrigin("ll")
-            lryorigin, lrxorigin = base.getOrigin("lr")
+            offset = np.abs(base.cellsize)
+            bbox = base.bbox
 
-            idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
-            coords = ((ulyorigin,ulxorigin),(lryorigin+offset[0], lrxorigin-offset[1]),
-                    (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
+            idxs = (
+                (0,0),
+                (base.nrows-1, base.ncols-1),
+                (0,base.ncols-1),
+                (base.nrows-1,0)
+            )
+            expected = (
+                (bbox["ymax"], bbox["xmin"]),
+                (bbox["ymin"]+offset[0], bbox["xmax"]-offset[1]),
+                (bbox["ymax"], bbox["xmax"]-offset[1]),
+                (bbox["ymin"]+offset[0], bbox["xmin"])
+            )
 
-            for idx,coord in zip(idxs,coords):
-                self.assertTupleEqual(base.indexOf(*idx),coord)
+            for idx, e in zip(idxs, expected):
+                self.assertTupleEqual(base.coordinatesOf(*idx), e)
 
     def test_coordinatesOf(self):
         for base in self.grids:

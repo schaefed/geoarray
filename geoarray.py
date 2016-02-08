@@ -918,22 +918,9 @@ class GeoArray(np.ma.MaskedArray):
         yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
         xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
         return {
-            "ymin": min(yvals),
-            "ymax": max(yvals),
-            "xmin": min(xvals),
-            "xmax": max(xvals),
+            "ymin": min(yvals), "ymax": max(yvals),
+            "xmin": min(xvals), "xmax": max(xvals),
         }
-
-        # yopp = self.nrows * self.cellsize[0]
-        # xopp = self.ncols * self.cellsize[1]
-
-        # return {
-        #     "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin - abs(yopp),
-        #     "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin + abs(yopp),
-        #     "xmin": self.xorigin if self.origin[1] == "l" else self.xorigin - abs(xopp),
-        #     "xmax": self.xorigin if self.origin[1] == "r" else self.xorigin + abs(xopp),
-        # }
-
 
     def getOrigin(self, origin=None):
         """
@@ -958,6 +945,7 @@ class GeoArray(np.ma.MaskedArray):
 
         if not origin:
             origin = self.origin
+
         bbox = self.bbox
         return (
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
@@ -1104,7 +1092,7 @@ class GeoArray(np.ma.MaskedArray):
         """
         _tofile(fname, self)
 
-    def indexOf(self, y_idx, x_idx):
+    def coordinatesOf(self, y_idx, x_idx):
         """
         Parameters
         ----------
@@ -1127,12 +1115,14 @@ class GeoArray(np.ma.MaskedArray):
 
         if (y_idx < 0 or x_idx < 0) or (y_idx >= self.nrows or x_idx >= self.ncols):
             raise ValueError("Index out of bounds !")
-        yorigin, xorigin = self.getOrigin("ul")
-        y_coor =  yorigin - y_idx * self.cellsize[0]
-        x_coor =  xorigin + x_idx * self.cellsize[1]
-        return y_coor, x_coor
 
-    def coordinatesOf(self, y_coor, x_coor):
+        yorigin, xorigin = self.getOrigin("ul")
+        return (
+            yorigin - y_idx * abs(self.cellsize[0]),
+            xorigin + x_idx * abs(self.cellsize[1]),
+        )
+        
+    def indexOf(self, y_coor, x_coor):
         """
         Parameters
         ----------
@@ -1690,13 +1680,13 @@ class GeoArray(np.ma.MaskedArray):
                     out.yorigin = yorigin + slices[-2].first * self.cellsize[0]
             else:
                 if slices[-2].last:
-                    out.yorigin = yorigin + (slices[-2].last + 1) * self.cellsize[0]
+                    out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize[0]
             if self.origin[1] == "l":
                 if slices[-1].first:
                     out.xorigin = xorigin + slices[-1].first * self.cellsize[1]
             else:
                 if slices[-1].last:
-                    out.xorigin = xorigin + (slices[-1].last + 1) * self.cellsize[1]
+                    out.xorigin = xorigin - (slices[-1].last + 1) * self.cellsize[1]
 
         except AttributeError: # out is scalar
             pass
