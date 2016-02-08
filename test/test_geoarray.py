@@ -178,6 +178,23 @@ class TestGeoArray(unittest.TestCase):
                 grid[slc] = value
                 self.assertTrue(np.all(grid[slc] == value))
 
+    def test_bbox(self):
+        grids = (
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
+            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
+        )
+        expected = (
+            {'xmin': 1200, 'ymin': 900, 'ymax': 1000, 'xmax': 1300},
+            {'xmin': 1200, 'ymin': 1000, 'ymax': 1100, 'xmax': 1300},
+            {'xmin': 1100, 'ymin': 900, 'ymax': 1000, 'xmax': 1200},
+            {'xmin': 1100, 'ymin': 1000, 'ymax': 1100, 'xmax': 1200},
+        )
+
+        for g, e in zip(grids, expected):
+            self.assertDictEqual(g.bbox, e)
+        
     def test_tofile(self):
         outfiles = ("{:}/testout{:}".format(TMPPATH, ext) for ext in ga._DRIVER_DICT)
 
@@ -298,31 +315,31 @@ class TestGeoArrayFuncs(unittest.TestCase):
             self.assertTrue(np.any(trimgrid[...,0]  != base.fill_value))
             self.assertTrue(np.any(trimgrid[...,-1] != base.fill_value))
 
-    def test_snap(self):
-        for base in self.grids:
-            offsets = (
-                (-75,-30),
-                (np.array(base.cellsize) *.9, np.array(base.cellsize) *20),
-                (base.yorigin * -1.1, base.xorigin * 1.89),
-            )
+    # def test_snap(self):
+    #     for base in self.grids:
+    #         offsets = (
+    #             (-75,-30),
+    #             (np.array(base.cellsize) *.9, np.array(base.cellsize) *20),
+    #             (base.yorigin * -1.1, base.xorigin * 1.89),
+    #         )
 
-            for yoff,xoff in offsets:            
-                grid = copy.deepcopy(base)
-                grid.yorigin -= yoff
-                grid.xorigin -= xoff
-                yorg, xorg = grid.getOrigin()
-                grid.snap(base)            
+    #         for yoff,xoff in offsets:            
+    #             grid = copy.deepcopy(base)
+    #             grid.yorigin -= yoff
+    #             grid.xorigin -= xoff
+    #             yorg, xorg = grid.getOrigin()
+    #             grid.snap(base)            
 
-                xdelta = abs(grid.xorigin - xorg)
-                ydelta = abs(grid.yorigin - yorg)
+    #             xdelta = abs(grid.xorigin - xorg)
+    #             ydelta = abs(grid.yorigin - yorg)
 
-                # asure the shift to the next cell
-                self.assertLessEqual(ydelta, base.cellsize[0]/2)
-                self.assertLessEqual(xdelta, base.cellsize[1]/2)
+    #             # asure the shift to the next cell
+    #             self.assertLessEqual(ydelta, base.cellsize[0]/2)
+    #             self.assertLessEqual(xdelta, base.cellsize[1]/2)
 
-                # grid origin is shifted to a cell multiple of self.grid.origin
-                self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize[0], 0)
-                self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize[1], 0)
+    #             # grid origin is shifted to a cell multiple of self.grid.origin
+    #             self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize[0], 0)
+    #             self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize[1], 0)
 
     def test_indexOf(self):
         for base in self.grids:
