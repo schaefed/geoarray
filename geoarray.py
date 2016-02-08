@@ -566,11 +566,16 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
     try:
         cellsize[0]
     except TypeError:
-        cellsize = (cellsize, cellsize)
+        cellsize = (
+            cellsize if origin[0] == "l" else -cellsize,
+            cellsize if origin[0] == "l" else -cellsize
+        )
         
-    mask = data==fill_value
-    # if not np.any(mask):
-    #     mask = None
+    if fill_value is None:
+        mask = np.zeros_like(data, np.bool)
+    else:
+        mask = data==fill_value
+    
     return GeoArray(data, yorigin, xorigin, origin, cellsize, proj_params, mask=mask, fill_value=fill_value, fobj=fobj)
 
 
