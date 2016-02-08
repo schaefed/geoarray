@@ -1122,11 +1122,11 @@ class GeoArray(np.ma.MaskedArray):
             xorigin + x_idx * abs(self.cellsize[1]),
         )
         
-    def indexOf(self, y_coor, x_coor):
+    def indexOf(self, ycoor, xcoor):
         """
         Parameters
         ----------
-        y_coor, x_coor : scalar
+        ycoor, xcoor : scalar
 
         Returns
         -------
@@ -1139,13 +1139,14 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         yorigin, xorigin = self.getOrigin("ul")
-        y_idx = int(floor((yorigin - y_coor)/float(abs(self.cellsize[0]))))
-        x_idx = int(floor((x_coor - xorigin )/float(abs(self.cellsize[1]))))
+        cellsize = np.abs(self.cellsize)
+        yidx = int(floor((yorigin - ycoor)/float(cellsize[0])))
+        xidx = int(floor((xcoor - xorigin )/float(cellsize[1])))
         
-        if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
+        if yidx < 0 or yidx >= self.nrows or xidx < 0 or xidx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")
 
-        return y_idx,x_idx
+        return yidx, xidx
 
     def trim(self):
         """
