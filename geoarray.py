@@ -1506,7 +1506,8 @@ class GeoArray(np.ma.MaskedArray):
             srs = osr.SpatialReference()
             srs.ImportFromProj4(params)
             return srs
-            
+
+        
         resampling = gdal.GRA_NearestNeighbour
 
         fproj = _projer(self.proj_params)
@@ -1514,6 +1515,8 @@ class GeoArray(np.ma.MaskedArray):
         tx = osr.CoordinateTransformation (fproj, tproj)
         trans = self._fobj.GetGeoTransform()
 
+        print trans
+        
         # Corner cells in projected coordinates
         (ulx, uly, ulz ) = tx.TransformPoint(trans[0], trans[3])
         (lrx, lry, lrz ) = tx.TransformPoint(
