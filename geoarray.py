@@ -1139,8 +1139,8 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         yorigin, xorigin = self.getOrigin("ul")
-        y_idx = int(floor((yorigin - y_coor)/float(self.cellsize[0])))
-        x_idx = int(floor((x_coor - xorigin )/float(self.cellsize[1])))
+        y_idx = int(floor((yorigin - y_coor)/float(abs(self.cellsize[0]))))
+        x_idx = int(floor((x_coor - xorigin )/float(abs(self.cellsize[1]))))
         
         if y_idx < 0 or y_idx >= self.nrows or x_idx < 0 or x_idx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")

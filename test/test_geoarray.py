@@ -341,7 +341,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
     #             self.assertEqual((grid.yorigin - grid.yorigin)%grid.cellsize[0], 0)
     #             self.assertEqual((grid.xorigin - grid.xorigin)%grid.cellsize[1], 0)
 
-    def test_indexOf(self):
+    def test_coordinatesOf(self):
         for base in self.grids:
             offset = np.abs(base.cellsize)
             bbox = base.bbox
@@ -362,21 +362,27 @@ class TestGeoArrayFuncs(unittest.TestCase):
             for idx, e in zip(idxs, expected):
                 self.assertTupleEqual(base.coordinatesOf(*idx), e)
 
-    def test_coordinatesOf(self):
+    def test_indexOf(self):
         for base in self.grids:
-            offset = base.cellsize
-            ulyorigin, ulxorigin = base.getOrigin("ul")
-            uryorigin, urxorigin = base.getOrigin("ur")
-            llyorigin, llxorigin = base.getOrigin("ll")
-            lryorigin, lrxorigin = base.getOrigin("lr")
+            offset = np.abs(base.cellsize)*.8
+            bbox = base.bbox
+            
+            coodinates = (
+                (bbox["ymax"], bbox["xmin"]),
+                (bbox["ymin"]+offset[0], bbox["xmax"]-offset[1]),
+                (bbox["ymax"], bbox["xmax"]-offset[1]),
+                (bbox["ymin"]+offset[0], bbox["xmin"])
+            )
 
-            idxs = ((0,0),(base.nrows-1, base.ncols-1), (0,base.ncols-1), (base.nrows-1,0))
-            coords = ((ulyorigin,ulxorigin),(lryorigin+offset[0], lrxorigin-offset[1]),
-                    (uryorigin, urxorigin-offset[1]),(llyorigin+offset[0], llxorigin))
+            expected = (
+                (0,0),
+                (base.nrows-1, base.ncols-1),
+                (0,base.ncols-1),
+                (base.nrows-1,0)
+            )
 
-            for idx,coord in zip(idxs,coords):
-                self.assertTupleEqual(base.coordinatesOf(*coord),idx)
-
+            for c, e in zip(coodinates, expected):
+                self.assertTupleEqual(base.indexOf(*c), e)
 
     def test_warp2(self):
 
