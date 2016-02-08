@@ -566,11 +566,18 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
     try:
         cellsize[0]
     except TypeError:
-        cellsize = (
-            cellsize if origin[0] == "l" else -cellsize,
-            cellsize if origin[0] == "l" else -cellsize
-        )
+        cellsize = (cellsize, cellsize)
+
+    cellsize = list(cellsize)
         
+    if origin[0] == "u" and cellsize[0] > 0:
+        cellsize[0] *= -1
+
+    if origin[0] == "r" and cellsize[0] > 0:
+        cellsize[1] *= -1
+
+    cellsize = tuple(cellsize)
+       
     if fill_value is None:
         mask = np.zeros_like(data, np.bool)
     else:
@@ -884,6 +891,7 @@ class GeoArray(np.ma.MaskedArray):
         }
 
     @property
+
     def bbox(self):
         """
         Parameters
@@ -905,6 +913,15 @@ class GeoArray(np.ma.MaskedArray):
         >>> x.bbox
         {'xmin': 51, 'ymin': 96, 'ymax': 100, 'xmax': 55}
         """
+
+        # yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
+        # xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
+        # return {
+        #     "ymin": min(yvals),
+        #     "ymax": max(yvals),
+        #     "xmin": min(xvals),
+        #     "xmax": max(xvals),
+        # }
 
         yopp = self.nrows * self.cellsize[0]
         xopp = self.ncols * self.cellsize[1]
@@ -1665,10 +1682,10 @@ class GeoArray(np.ma.MaskedArray):
         slices = getSlices(slc,self.shape)
 
         try:
-            yorigin,xorigin = self.getOrigin("ul")
+            yorigin, xorigin = self.getOrigin("ul")
             if self.origin[0] == "u":
                 if slices[-2].first:
-                    out.yorigin = yorigin - slices[-2].first * self.cellsize[0]
+                    out.yorigin = yorigin + slices[-2].first * self.cellsize[0]
             else:
                 if slices[-2].last:
                     out.yorigin = yorigin - (slices[-2].last + 1) * self.cellsize[0]
