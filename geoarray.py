@@ -1480,105 +1480,90 @@ class GeoArray(np.ma.MaskedArray):
             self._optinfo["_fobj"] = _gdalMemory(self, _proj2Gdal(self.proj_params))
         return self._optinfo["_fobj"]
 
-    # def warp2(self, proj_params, max_error=0.125):
-    #     """
-    #     Can serve as an outline for an interpoateToGrid method.
+    def warp2(self, proj_params, max_error=0.125):
+        """
+        Can serve as an outline for an interpoateToGrid method.
 
-    #     Taken and adapted from:
-    #     https://jgomezdans.github.io/gdal_notes/reprojection.html
+        Taken and adapted from:
+        https://jgomezdans.github.io/gdal_notes/reprojection.html
 
-    #     This can also be used to warp a grid like it is done in
-    #     warp. The missing bit to get an consistent experience with
-    #     gdalwarp is the calculation of the padding of the grid. In
-    #     gdalwarp this is done with the function GDALSuggestedWarpOutput
-    #     which I think is not exposed through SWIG. Some hints
-    #     on the cellsize estimation is found on:
-    #     http://gdal.org/gdal__alg_8h.html#a816819e7495bfce06dbd110f7c57af65
+        This can also be used to warp a grid like it is done in
+        warp. The missing bit to get an consistent experience with
+        gdalwarp is the calculation of the padding of the grid. In
+        gdalwarp this is done with the function GDALSuggestedWarpOutput
+        which I think is not exposed through SWIG. Some hints
+        on the cellsize estimation is found on:
+        http://gdal.org/gdal__alg_8h.html#a816819e7495bfce06dbd110f7c57af65
 
-    #     The beauty in this approach is, that no temprary .vrt files needs to be
-    #     written and a way more flexible interface could be provided (cellsize, bounding
-    #     box, etc).
-    #     """
-    #     def _projer(params):
-    #         params =  "+{:}".format(" +".join(
-    #             ["=".join(map(str, pp)) for pp in params.items()])
-    #         )
-    #         srs = osr.SpatialReference()
-    #         srs.ImportFromProj4(params)
-    #         return srs
+        The beauty in this approach is, that no temprary .vrt files needs to be
+        written and a way more flexible interface could be provided (cellsize, bounding
+        box, etc).
+        """
+        def _projer(params):
+            params =  "+{:}".format(" +".join(
+                ["=".join(map(str, pp)) for pp in params.items()])
+            )
+            srs = osr.SpatialReference()
+            srs.ImportFromProj4(params)
+            return srs
             
-    #     resampling = gdal.GRA_NearestNeighbour
+        resampling = gdal.GRA_NearestNeighbour
 
-    #     fproj = _projer(self.proj_params)
-    #     tproj = _projer(proj_params)
-    #     tx = osr.CoordinateTransformation (fproj, tproj)
-    #     trans = self._fobj.GetGeoTransform()
-    #     print trans
-    #     # Corner cells in projected coordinates
-    #     (ulx, uly, ulz ) = tx.TransformPoint(trans[0], trans[3]) #(x, y)
-    #     (lrx, lry, lrz ) = tx.TransformPoint(
-    #         trans[0] + trans[1]*self.ncols,
-    #         trans[3] + trans[5]*self.nrows
-    #     )
-    #     (urx, ury, urz) = tx.TransformPoint(
-    #         trans[0] + trans[1]*self.ncols,
-    #         trans[3]
-    #     )
-    #     (llx, lly, llz) = tx.TransformPoint(
-    #         trans[0],
-    #         trans[3] + trans[5]*self.nrows
-    #     )
+        fproj = _projer(self.proj_params)
+        tproj = _projer(proj_params)
+        tx = osr.CoordinateTransformation (fproj, tproj)
+        trans = self._fobj.GetGeoTransform()
 
-    #     print "ul: ", (ulx, uly)
-    #     print "ll: ", (llx, lly)
-    #     print "ur: ", (urx, ury)
-    #     print "lr: ", (lrx, lry)
+        # Corner cells in projected coordinates
+        (ulx, uly, ulz ) = tx.TransformPoint(trans[0], trans[3])
+        (lrx, lry, lrz ) = tx.TransformPoint(
+            trans[0] + trans[1]*self.ncols,
+            trans[3] + trans[5]*self.nrows
+        )
+        (urx, ury, urz) = tx.TransformPoint(
+            trans[0] + trans[1]*self.ncols,
+            trans[3]
+        )
+        (llx, lly, llz) = tx.TransformPoint(
+            trans[0],
+            trans[3] + trans[5]*self.nrows
+        )
 
-    #     # Calcultae terget cellsize, i.e. same number of
-    #     # cells along the diagonal.
-    #     sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
-    #     tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
-    #     tcellsize = tdiag/sdiag
-
+        # Calculate terget cellsize, i.e. same number of
+        # cells along the diagonal.
+        sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
+        tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
+        tcellsize = tdiag/sdiag
        
-    #     driver = gdal.GetDriverByName("MEM")
-    #     out = driver.Create(
-    #         "",
-    #         abs(int((max(urx, lrx) - min(ulx, llx))/tcellsize)),
-    #         abs(int((max(ury, lry) - min(uly, lly))/tcellsize)),
-    #         1,
-    #         TYPEMAP[str(self.dtype)]
-    #     )
+        driver = gdal.GetDriverByName("MEM")
+        out = driver.Create(
+            "",
+            abs(int(np.round((max(urx, lrx) - min(ulx, llx))/tcellsize))),
+            abs(int(np.round((max(ury, lry) - min(uly, lly))/tcellsize))),
+            1,
+            TYPEMAP[str(self.dtype)]
+        )
         
-    #     # out = driver.Create(
-    #     #     '', int((lrx - ulx)/tcellsize), 
-    #     #     abs(int((uly - lry)/tcellsize)), 1, TYPEMAP[str(self.dtype)]
-    #     # )
+        out.SetGeoTransform(
+            (min(ulx, llx, urx, lrx), tcellsize, trans[2], 
+             max(uly, lly, ury, lry), trans[4], -tcellsize if tcellsize > 0 else tcellsize)
+        )
 
-    #     out.SetGeoTransform(
-    #         (min(ulx,llx), tcellsize, trans[2], 
-    #          max(uly,ury), trans[4], -tcellsize)
-    #     )
-    #      # out.SetGeoTransform(
-    #     #     (ulx, tcellsize, trans[2], 
-    #     #      uly, trans[4], -tcellsize)
-    #     # )
-    #     out.SetProjection(tproj.ExportToWkt())
-    #     for i in xrange(self.nbands):
-    #         band = out.GetRasterBand(i+1)
-    #         band.Fill(float(self.fill_value))
-    #         band.SetNoDataValue(float(self.fill_value))
+        out.SetProjection(tproj.ExportToWkt())
+        for i in xrange(self.nbands):
+            band = out.GetRasterBand(i+1)
+            band.Fill(float(self.fill_value))
+            band.SetNoDataValue(float(self.fill_value))
             
             
-    #     res = gdal.ReprojectImage(
-    #         self._fobj, out,
-    #         None, None,
-    #         # fproj.ExportToWkt(), tproj.ExportToWkt(),
-    #         resampling, )
-    #     #0.0, max_error)
-    #     print np.mean(out.ReadAsArray())
+        res = gdal.ReprojectImage(
+            self._fobj, out,
+            None, None,
+            resampling, 
+            0.0, max_error)
+        # print np.mean(out.ReadAsArray())
         
-    #     return _fromDataset(out)
+        return _fromDataset(out)
         
     def warp(self, proj_params, max_error=0.125):
     
