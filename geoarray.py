@@ -914,23 +914,23 @@ class GeoArray(np.ma.MaskedArray):
         {'xmin': 51, 'ymin': 96, 'ymax': 100, 'xmax': 55}
         """
 
-        # yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
-        # xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
-        # return {
-        #     "ymin": min(yvals),
-        #     "ymax": max(yvals),
-        #     "xmin": min(xvals),
-        #     "xmax": max(xvals),
-        # }
-
-        yopp = self.nrows * self.cellsize[0]
-        xopp = self.ncols * self.cellsize[1]
+        yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
+        xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
         return {
-            "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin - yopp,
-            "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin + yopp,
-            "xmin": self.xorigin if self.origin[1] == "l" else self.xorigin - xopp,
-            "xmax": self.xorigin if self.origin[1] == "r" else self.xorigin + xopp,
+            "ymin": min(yvals),
+            "ymax": max(yvals),
+            "xmin": min(xvals),
+            "xmax": max(xvals),
         }
+
+        # yopp = self.nrows * self.cellsize[0]
+        # xopp = self.ncols * self.cellsize[1]
+        # return {
+        #     "ymin": self.yorigin if self.origin[0] == "l" else self.yorigin - yopp,
+        #     "ymax": self.yorigin if self.origin[0] == "u" else self.yorigin + yopp,
+        #     "xmin": self.xorigin if self.origin[1] == "l" else self.xorigin - xopp,
+        #     "xmax": self.xorigin if self.origin[1] == "r" else self.xorigin + xopp,
+        # }
 
 
     def getOrigin(self, origin=None):
