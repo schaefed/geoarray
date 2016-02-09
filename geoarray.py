@@ -85,7 +85,7 @@ gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=(1,1), proj_params=None):
+          fill_value=-9999, cellsize=(1,1), proj=None):
     """
     Parameters
     ----------
@@ -103,7 +103,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj_params  : dict/None                     # proj4 projection parameters
+    proj  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -148,10 +148,10 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
 
     """
     return _factory(np.asarray(data) if not dtype else np.asarray(data, dtype),
-                    yorigin, xorigin, origin, fill_value, cellsize, proj_params, None)
+                    yorigin, xorigin, origin, fill_value, cellsize, proj, None)
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=1, proj=None):
     """
     Parameters
     ----------
@@ -169,7 +169,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj_params  : dict/None                     # proj4 projection parameters
+    proj  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -189,7 +189,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [0.0 0.0 0.0 0.0]])
     """
     return _factory(np.zeros(shape, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj_params, None)
+                    origin, fill_value, cellsize, proj, None)
 
 def zeros_like(a, *args, **kwargs):
     """
@@ -251,7 +251,7 @@ def zeros_like(a, *args, **kwargs):
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=-9999, cellsize=1, proj_params=None):
+         fill_value=-9999, cellsize=1, proj=None):
     """
     Parameters
     ----------
@@ -269,7 +269,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj_params  : dict/None                     # proj4 projection parameters
+    proj  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -290,7 +290,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
 
     return _factory(np.ones(shape,dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj_params, None)
+                    origin, fill_value, cellsize, proj, None)
 
 def ones_like(a, *args, **kwargs):
     """
@@ -352,7 +352,7 @@ def ones_like(a, *args, **kwargs):
 
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=-9999, cellsize=1, proj_params=None):
+         fill_value=-9999, cellsize=1, proj=None):
     """
     Parameters
     ----------
@@ -371,7 +371,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj_params  : dict/None                     # proj4 projection parameters
+    proj  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -391,7 +391,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [42.0 42.0 42.0 42.0]])
     """
     return _factory(np.full(shape, value, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj_params, None)
+                    origin, fill_value, cellsize, proj, None)
 
 def full_like(a, fill_value, *args, **kwargs):
     """
@@ -453,7 +453,7 @@ def full_like(a, fill_value, *args, **kwargs):
         return array(np.full_like(a,fill_value,*args,**kwargs))
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=1, proj_params=None):
+          fill_value=-9999, cellsize=1, proj=None):
     """
     Parameters
     ----------
@@ -471,7 +471,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                                  #    "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj_params  : dict/None                     # proj4 projection parameters
+    proj  : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -499,7 +499,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
 
     return _factory(np.full(shape, fill_value, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj_params, None)
+                    origin, fill_value, cellsize, proj, None)
 
 def empty_like(a,*args,**kwargs):
     """
@@ -560,7 +560,7 @@ def empty_like(a,*args,**kwargs):
         return array(np.full_like(a,-9999),*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, fobj):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
@@ -576,16 +576,18 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
             cs if origin[1] == "l" else -cs
         )
 
-    # print "factory", proj_params.get()
+    # print "factory", proj.get()
         
     if fill_value is None:
         mask = np.zeros_like(data, np.bool)
     else:
         mask = data==fill_value
     
-    return GeoArray(data, yorigin, xorigin, origin, cellsize, proj_params, mask=mask, fill_value=fill_value, fobj=fobj)
-
-
+    return GeoArray(
+        data, yorigin, xorigin, origin, cellsize,
+        Projer(proj),
+        mask=mask, fill_value=fill_value, fobj=fobj
+    )
 
 def fromfile(fname):
     """
@@ -608,60 +610,33 @@ def fromfile(fname):
         return _fromDataset(fobj)
     raise IOError("Could not open file")
 
-def _proj2Gdal(proj_params):
-    params = None
-    if proj_params:
-        params =  "+{:}".format(" +".join(
-            ["=".join(map(str, pp)) for pp in proj_params.items()])
-        )
-    srs = osr.SpatialReference()
-    srs.ImportFromProj4(params)
-    return srs.ExportToWkt()
-
-def _gdal2Proj(fobj):
-    """
-    Move out...
-    """
-    srs = osr.SpatialReference()
-    srs.ImportFromWkt(fobj.GetProjection())
-    proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
-    return dict(zip(proj_params[0::2],proj_params[1::2]))
-
 class Projer(object):
-    def __init__(self,proj=None, epsg=None, wkt=None):
+    def __init__(self, arg):
 
-        self._srs = osr.SpatialReference() 
-        if epsg:
-            self._epsg(epsg)
-        elif proj:
-            self._proj4(proj)
-        elif wkt:
-            self._wkt(wkt)
-        else:
-            self._srs = None
+        self._srs = osr.SpatialReference()
+
+        if isinstance(arg, int):
+            self._srs.ImportFromEpsg(arg)
+        elif isinstance(arg, dict):
+            params =  "+{:}".format(" +".join(
+                ["=".join(map(str, pp)) for pp in arg.items()])
+            )
+            self._srs.ImportFromProj4(params)
+        elif isinstance(arg, str):
+            self._srs.ImportFromWkt(arg)
             
-    def export(self):
-        if self._srs:
-            return self._srs.ExportToWkt()
-
-    def get(self):
-        return self._srs
-    
-    def __call__(self):
-        return self.export()
-
-    def _wkt(self, wkt):
-        self._srs.ImportFromWkt(wkt)
-    
-    def _proj4(self, proj):
-        params =  "+{:}".format(" +".join(
-            ["=".join(map(str, pp)) for pp in proj.items()])
-        )
-        self._srs.ImportFromProj4(params)
-
-    def _epsg(self, epsg):
-        self._srs.ImportFromEPSG(epsg)
+    def getProj4(self):
+        tmp = self._srs.ExportToProj4()
+        proj = [x for x in re.split("[+= ]", tmp) if x]
+        return dict(zip(proj[0::2], proj[1::2]))
         
+    def getWkt(self):
+        return self._srs.ExportToWkt()
+
+    def getReference(self):
+        if str(self._srs):
+            return self._srs
+       
         
 def _fromDataset(fobj):
 
@@ -685,14 +660,12 @@ def _fromDataset(fobj):
     #     data = fobj.ReadAsArray()
 
     data = fobj.ReadAsArray()
-    # p = Projer(wkt=fobj.GetProjection())
     
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
         origin="ul", fill_value=rasterband.GetNoDataValue(),
         cellsize=(geotrans[5], geotrans[1]),
-        proj_params = _gdal2Proj(fobj),
-        # proj_params = p, #Projer(wkt=fobj.GetProjection()),
+        proj = fobj.GetProjection(),
         fobj=fobj
     )
 
@@ -712,8 +685,7 @@ def _gdalMemory(grid): #, projection):
          grid.yorigin, 0, grid.cellsize[0])
     )
 
-    # out.SetProjection(projection)
-    out.SetProjection(_proj2Gdal(grid.proj_params))
+    out.SetProjection(grid.proj.getWkt())
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
@@ -742,11 +714,6 @@ def _tofile(fname, geoarray):
     memset = _gdalMemory(geoarray) #, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
     outdriver.CreateCopy(fname, memset, 0)
-    # out = outdriver.CreateCopy(fname, memset, 0)
-    # errormsg = gdal.GetLastErrorMsg()
-    # if errormsg or not out:
-    #     raise IOError(errormsg)
-
 
 class GeoArray(np.ma.MaskedArray):
     """
@@ -883,7 +850,7 @@ class GeoArray(np.ma.MaskedArray):
     """
 
     def __new__(cls, data, yorigin, xorigin, origin,
-                cellsize, proj_params=None, fobj=None, *args, **kwargs):
+                cellsize, proj=None, fobj=None, *args, **kwargs):
 
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
 
@@ -892,9 +859,8 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["origin"]      = origin
         obj._optinfo["cellsize"]    = cellsize
         obj._optinfo["_fobj"]       = fobj
-        obj._optinfo["proj_params"] = proj_params
+        obj._optinfo["proj"] = proj
 
-        # print "__new__", proj_params.get()
         return obj
 
     @property
@@ -919,7 +885,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geoarray as ga
         >>> x = ga.full((4,4), 42, yorigin=100, xorigin=55, origin="ur")
         >>> x.header
-        {'origin': 'ur', 'fill_value': -9999.0, 'proj_params': None, 'cellsize': (-1, -1), 'yorigin': 100, 'xorigin': 55}
+        {'origin': 'ur', 'fill_value': -9999.0, 'proj': None, 'cellsize': (-1, -1), 'yorigin': 100, 'xorigin': 55}
         """
 
         return {
@@ -928,7 +894,7 @@ class GeoArray(np.ma.MaskedArray):
             "origin"      : self.origin,
             "fill_value"  : self.fill_value,
             "cellsize"    : self.cellsize,
-            "proj_params" : self.proj_params
+            "proj" : self.proj.getProj4()
         }
 
     @property
@@ -1389,7 +1355,7 @@ class GeoArray(np.ma.MaskedArray):
             origin      = "ul",
             fill_value  = self.fill_value,
             cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
-            proj_params = self.proj_params,
+            proj = self.proj,
         )
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
@@ -1524,7 +1490,7 @@ class GeoArray(np.ma.MaskedArray):
         Check if two grids are broadcastable.
         """
         return (
-            (self.proj_params == grid.proj_params) and
+            (self.proj == grid.proj) and
             (self.getOrigin() == grid.getOrigin(self.origin)) and
             (self.cellsize == grid.cellsize)
         )
@@ -1535,11 +1501,11 @@ class GeoArray(np.ma.MaskedArray):
             self._optinfo["_fobj"] = _gdalMemory(self)#, _proj2Gdal(self.proj_params))
         return self._optinfo["_fobj"]
 
-    def warp(self, proj_params, max_error=0.125):
+    def warp(self, proj, max_error=0.125):
         """
         Arguments
         ---------
-        proj_params: dict   -> proj4 parameters of the target coordinate system
+        proj: dict   -> proj4 parameters of the target coordinate system
         max_error  : float  -> Maximum error (in pixels) allowed in transformation
                                approximation (default: value of gdalwarp)
         
@@ -1551,23 +1517,28 @@ class GeoArray(np.ma.MaskedArray):
         ----
         - Make the resampling strategy an optional argument
         """
+
         
-        # print "warp", self.proj_params.get()
+        # return
         tx = osr.CoordinateTransformation (
-            # self.proj_params.get(),
-            Projer(self.proj_params).get(),
-            Projer(proj=proj_params).get(),
+            self.proj.getReference(),
+            Projer(proj).getReference(),
         )
 
         # transform corners
         yorigin, xorigin = self.getOrigin()
         xdelta = self.cellsize[0] * self.nrows
         ydelta = self.cellsize[1] * self.ncols
-        ulx, uly, _ = tx.TransformPoint(xorigin, yorigin)
-        lrx, lry, _ = tx.TransformPoint(xorigin + xdelta, yorigin + ydelta)
-        urx, ury, _ = tx.TransformPoint(xorigin + xdelta, yorigin)
-        llx, lly, _ = tx.TransformPoint(xorigin, yorigin + ydelta)
-
+        try:
+            ulx, uly, _ = tx.TransformPoint(xorigin, yorigin)
+            lrx, lry, _ = tx.TransformPoint(xorigin + xdelta, yorigin + ydelta)
+            urx, ury, _ = tx.TransformPoint(xorigin + xdelta, yorigin)
+            llx, lly, _ = tx.TransformPoint(xorigin, yorigin + ydelta)
+        except NotImplementedError:
+            raise AttributeError(
+                "Projections not correct or given!"
+            )
+            
         # Calculate cellsize, i.e. same number of cells along the diagonal.
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
         tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
@@ -1585,7 +1556,7 @@ class GeoArray(np.ma.MaskedArray):
             xorigin = min(ulx, urx, llx, lrx),
             origin = "ul",
             cellsize = tcellsize,
-            proj_params = proj_params
+            proj = proj
         )
 
         return self.warpTo(target, max_error)
@@ -1701,7 +1672,7 @@ class GeoArray(np.ma.MaskedArray):
 
     def __deepcopy__(self, memo):
         return array(self.data.copy(), self.dtype, self.yorigin, self.xorigin, self.origin,
-                     self.fill_value, self.cellsize, self.proj_params)
+                     self.fill_value, self.cellsize, self.proj.getWkt())
         
     def __getitem__(self, slc):
 

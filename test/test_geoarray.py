@@ -112,7 +112,7 @@ class TestGeoArray(unittest.TestCase):
             grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
             grid2.xorigin -= 1
             grid3.cellsize = (grid3.cellsize[0] + 1, grid3.cellsize[0] + 1)
-            grid4.proj_params = {"invalid":"key"}
+            grid4.proj = {"invalid":"key"}
             self.assertTrue(base.basicMatch(grid1))
             self.assertFalse(base.basicMatch(grid2))
             self.assertFalse(base.basicMatch(grid3))
@@ -207,13 +207,14 @@ class TestGeoArray(unittest.TestCase):
 
                 
     def test_copy(self):
-        for base in self.grids:
+        for base in self.grids[1:]:
+
             deep_copy = copy.deepcopy(base)        
-            self.assertTrue(base.header == deep_copy.header)
+            self.assertDictEqual(base.header, deep_copy.header)
             self.assertNotEqual(id(base),id(deep_copy))
             self.assertTrue(np.all(base == deep_copy))
             shallow_copy = copy.copy(base)
-            self.assertTrue(base.header == shallow_copy.header)
+            self.assertDictEqual(base.header, shallow_copy.header)
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
 
@@ -399,10 +400,9 @@ class TestGeoArrayFuncs(unittest.TestCase):
         tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
         for fname, base in zip(FILES, self.grids):
-            if base.proj_params:
+            if base.proj.getReference():
                 for epsg in codes:
                     proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
-                    # proj.tofile("proj.tif")
                     with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                         subprocess.check_output(
                             "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
