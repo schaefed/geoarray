@@ -36,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re, os, sys
 import tempfile
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET
 import gdal, osr
 import numpy as np
 from math import floor, ceil
@@ -48,11 +48,12 @@ except NameError: # python 3
     xrange = range
 
 # Possible positions of the grid origin
-ORIGINS = ("ul",    #     "ul" -> upper left
-           "ur",    #     "ur" -> upper right
-           "ll",    #     "ll" -> lower left
-           "lr")    #     "lr" -> lower right
-
+ORIGINS = (
+    "ul",    #     "ul" -> upper left
+    "ur",    #     "ur" -> upper right
+    "ll",    #     "ll" -> lower left
+    "lr",    #     "lr" -> lower right
+)
 
 # should be extended, for available options see:
 # http://www.gdal.org/formats_list.html
@@ -575,8 +576,6 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
             cs if origin[0] == "l" else -cs,
             cs if origin[1] == "l" else -cs
         )
-
-    # print "factory", proj.get()
         
     if fill_value is None:
         mask = np.zeros_like(data, np.bool)
@@ -636,7 +635,6 @@ class Projer(object):
     def getReference(self):
         if str(self._srs):
             return self._srs
-       
         
 def _fromDataset(fobj):
 
@@ -1518,8 +1516,6 @@ class GeoArray(np.ma.MaskedArray):
         - Make the resampling strategy an optional argument
         """
 
-        
-        # return
         tx = osr.CoordinateTransformation (
             self.proj.getReference(),
             Projer(proj).getReference(),
@@ -1671,8 +1667,10 @@ class GeoArray(np.ma.MaskedArray):
             )
 
     def __deepcopy__(self, memo):
-        return array(self.data.copy(), self.dtype, self.yorigin, self.xorigin, self.origin,
-                     self.fill_value, self.cellsize, self.proj.getWkt())
+        return array(
+            self.data.copy(), self.dtype, self.yorigin, self.xorigin, self.origin,
+            self.fill_value, self.cellsize, self.proj.getWkt()
+        )
         
     def __getitem__(self, slc):
 
