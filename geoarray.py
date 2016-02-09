@@ -670,7 +670,7 @@ def _fromDataset(fobj):
     )
 
 
-def _gdalMemory(grid): #, projection):
+def _memDataset(grid): #, projection):
 
     """
     Create GDAL memory dataset
@@ -711,7 +711,7 @@ def _tofile(fname, geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filename extension '{:}'".format(fext))
 
-    memset = _gdalMemory(geoarray) #, _proj2Gdal(geoarray.proj_params))
+    memset = _memDataset(geoarray) #, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
     outdriver.CreateCopy(fname, memset, 0)
 
@@ -1498,7 +1498,7 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def _fobj(self):
         if self._optinfo["_fobj"] is None:
-            self._optinfo["_fobj"] = _gdalMemory(self)#, _proj2Gdal(self.proj_params))
+            self._optinfo["_fobj"] = _memDataset(self)#, _proj2Gdal(self.proj_params))
         return self._optinfo["_fobj"]
 
     def warp(self, proj, max_error=0.125):
