@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from geoarray import (
+from wrapperfuncs import (
     array,
     zeros,
     ones,
@@ -11,6 +11,9 @@ from geoarray import (
     ones_like,
     full_like,
     empty_like,
+)
+
+from geoarray import (
     fromfile,
     _DRIVER_DICT
 )
