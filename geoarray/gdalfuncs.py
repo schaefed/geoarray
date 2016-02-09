@@ -110,7 +110,7 @@ def _fromDataset(fobj):
         "data":data, "yorigin":geotrans[3], "xorigin":geotrans[0],
         "origin":"ul", "fill_value":rasterband.GetNoDataValue(),
         "cellsize":(geotrans[5], geotrans[1]),
-        "proj" : fobj.GetProjection(), "fobj":fobj
+        "proj" : fobj.GetProjection()
     }
 
 # return _factory(

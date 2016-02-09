@@ -46,14 +46,6 @@ try:
 except NameError: # python 3
     xrange = range
 
-# should be extended, for available options see:
-# http://www.gdal.org/formats_list.html
-# _DRIVER_DICT = {
-#     ".tif" : "GTiff",
-#     ".asc" : "AAIGrid",
-#     ".img" : "HFA",
-# }
-
 # Possible positions of the grid origin
 ORIGINS = (
     "ul",    #     "ul" -> upper left
@@ -61,28 +53,6 @@ ORIGINS = (
     "ll",    #     "ll" -> lower left
     "lr",    #     "lr" -> lower right
 )
-
-# # type mapping: there is no boolean data type in GDAL
-# TYPEMAP = {
-#     "uint8"      : 1,
-#     "int8"       : 1,
-#     "uint16"     : 2,
-#     "int16"      : 3,
-#     "uint32"     : 4,
-#     "int32"      : 5,
-#     "float32"    : 6,
-#     "float64"    : 7,
-#     "complex64"  : 10,
-#     "complex128" : 11,
-# }
-# TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
-
-# # The open gdal file objects need to outlive their GeoArray
-# # instance. Therefore they are stored globaly.
-# # _FILEREFS = []
-
-# gdal.UseExceptions()
-# gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=(1,1), proj=None):
@@ -149,7 +119,7 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     """
     return _factory(
         np.asarray(data) if not dtype else np.asarray(data, dtype),
-        yorigin, xorigin, origin, fill_value, cellsize, proj, None
+        yorigin, xorigin, origin, fill_value, cellsize, proj
     )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -192,7 +162,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
     return _factory(
         np.zeros(shape, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj, None
+        origin, fill_value, cellsize, proj
     )
 
 def zeros_like(a, *args, **kwargs):
@@ -291,7 +261,7 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     return _factory(
         np.ones(shape,dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj, None
+        origin, fill_value, cellsize, proj
     )
 
 def ones_like(a, *args, **kwargs):
@@ -390,7 +360,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
     return _factory(
         np.full(shape, value, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj, None
+        origin, fill_value, cellsize, proj
     )
 
 def full_like(a, fill_value, *args, **kwargs):
@@ -480,7 +450,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     return _factory(
         np.empty(shape, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj, None
+        origin, fill_value, cellsize, proj
     )
 
 def empty_like(a, *args, **kwargs):
@@ -511,7 +481,7 @@ def empty_like(a, *args, **kwargs):
         return array(np.full_like(a,-9999),*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
@@ -534,7 +504,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
     return GeoArray(
         data, yorigin, xorigin, origin, cellsize,
         Projer(proj),
-        mask=mask, fill_value=fill_value, fobj=fobj
+        mask=mask, fill_value=fill_value
     )
 
 
@@ -676,7 +646,7 @@ class GeoArray(np.ma.MaskedArray):
     """
 
     def __new__(cls, data, yorigin, xorigin, origin,
-                cellsize, proj=None, fobj=None, *args, **kwargs):
+                cellsize, proj=None, *args, **kwargs):
 
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
 
@@ -684,7 +654,6 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["xorigin"]     = xorigin
         obj._optinfo["origin"]      = origin
         obj._optinfo["cellsize"]    = cellsize
-        obj._optinfo["_fobj"]       = fobj
         obj._optinfo["proj"] = proj
 
         return obj
@@ -1318,11 +1287,11 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
-    @property
-    def _fobj(self):
-        if self._optinfo["_fobj"] is None:
-            self._optinfo["_fobj"] = _memDataset(self)#, _proj2Gdal(self.proj_params))
-        return self._optinfo["_fobj"]
+    # @property
+    # def _fobj(self):
+    #     if self._optinfo["_fobj"] is None:
+    #         self._optinfo["_fobj"] = _memDataset(self)#, _proj2Gdal(self.proj_params))
+    #     return self._optinfo["_fobj"]
 
     def warp(self, proj, max_error=0.125):
         """
@@ -1397,11 +1366,11 @@ class GeoArray(np.ma.MaskedArray):
         coordinate transformations if necessary.
         """
         
-        out = grid._fobj
+        out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
            
         res = gdal.ReprojectImage(
-            self._fobj, out,
+            _memDataset(self), out,
             None, None,
             resampling, 
             0.0, max_error)
@@ -1458,6 +1427,7 @@ class GeoArray(np.ma.MaskedArray):
 
         return out
 
+    
 if __name__ == "__main__":
 
     import doctest
