@@ -35,8 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import re, os, sys
-import tempfile
-# import xml.etree.ElementTree as ET
 import gdal, osr
 import numpy as np
 from math import floor, ceil
@@ -47,14 +45,6 @@ try:
 except NameError: # python 3
     xrange = range
 
-# Possible positions of the grid origin
-ORIGINS = (
-    "ul",    #     "ul" -> upper left
-    "ur",    #     "ur" -> upper right
-    "ll",    #     "ll" -> lower left
-    "lr",    #     "lr" -> lower right
-)
-
 # should be extended, for available options see:
 # http://www.gdal.org/formats_list.html
 _DRIVER_DICT = {
@@ -62,6 +52,14 @@ _DRIVER_DICT = {
     ".asc" : "AAIGrid",
     ".img" : "HFA",
 }
+
+# Possible positions of the grid origin
+ORIGINS = (
+    "ul",    #     "ul" -> upper left
+    "ur",    #     "ur" -> upper right
+    "ll",    #     "ll" -> lower left
+    "lr",    #     "lr" -> lower right
+)
 
 # type mapping: there is no boolean data type in GDAL
 TYPEMAP = {
@@ -587,6 +585,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
         Projer(proj),
         mask=mask, fill_value=fill_value, fobj=fobj
     )
+
 
 def fromfile(fname):
     """
@@ -1335,7 +1334,7 @@ class GeoArray(np.ma.MaskedArray):
                   [-- -- -- -- -- --]
                   [-- -- -- -- -- --]])
        """
-
+        
         top    = int(max(top,0))
         left   = int(max(left,0))
         bottom = int(max(bottom,0))
