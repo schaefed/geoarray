@@ -712,12 +712,13 @@ def _gdalMemory(grid, projection):
         (grid.xorigin, grid.cellsize[1], 0,
          grid.yorigin, 0, grid.cellsize[0])
     )
-    grid = np.atleast_3d(grid)
+
     out.SetProjection(projection)
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
-        band.WriteArray(grid[n])
+        band.WriteArray(grid[n] if grid.ndim>2 else grid)
+            
     # out.FlushCache()
     return out
 
