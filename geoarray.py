@@ -575,18 +575,9 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
             cs if origin[0] == "l" else -cs,
             cs if origin[1] == "l" else -cs
         )
-    #     cellsize = (cellsize, cellsize)
 
-    # cellsize = list(cellsize)
+    # print "factory", proj_params.get()
         
-    # if origin[0] == "u" and cellsize[0] > 0:
-    #     cellsize[0] *= -1
-
-    # if origin[1] == "r" and cellsize[1] > 0:
-    #     cellsize[1] *= -1
-
-    # cellsize = tuple(cellsize)
-       
     if fill_value is None:
         mask = np.zeros_like(data, np.bool)
     else:
@@ -637,34 +628,39 @@ def _gdal2Proj(fobj):
     return dict(zip(proj_params[0::2],proj_params[1::2]))
 
 class Projer(object):
-    def __init__(self,proj=None, epsg=None):
+    def __init__(self,proj=None, epsg=None, wkt=None):
 
+        self._srs = osr.SpatialReference() 
         if epsg:
-            self.srs = self._epsg(epsg)
+            self._epsg(epsg)
         elif proj:
-            self.srs = self._proj4(proj)
+            self._proj4(proj)
+        elif wkt:
+            self._wkt(wkt)
         else:
-            self.srs = None
-    
+            self._srs = None
+            
     def export(self):
-        if self.srs:
-            return self.srs.ExportToWkt()
-        
+        if self._srs:
+            return self._srs.ExportToWkt()
+
+    def get(self):
+        return self._srs
+    
     def __call__(self):
         return self.export()
+
+    def _wkt(self, wkt):
+        self._srs.ImportFromWkt(wkt)
     
     def _proj4(self, proj):
         params =  "+{:}".format(" +".join(
             ["=".join(map(str, pp)) for pp in proj.items()])
         )
-        srs = osr.SpatialReference()
-        srs.ImportFromProj4(params)
-        return srs
+        self._srs.ImportFromProj4(params)
 
     def _epsg(self, epsg):
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(epsg)
-        return srs
+        self._srs.ImportFromEPSG(epsg)
         
         
 def _fromDataset(fobj):
@@ -689,16 +685,19 @@ def _fromDataset(fobj):
     #     data = fobj.ReadAsArray()
 
     data = fobj.ReadAsArray()
-   
+    # p = Projer(wkt=fobj.GetProjection())
+    
     return _factory(
         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
         origin="ul", fill_value=rasterband.GetNoDataValue(),
-        cellsize=(geotrans[5], geotrans[1]), proj_params=_gdal2Proj(fobj),
+        cellsize=(geotrans[5], geotrans[1]),
+        proj_params = _gdal2Proj(fobj),
+        # proj_params = p, #Projer(wkt=fobj.GetProjection()),
         fobj=fobj
     )
 
 
-def _gdalMemory(grid, projection):
+def _gdalMemory(grid): #, projection):
 
     """
     Create GDAL memory dataset
@@ -713,7 +712,8 @@ def _gdalMemory(grid, projection):
          grid.yorigin, 0, grid.cellsize[0])
     )
 
-    out.SetProjection(projection)
+    # out.SetProjection(projection)
+    out.SetProjection(_proj2Gdal(grid.proj_params))
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
@@ -739,7 +739,7 @@ def _tofile(fname, geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filename extension '{:}'".format(fext))
 
-    memset = _gdalMemory(geoarray, _proj2Gdal(geoarray.proj_params))
+    memset = _gdalMemory(geoarray) #, _proj2Gdal(geoarray.proj_params))
     outdriver = _getDriver(_fnameExtension(fname))
     outdriver.CreateCopy(fname, memset, 0)
     # out = outdriver.CreateCopy(fname, memset, 0)
@@ -894,6 +894,7 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["_fobj"]       = fobj
         obj._optinfo["proj_params"] = proj_params
 
+        # print "__new__", proj_params.get()
         return obj
 
     @property
@@ -1531,7 +1532,7 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def _fobj(self):
         if self._optinfo["_fobj"] is None:
-            self._optinfo["_fobj"] = _gdalMemory(self, _proj2Gdal(self.proj_params))
+            self._optinfo["_fobj"] = _gdalMemory(self)#, _proj2Gdal(self.proj_params))
         return self._optinfo["_fobj"]
 
     def warp(self, proj_params, max_error=0.125):
@@ -1550,10 +1551,12 @@ class GeoArray(np.ma.MaskedArray):
         ----
         - Make the resampling strategy an optional argument
         """
-
+        
+        # print "warp", self.proj_params.get()
         tx = osr.CoordinateTransformation (
-            Projer(self.proj_params).srs,
-            Projer(proj_params).srs
+            # self.proj_params.get(),
+            Projer(self.proj_params).get(),
+            Projer(proj=proj_params).get(),
         )
 
         # transform corners
