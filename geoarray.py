@@ -1378,19 +1378,18 @@ class GeoArray(np.ma.MaskedArray):
 
         shape = list(self.shape)
         shape[-2:] = self.nrows + top  + bottom, self.ncols + left + right
-        yorigin,xorigin = self.getOrigin("ul")
+        yorigin, xorigin = self.getOrigin("ul")
 
         out = empty(
             shape       = shape,
             dtype       = self.dtype,
-            yorigin     = yorigin + top*self.cellsize[0] ,
-            xorigin     = xorigin - left*self.cellsize[1],
+            yorigin     = yorigin - top*abs(self.cellsize[0]),
+            xorigin     = xorigin - left*abs(self.cellsize[1]),
             origin      = "ul",
             fill_value  = self.fill_value,
-            cellsize    = self.cellsize,
+            cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
             proj_params = self.proj_params,
         )
-
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
         out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
@@ -1418,7 +1417,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geoarray as ga
 
         >>> x = np.arange(20).reshape((4,5))
-        >>> grid = ga.array(x,yorigin=100,xorigin=200,origin="ll",cellsize=20,fill_value=-9)
+        >>> grid = ga.array(x, yorigin=100, xorigin=200, origin="ll", cellsize=20, fill_value=-9)
 
         >>> grid.bbox
         {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
@@ -1430,7 +1429,7 @@ class GeoArray(np.ma.MaskedArray):
                   [10 11 12 13 14]
                   [15 16 17 18 19]])
 
-        >>> enlarged = grid.enlarge(xmin=130,xmax=200,ymin=66)
+        >>> enlarged = grid.enlarge(xmin=130, xmax=200, ymin=66)
         >>> enlarged.bbox
         {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
 
@@ -1449,6 +1448,7 @@ class GeoArray(np.ma.MaskedArray):
             "xmin": xmin if xmin else self.bbox["xmin"],
             "xmax": xmax if xmax else self.bbox["xmax"],
             }
+
         cellsize = map(float, self.cellsize)
         top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize[0])
         left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize[1])

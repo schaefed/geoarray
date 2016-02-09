@@ -287,6 +287,15 @@ class TestGeoArrayFuncs(unittest.TestCase):
             self.assertEqual(enlrgrid.nrows, base.nrows + 1 + 7)
             self.assertEqual(enlrgrid.ncols, base.ncols + 3 + 1)
 
+        # the doctest
+        x = np.arange(20).reshape((4,5))
+        grid = ga.array(x, yorigin=100, xorigin=200, origin="ll", cellsize=20, fill_value=-9)
+        enlarged = grid.enlarge(xmin=130, xmax=200, ymin=66)
+        self.assertDictEqual(
+            enlarged.bbox, 
+            {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}    
+        )
+        
     def test_shrink(self):
         for base in self.grids:
             bbox = base.bbox
