@@ -78,20 +78,20 @@ TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globaly.
-_FILEREFS = []
+# _FILEREFS = []
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=(1,1), proj=None):
+          fill_value=None, cellsize=(1,1), proj=None):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     data         : numpy.ndarray  # data to wrap
 
-    Optional Parameters
-    -------------------
+    Optional Arguments
+    ------------------
     dtype        : str/np.dtype                  # type of the returned grid
     yorigin      : int/float                     # y-value of the grid's origin
     xorigin      : int/float                     # x-value of the grid's origin
@@ -146,18 +146,20 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
               [-- -- -- -- -- --]])
 
     """
-    return _factory(np.asarray(data) if not dtype else np.asarray(data, dtype),
-                    yorigin, xorigin, origin, fill_value, cellsize, proj, None)
+    return _factory(
+        np.asarray(data) if not dtype else np.asarray(data, dtype),
+        yorigin, xorigin, origin, fill_value, cellsize, proj, None
+    )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=1, proj=None):
+          fill_value=None, cellsize=1, proj=None):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     shape        : tuple          # shape of the returned grid
 
-    Optional Parameters
-    -------------------
+    Optional Arguments
+    ------------------
     dtype        : str/np.dtype                  # type of the returned grid
     yorigin      : int/float                     # y-value of the grid's origin
     xorigin      : int/float                     # x-value of the grid's origin
@@ -168,7 +170,7 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj  : dict/None                     # proj4 projection parameters
+    proj         : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -187,17 +189,19 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [0.0 0.0 0.0 0.0]
               [0.0 0.0 0.0 0.0]])
     """
-    return _factory(np.zeros(shape, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj, None)
+    return _factory(
+        np.zeros(shape, dtype), yorigin, xorigin,
+        origin, fill_value, cellsize, proj, None
+    )
 
 def zeros_like(a, *args, **kwargs):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     a           : np.ndarray         # the array to derive the shape and dtype attributes
 
-    Optional Parameters
-    -------------------
+    Optional Arguments
+    ------------------
     dtype       : str/np.dtype      # overrides the data stype of the result
     order       : {"C","F","A","K"} # overrides the memory layout of the result
     subok       : bool              # If True, then the newly created array will use the
@@ -250,25 +254,21 @@ def zeros_like(a, *args, **kwargs):
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=-9999, cellsize=1, proj=None):
+         fill_value=None, cellsize=1, proj=None):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     shape        : tuple          # shape of the returned grid
 
-    Optional Parameters
-    -------------------
+    Optional Arguments
+    ------------------
     dtype        : str/np.dtype                  # type of the returned grid
     yorigin      : int/float                     # y-value of the grid's origin
     xorigin      : int/float                     # x-value of the grid's origin
     origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-                                                 #     "ul" : upper left corner
-                                                 #     "ur" : upper right corner
-                                                 #     "ll" : lower left corner
-                                                 #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj  : dict/None                     # proj4 projection parameters
+    proj         : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -288,22 +288,24 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [1.0 1.0 1.0 1.0]])
     """
 
-    return _factory(np.ones(shape,dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj, None)
+    return _factory(
+        np.ones(shape,dtype), yorigin, xorigin,
+        origin, fill_value, cellsize, proj, None
+    )
 
 def ones_like(a, *args, **kwargs):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     a           : np.ndarray         # the array to derive the shape and dtype attributes
 
-    Optional Parameters
+    Optional Arguments
     -------------------
-    dtype       : str/np.dtype      # overrides the data stype of the result
-    order       : {"C","F","A","K"} # overrides the memory layout of the result
-    subok       : bool              # If True, then the newly created array will use the
-                                    # sub-class type of ‘a’, otherwise it will be a base-class
-                                    # array
+    dtype       : str/np.dtype       # overrides the data stype of the result
+    order       : {"C","F","A","K"}  # overrides the memory layout of the result
+    subok       : bool               # If True, then the newly created array will use the
+                                     # sub-class type of ‘a’, otherwise it will be a base-class
+                                     # array
     Returns
     -------
     GeoArray
@@ -351,23 +353,19 @@ def ones_like(a, *args, **kwargs):
 
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=-9999, cellsize=1, proj=None):
+         fill_value=None, cellsize=1, proj=None):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     shape        : tuple          # shape of the returned grid
     fill_value   : scalar         # fille value
 
-    Optional Parameters
-    -------------------
+    Optional Arguments
+    ------------------
     dtype        : str/np.dtype                  # type of the returned grid
     yorigin      : int/float                     # y-value of the grid's origin
     xorigin      : int/float                     # x-value of the grid's origin
     origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-                                                 #     "ul" : upper left corner
-                                                 #     "ur" : upper right corner
-                                                 #     "ll" : lower left corner
-                                                 #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
     proj  : dict/None                     # proj4 projection parameters
@@ -389,17 +387,19 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [42.0 42.0 42.0 42.0]
               [42.0 42.0 42.0 42.0]])
     """
-    return _factory(np.full(shape, value, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj, None)
+    return _factory(
+        np.full(shape, value, dtype), yorigin, xorigin,
+        origin, fill_value, cellsize, proj, None
+    )
 
 def full_like(a, fill_value, *args, **kwargs):
     """
-    Parameters
+    Arguments
     ----------
     a           : np.ndarray         # the array to derive the shape and dtype attributes
     fill_value  : scalar             # fill value
 
-    Optional Parameters
+    Optional Arguments
     -------------------
     dtype       : str/np.dtype      # overrides the data stype of the result
     order       : {"C","F","A","K"} # overrides the memory layout of the result
@@ -452,25 +452,21 @@ def full_like(a, fill_value, *args, **kwargs):
         return array(np.full_like(a,fill_value,*args,**kwargs))
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=-9999, cellsize=1, proj=None):
+          fill_value=None, cellsize=1, proj=None):
     """
-    Parameters
+    Arguments
     ----------
     shape        : tuple          # shape of the returned grid
 
-    Optional Parameters
+    Optional Arguments
     ------------------
     dtype        : str/np.dtype                  # type of the returned grid
     yorigin      : int/float                     # y-value of the grid's origin
     xorigin      : int/float                     # x-value of the grid's origin
     origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-                                                 #    "ul" : upper left corner
-                                                 #    "ur" : upper right corner
-                                                 #    "ll" : lower left corner
-                                                 #    "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj  : dict/None                     # proj4 projection parameters
+    proj         : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -497,22 +493,24 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
               [-- -- -- --]])
     """
 
-    return _factory(np.full(shape, fill_value, dtype), yorigin, xorigin,
-                    origin, fill_value, cellsize, proj, None)
+    return _factory(
+        np.empty(shape, dtype), yorigin, xorigin,
+        origin, fill_value, cellsize, proj, None
+    )
 
-def empty_like(a,*args,**kwargs):
+def empty_like(a, *args, **kwargs):
     """
-    Parameters
+    Arguments
     ----------
     a           : np.ndarray         # the array to derive the shape and dtype attributes
 
-    Optional Parameters
+    Optional Arguments
     -------------------
-    dtype       : str/np.dtype      # overrides the data stype of the result
-    order       : {"C","F","A","K"} # overrides the memory layout of the result
-    subok       : bool              # If True, then the newly created array will use the
-                                    # sub-class type of ‘a’, otherwise it will be a base-class
-                                    # array
+    dtype       : str/np.dtype       # overrides the data stype of the result
+    order       : {"C","F","A","K"}  # overrides the memory layout of the result
+    subok       : bool               # If True, then the newly created array will use the
+                                     # sub-class type of ‘a’, otherwise it will be a base-class
+                                     # array
     Returns
     -------
     GeoArray
@@ -563,7 +561,6 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
-        # cellsize[1]
         origin = "".join(
             ("l" if cellsize[0] > 0 else "u",
              "l" if cellsize[1] > 0 else "r")
@@ -589,8 +586,8 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj):
 
 def fromfile(fname):
     """
-    Parameters
-    ----------
+    Arguments
+    ---------
     fname : str  # file name
     
     Returns
@@ -637,8 +634,7 @@ class Projer(object):
         
 def _fromDataset(fobj):
 
-    _FILEREFS.append(fobj)
-
+    # _FILEREFS.append(fobj)
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
 
@@ -667,9 +663,19 @@ def _fromDataset(fobj):
     )
 
 
-def _memDataset(grid): #, projection):
+def _memDataset(grid): 
 
     """
+    Arguments
+    ---------
+    grid: GeoArray
+
+    Returns
+    -------
+    Gdal Dataset
+
+    Purpose
+    -------
     Create GDAL memory dataset
     """
     
@@ -714,36 +720,22 @@ def _tofile(fname, geoarray):
 
 class GeoArray(np.ma.MaskedArray):
     """
-    Parameters
+    Arguments
     ----------
     data         : np.ndarray/list/tuple
     yorigin      : scalar                # y-coordinate of origin
     xorigin      : scalar                # x-coordinate of origin
     origin       : {"ul","ur","ll","lr"} # position of the grid origin
-                                         #     "ul" -> upper left
-                                         #     "ur" -> upper right
-                                         #     "ll" -> lower left
-                                         #     "lr" -> lower right
     fill_value   : scalar
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
-    
-    Optional Parameters
-    -------------------
-    proj_params  : dict/None             # Proj4 projection parameters
+    proj_params  : Projer                # Projer Instance holding projection information
 
     Purpose
     -------
     This numpy.ndarray subclass adds geographic context to data.
     A (hopfully growing) number of operations on the data and the writing
     to different file formats (see the variable _DRIVER_DICT) is supported.
-
-    Details
-    -------
-    The Python GDAL bindings serve as backend. On Linux the GDAL virtual memory
-    mapping is available, i.e. data is only read from storage when it is actually accessed.
-    For other OS this mechanism is not implemented by GDAL and all data is read during
-    initialization.
 
     Restrictions
     ------------
@@ -863,8 +855,8 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def header(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -898,8 +890,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def bbox(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -928,12 +920,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def getOrigin(self, origin=None):
         """
-        Parameters
-        ----------
-        None
-
-        Parameters
-        ----------
+        Arguments
+        ---------
         origin : str/None
 
         Returns
@@ -959,8 +947,8 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def nbands(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -1000,8 +988,8 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def nrows(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -1041,8 +1029,8 @@ class GeoArray(np.ma.MaskedArray):
     @property
     def ncols(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -1081,8 +1069,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def tofile(self,fname):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         fname : str  # file name
 
         Returns
@@ -1098,8 +1086,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def coordinatesOf(self, y_idx, x_idx):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         y_idx, x_idx :  int
 
         Returns
@@ -1128,8 +1116,8 @@ class GeoArray(np.ma.MaskedArray):
         
     def indexOf(self, ycoor, xcoor):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         ycoor, xcoor : scalar
 
         Returns
@@ -1154,8 +1142,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def trim(self):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         None
 
         Returns
@@ -1205,8 +1193,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def removeCells(self, top=0, left=0, bottom=0, right=0):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         top, left, bottom, right : int
 
         Returns
@@ -1244,8 +1232,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def shrink(self, ymin=None, ymax=None, xmin=None, xmax=None):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         ymin, ymax, xmin, xmax : scalar
 
         Returns
@@ -1302,8 +1290,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def addCells(self, top=0, left=0, bottom=0, right=0):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         top, left, bottom, right : int
 
         Returns
@@ -1361,8 +1349,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def enlarge(self, ymin=None, ymax=None, xmin=None, xmax=None):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         ymin, ymax, xmin, xmax : scalar
 
         Returns
@@ -1423,8 +1411,8 @@ class GeoArray(np.ma.MaskedArray):
 
     # def snap(self,target):
     #     """
-    #     Parameters
-    #     ----------
+    #     Arguments
+    #     ---------
     #     target : GeoArray
 
     #     Returns
@@ -1474,8 +1462,8 @@ class GeoArray(np.ma.MaskedArray):
 
     def basicMatch(self, grid):
         """
-        Parameters
-        ----------
+        Arguments
+        ---------
         grid : GeoArray
 
         Returns
@@ -1502,7 +1490,7 @@ class GeoArray(np.ma.MaskedArray):
         """
         Arguments
         ---------
-        proj: dict   -> proj4 parameters of the target coordinate system
+        proj       : dict   -> proj4 parameters of the target coordinate system
         max_error  : float  -> Maximum error (in pixels) allowed in transformation
                                approximation (default: value of gdalwarp)
         
@@ -1530,9 +1518,7 @@ class GeoArray(np.ma.MaskedArray):
             urx, ury, _ = tx.TransformPoint(xorigin + xdelta, yorigin)
             llx, lly, _ = tx.TransformPoint(xorigin, yorigin + ydelta)
         except NotImplementedError:
-            raise AttributeError(
-                "Projections not correct or given!"
-            )
+            raise AttributeError("Projections not correct or given!")
             
         # Calculate cellsize, i.e. same number of cells along the diagonal.
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
@@ -1543,8 +1529,9 @@ class GeoArray(np.ma.MaskedArray):
         ncols = abs(int(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
         nrows = abs(int(round((max(ury, lry) - min(uly, lly))/tcellsize)))
         
-        target = empty(
+        target = full(
             shape = (self.nbands, nrows, ncols),
+            value = self.fill_value,
             fill_value = self.fill_value,
             dtype = self.dtype,
             yorigin = max(uly, ury, lly, lry),
@@ -1582,70 +1569,7 @@ class GeoArray(np.ma.MaskedArray):
             0.0, max_error)
 
         return _fromDataset(out)
-        
-    # def warp(self, proj_params, max_error=0.125):
-    
-    #     """
-    #     Arguments
-    #     ---------
-    #     proj_params: dict   -> proj4 parameters of the target coordinate system
-    #     max_error  : float  -> Maximum error (in pixels) allowed in transformation
-    #                             approximation (default: value of gdalwarp)
-       
-    #     Return
-    #     ------
-    #     GeoArray
-        
-    #     Todo
-    #     ----
-    #     - Make the resampling strategy an optional argument
-    #     - Allow for an explicit target grid
-    #     """
-
-        
-    #     if not self.proj_params:
-    #         raise AttributeError("No projection information available for source grid!")
-        
-    #     resampling = gdal.GRA_NearestNeighbour
-    #     target_proj = _proj2Gdal(proj_params)
-
-    #     vrt = gdal.AutoCreateWarpedVRT(
-    #         self._fobj, None, 
-    #         target_proj, resampling, max_error
-    #     )
-
-    #     # The vrt xml file needs to be modified directly
-    #     # in order to set the fill_value correctly.
-    #     # This should be moved to a seperate function
-    #     with tempfile.NamedTemporaryFile(suffix=".vrt") as tf:
-    #         vrt.GetDriver().CreateCopy(tf.name, vrt)
-
-    #         string = tf.read()
- 
-    #         tree = ET.ElementTree(file=tf.name)
-    #         bmapping = tuple(tree.iter("BandMapping"))[0]
-
-    #         for opt in tree.iter("Option"):
-    #             if opt.attrib.get("name") == "INIT_DEST":
-    #                 opt.text = str(self.fill_value)
-                    
-    #         add = {
-    #             "SrcNoDataReal": str(self.fill_value),
-    #             "DstNoDataReal": str(self.fill_value),
-    #             "SrcNoDataImag": "0",
-    #             "DstNoDataImag": "0",
-    #         }
-
-    #         for k, v in add.items():
-    #             node = ET.SubElement(bmapping, k)
-    #             node.text = v
-
-    #         tree.write(tf.name)
-
-    #         out = gdal.OpenShared(tf.name)
-                
-    #     return _fromDataset(out)
-   
+  
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
