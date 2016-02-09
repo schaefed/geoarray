@@ -384,7 +384,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
             for c, e in zip(coodinates, expected):
                 self.assertTupleEqual(base.indexOf(*c), e)
 
-    def test_warp2(self):
+    def test_warp(self):
 
         codes = (2062, 3857)
         tmpfile = os.path.join(TMPPATH, "tmp.tif")
@@ -392,7 +392,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
         for fname, base in zip(FILES, self.grids):
             if base.proj_params:
                 for epsg in codes:
-                    proj = base.warp2({"init":"epsg:{:}".format(epsg)}, 0)
+                    proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
                     # proj.tofile("proj.tif")
                     with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                         subprocess.check_output(
@@ -411,27 +411,27 @@ class TestGeoArrayFuncs(unittest.TestCase):
             else:
                 self.assertRaises(AttributeError)
                  
-    def test_warp(self):
+    # def test_warp(self):
 
-        epsg = 2062 #3857
-        tmpfile = os.path.join(TMPPATH, "tmp.tif")
+    #     epsg = 2062 #3857
+    #     tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
-        for fname, base in zip(FILES, self.grids):
-            if base.proj_params:
-                proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
-                with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
-                    subprocess.check_output(
-                        "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
-                            epsg, fname, tf.name
-                        ),
-                        shell=True
-                    )
-                    compare = ga.fromfile(tf.name)
-                    self.assertTrue(np.all(proj.data == compare.data))
-                    self.assertTrue(np.all(proj.mask == compare.mask))
-                    self.assertDictEqual(proj.bbox, compare.bbox)
-            else:
-                self.assertRaises(AttributeError)
+    #     for fname, base in zip(FILES, self.grids):
+    #         if base.proj_params:
+    #             proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
+    #             with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
+    #                 subprocess.check_output(
+    #                     "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
+    #                         epsg, fname, tf.name
+    #                     ),
+    #                     shell=True
+    #                 )
+    #                 compare = ga.fromfile(tf.name)
+    #                 self.assertTrue(np.all(proj.data == compare.data))
+    #                 self.assertTrue(np.all(proj.mask == compare.mask))
+    #                 self.assertDictEqual(proj.bbox, compare.bbox)
+    #         else:
+    #             self.assertRaises(AttributeError)
                 
 if __name__== "__main__":
     unittest.main()

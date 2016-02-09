@@ -1534,43 +1534,30 @@ class GeoArray(np.ma.MaskedArray):
             self._optinfo["_fobj"] = _gdalMemory(self, _proj2Gdal(self.proj_params))
         return self._optinfo["_fobj"]
 
-    def warp2(self, proj_params, max_error=0.125):
+    def warp(self, proj_params, max_error=0.125):
         """
-        Can serve as an outline for an interpoateToGrid method.
-
-        Taken and adapted from:
-        https://jgomezdans.github.io/gdal_notes/reprojection.html
-
-        This can also be used to warp a grid like it is done in
-        warp. The missing bit to get an consistent experience with
-        gdalwarp is the calculation of the padding of the grid. In
-        gdalwarp this is done with the function GDALSuggestedWarpOutput
-        which I think is not exposed through SWIG. Some hints
-        on the cellsize estimation is found on:
-        http://gdal.org/gdal__alg_8h.html#a816819e7495bfce06dbd110f7c57af65
-
-        The beauty in this approach is, that no temprary .vrt files needs to be
-        written and a way more flexible interface could be provided (cellsize, bounding
-        box, etc).
+        Arguments
+        ---------
+        proj_params: dict   -> proj4 parameters of the target coordinate system
+        max_error  : float  -> Maximum error (in pixels) allowed in transformation
+                               approximation (default: value of gdalwarp)
+        
+        Return
+        ------
+        GeoArray
+        
+        Todo
+        ----
+        - Make the resampling strategy an optional argument
         """
-        # def _projer(params):
-        #     params =  "+{:}".format(" +".join(
-        #         ["=".join(map(str, pp)) for pp in params.items()])
-        #     )
-        #     srs = osr.SpatialReference()
-        #     srs.ImportFromProj4(params)
-        #     return srs
 
         
         resampling = gdal.GRA_NearestNeighbour
-        # sproj = Projer(self.proj_params).srs,
-        # tproj = Projer(proj_params).srs
         
         tx = osr.CoordinateTransformation (
             Projer(self.proj_params).srs,
             Projer(proj_params).srs
         )
-        # trans = self._fobj.GetGeoTransform()
 
         # transform corners
         yorigin, xorigin = self.getOrigin()
@@ -1610,68 +1597,68 @@ class GeoArray(np.ma.MaskedArray):
 
         return _fromDataset(out)
         
-    def warp(self, proj_params, max_error=0.125):
+    # def warp(self, proj_params, max_error=0.125):
     
-        """
-        Arguments
-        ---------
-        proj_params: dict   -> proj4 parameters of the target coordinate system
-        max_error  : float  -> Maximum error (in pixels) allowed in transformation
-                                approximation (default: value of gdalwarp)
+    #     """
+    #     Arguments
+    #     ---------
+    #     proj_params: dict   -> proj4 parameters of the target coordinate system
+    #     max_error  : float  -> Maximum error (in pixels) allowed in transformation
+    #                             approximation (default: value of gdalwarp)
        
-        Return
-        ------
-        GeoArray
+    #     Return
+    #     ------
+    #     GeoArray
         
-        Todo
-        ----
-        - Make the resampling strategy an optional argument
-        - Allow for an explicit target grid
-        """
+    #     Todo
+    #     ----
+    #     - Make the resampling strategy an optional argument
+    #     - Allow for an explicit target grid
+    #     """
 
         
-        if not self.proj_params:
-            raise AttributeError("No projection information available for source grid!")
+    #     if not self.proj_params:
+    #         raise AttributeError("No projection information available for source grid!")
         
-        resampling = gdal.GRA_NearestNeighbour
-        target_proj = _proj2Gdal(proj_params)
+    #     resampling = gdal.GRA_NearestNeighbour
+    #     target_proj = _proj2Gdal(proj_params)
 
-        vrt = gdal.AutoCreateWarpedVRT(
-            self._fobj, None, 
-            target_proj, resampling, max_error
-        )
+    #     vrt = gdal.AutoCreateWarpedVRT(
+    #         self._fobj, None, 
+    #         target_proj, resampling, max_error
+    #     )
 
-        # The vrt xml file needs to be modified directly
-        # in order to set the fill_value correctly.
-        # This should be moved to a seperate function
-        with tempfile.NamedTemporaryFile(suffix=".vrt") as tf:
-            vrt.GetDriver().CreateCopy(tf.name, vrt)
+    #     # The vrt xml file needs to be modified directly
+    #     # in order to set the fill_value correctly.
+    #     # This should be moved to a seperate function
+    #     with tempfile.NamedTemporaryFile(suffix=".vrt") as tf:
+    #         vrt.GetDriver().CreateCopy(tf.name, vrt)
 
-            string = tf.read()
+    #         string = tf.read()
  
-            tree = ET.ElementTree(file=tf.name)
-            bmapping = tuple(tree.iter("BandMapping"))[0]
+    #         tree = ET.ElementTree(file=tf.name)
+    #         bmapping = tuple(tree.iter("BandMapping"))[0]
 
-            for opt in tree.iter("Option"):
-                if opt.attrib.get("name") == "INIT_DEST":
-                    opt.text = str(self.fill_value)
+    #         for opt in tree.iter("Option"):
+    #             if opt.attrib.get("name") == "INIT_DEST":
+    #                 opt.text = str(self.fill_value)
                     
-            add = {
-                "SrcNoDataReal": str(self.fill_value),
-                "DstNoDataReal": str(self.fill_value),
-                "SrcNoDataImag": "0",
-                "DstNoDataImag": "0",
-            }
+    #         add = {
+    #             "SrcNoDataReal": str(self.fill_value),
+    #             "DstNoDataReal": str(self.fill_value),
+    #             "SrcNoDataImag": "0",
+    #             "DstNoDataImag": "0",
+    #         }
 
-            for k, v in add.items():
-                node = ET.SubElement(bmapping, k)
-                node.text = v
+    #         for k, v in add.items():
+    #             node = ET.SubElement(bmapping, k)
+    #             node.text = v
 
-            tree.write(tf.name)
+    #         tree.write(tf.name)
 
-            out = gdal.OpenShared(tf.name)
+    #         out = gdal.OpenShared(tf.name)
                 
-        return _fromDataset(out)
+    #     return _fromDataset(out)
    
     def __repr__(self):
         return super(self.__class__,self).__repr__()
