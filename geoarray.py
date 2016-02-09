@@ -636,10 +636,37 @@ def _gdal2Proj(fobj):
     proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
     return dict(zip(proj_params[0::2],proj_params[1::2]))
 
-# class Projer(object):
-#     def __init__(self,proj=None, epsg=None):
-#         if 
+class Projer(object):
+    def __init__(self,proj=None, epsg=None):
 
+        if epsg:
+            self.srs = self._epsg(epsg)
+        elif proj:
+            self.srs = self._proj4(proj)
+        else:
+            self.srs = None
+    
+    def export(self):
+        if self.srs:
+            return self.srs.ExportToWkt()
+        
+    def __call__(self):
+        return self.export()
+    
+    def _proj4(self, proj):
+        params =  "+{:}".format(" +".join(
+            ["=".join(map(str, pp)) for pp in proj_params.items()])
+        )
+        srs = osr.SpatialReference()
+        srs.ImportFromProj4(params)
+        return srs
+
+    def _epsg(self, epsg):
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(epsg)
+        return srs
+        
+        
 def _fromDataset(fobj):
 
     _FILEREFS.append(fobj)
@@ -1537,8 +1564,8 @@ class GeoArray(np.ma.MaskedArray):
         
         resampling = gdal.GRA_NearestNeighbour
 
-        fproj = _projer(self.proj_params)
-        tproj = _projer(proj_params)
+        fproj = Projer(self.proj_params).srs
+        tproj = Projer(proj_params).srs
         tx = osr.CoordinateTransformation (fproj, tproj)
         trans = self._fobj.GetGeoTransform()
 
