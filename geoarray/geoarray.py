@@ -39,6 +39,7 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
+from gdalfuncs import _fromfile, _tofile, _memDataset, _fromDataset, Projer
 
 try:
     xrange
@@ -47,11 +48,11 @@ except NameError: # python 3
 
 # should be extended, for available options see:
 # http://www.gdal.org/formats_list.html
-_DRIVER_DICT = {
-    ".tif" : "GTiff",
-    ".asc" : "AAIGrid",
-    ".img" : "HFA",
-}
+# _DRIVER_DICT = {
+#     ".tif" : "GTiff",
+#     ".asc" : "AAIGrid",
+#     ".img" : "HFA",
+# }
 
 # Possible positions of the grid origin
 ORIGINS = (
@@ -61,27 +62,27 @@ ORIGINS = (
     "lr",    #     "lr" -> lower right
 )
 
-# type mapping: there is no boolean data type in GDAL
-TYPEMAP = {
-    "uint8"      : 1,
-    "int8"       : 1,
-    "uint16"     : 2,
-    "int16"      : 3,
-    "uint32"     : 4,
-    "int32"      : 5,
-    "float32"    : 6,
-    "float64"    : 7,
-    "complex64"  : 10,
-    "complex128" : 11,
-}
-TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
+# # type mapping: there is no boolean data type in GDAL
+# TYPEMAP = {
+#     "uint8"      : 1,
+#     "int8"       : 1,
+#     "uint16"     : 2,
+#     "int16"      : 3,
+#     "uint32"     : 4,
+#     "int32"      : 5,
+#     "float32"    : 6,
+#     "float64"    : 7,
+#     "complex64"  : 10,
+#     "complex128" : 11,
+# }
+# TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
-# The open gdal file objects need to outlive their GeoArray
-# instance. Therefore they are stored globaly.
-# _FILEREFS = []
+# # The open gdal file objects need to outlive their GeoArray
+# # instance. Therefore they are stored globaly.
+# # _FILEREFS = []
 
-gdal.UseExceptions()
-gdal.PushErrorHandler('CPLQuietErrorHandler')
+# gdal.UseExceptions()
+# gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=(1,1), proj=None):
@@ -474,23 +475,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
 
     Purpose
     -------
-    Return a new GeoArray of given shape and type, filled with fill_value
-
-    Examples
-    --------
-    >>> import geoarray as ga
-
-    >>> print(ga.empty((4,4)))
-    GeoArray([[-- -- -- --]
-              [-- -- -- --]
-              [-- -- -- --]
-              [-- -- -- --]])
-
-    >>> print(ga.empty((4,4),fill_value=32))
-    GeoArray([[-- -- -- --]
-              [-- -- -- --]
-              [-- -- -- --]
-              [-- -- -- --]])
+    Return a new empty GeoArray of given shape and type
     """
 
     return _factory(
@@ -518,37 +503,6 @@ def empty_like(a, *args, **kwargs):
     Purpose
     -------
     Return a empty GeoArray with the same shape and type as a given array.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geoarray as ga
-
-    >>> x = np.arange(6).reshape((3,2))
-    >>> x
-    array([[0, 1],
-           [2, 3],
-           [4, 5]])
-
-    >>> print(ga.empty_like(x))
-    GeoArray([[-- --]
-              [-- --]
-              [-- --]])
-
-    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,fill_value=42)
-    >>> print(y)
-    GeoArray([[0 1]
-              [2 3]
-              [4 5]])
-
-    >>> z = ga.empty_like(y)
-    >>> print(z)
-    GeoArray([[-- --]
-              [-- --]
-              [-- --]])
-
-    >>> z.header == y.header
-    True
     """
 
     try:
@@ -599,125 +553,8 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
+    return _factory(**_fromfile(fname))
     
-    fobj = gdal.OpenShared(fname)
-    if fobj:
-        return _fromDataset(fobj)
-    raise IOError("Could not open file")
-
-class Projer(object):
-    def __init__(self, arg):
-
-        self._srs = osr.SpatialReference()
-
-        if isinstance(arg, int):
-            self._srs.ImportFromEpsg(arg)
-        elif isinstance(arg, dict):
-            params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in arg.items()])
-            )
-            self._srs.ImportFromProj4(params)
-        elif isinstance(arg, str):
-            self._srs.ImportFromWkt(arg)
-            
-    def getProj4(self):
-        tmp = self._srs.ExportToProj4()
-        proj = [x for x in re.split("[+= ]", tmp) if x]
-        return dict(zip(proj[0::2], proj[1::2]))
-        
-    def getWkt(self):
-        return self._srs.ExportToWkt()
-
-    def getReference(self):
-        if str(self._srs):
-            return self._srs
-        
-def _fromDataset(fobj):
-
-    # _FILEREFS.append(fobj)
-    rasterband = fobj.GetRasterBand(1)
-    geotrans   = fobj.GetGeoTransform()
-
-    nrows      = fobj.RasterYSize
-    ncols      = fobj.RasterXSize
-    nbands     = fobj.RasterCount
-
-    dtype      = np.dtype(TYPEMAP[rasterband.DataType])
-
-    # if "linux" in sys.platform:
-    #     # use GDAL's virtual memmory mappings
-    #     data       = fobj.GetVirtualMemArray(
-    #         gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
-    #     )
-    # else:
-    #     data = fobj.ReadAsArray()
-
-    data = fobj.ReadAsArray()
-    
-    return _factory(
-        data=data, yorigin=geotrans[3], xorigin=geotrans[0],
-        origin="ul", fill_value=rasterband.GetNoDataValue(),
-        cellsize=(geotrans[5], geotrans[1]),
-        proj = fobj.GetProjection(),
-        fobj=fobj
-    )
-
-
-def _memDataset(grid): 
-
-    """
-    Arguments
-    ---------
-    grid: GeoArray
-
-    Returns
-    -------
-    Gdal Dataset
-
-    Purpose
-    -------
-    Create GDAL memory dataset
-    """
-    
-    driver = gdal.GetDriverByName("MEM")
-    out = driver.Create(
-        "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
-    )
-    out.SetGeoTransform(
-        (grid.xorigin, grid.cellsize[1], 0,
-         grid.yorigin, 0, grid.cellsize[0])
-    )
-
-    out.SetProjection(grid.proj.getWkt())
-    for n in xrange(grid.nbands):
-        band = out.GetRasterBand(n+1)
-        band.SetNoDataValue(float(grid.fill_value))
-        band.WriteArray(grid[n] if grid.ndim>2 else grid)
-            
-    # out.FlushCache()
-    return out
-
-
-def _tofile(fname, geoarray):
-    def _fnameExtension(fname):
-        return os.path.splitext(fname)[-1].lower()
-
-    def _getDriver(fext):
-        """
-        Guess driver from file name extension
-        """
-        if fext in _DRIVER_DICT:
-            driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
-            metadata = driver.GetMetadata_Dict()
-            if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
-                return driver
-            raise IOError("Datatype canot be written")
-        raise IOError("No driver found for filename extension '{:}'".format(fext))
-
-    memset = _memDataset(geoarray) #, _proj2Gdal(geoarray.proj_params))
-    outdriver = _getDriver(_fnameExtension(fname))
-    outdriver.CreateCopy(fname, memset, 0)
-
 class GeoArray(np.ma.MaskedArray):
     """
     Arguments
@@ -872,7 +709,7 @@ class GeoArray(np.ma.MaskedArray):
         Examples
         --------
         >>> import geoarray as ga
-        >>> x = ga.full((4,4), 42, yorigin=100, xorigin=55, origin="ur")
+        >>> x = ga.full((4,4), 42, yorigin=100, xorigin=55, origin="ur", fill_value=-9999)
         >>> x.header
         {'origin': 'ur', 'fill_value': -9999.0, 'cellsize': (-1, -1), 'yorigin': 100, 'proj': {}, 'xorigin': 55}
         """
@@ -1306,7 +1143,7 @@ class GeoArray(np.ma.MaskedArray):
         -------
         >>> import geoarray as ga
 
-        >>> grid = ga.full((4,5),42,fill_value=-9)
+        >>> grid = ga.full((4,5), 42, fill_value=-9)
         >>> print(grid)
         GeoArray([[42.0 42.0 42.0 42.0 42.0]
                   [42.0 42.0 42.0 42.0 42.0]
@@ -1332,8 +1169,9 @@ class GeoArray(np.ma.MaskedArray):
         shape[-2:] = self.nrows + top  + bottom, self.ncols + left + right
         yorigin, xorigin = self.getOrigin("ul")
 
-        out = empty(
+        out = full(
             shape       = shape,
+            value       = self.fill_value,
             dtype       = self.dtype,
             yorigin     = yorigin - top*abs(self.cellsize[0]),
             xorigin     = xorigin - left*abs(self.cellsize[1]),
@@ -1568,7 +1406,7 @@ class GeoArray(np.ma.MaskedArray):
             resampling, 
             0.0, max_error)
 
-        return _fromDataset(out)
+        return _factory(**_fromDataset(out))
   
     def __repr__(self):
         return super(self.__class__,self).__repr__()

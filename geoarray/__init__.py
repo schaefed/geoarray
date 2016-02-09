@@ -12,5 +12,8 @@ from geoarray import (
     full_like,
     empty_like,
     fromfile,
+)
+
+from gdalfuncs import (
     _DRIVER_DICT
 )
