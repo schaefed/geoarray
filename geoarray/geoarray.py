@@ -39,7 +39,7 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
-from gdalfuncs import _fromfile, _tofile, _memDataset, _fromDataset, Projection, Transformer
+from gdalfuncs import _fromFile, _toFile, _memDataset, _fromDataset, _Projection, _Transformer
 
 try:
     xrange
@@ -503,7 +503,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
     
     return GeoArray(
         data, yorigin, xorigin, origin, cellsize,
-        Projection(proj),
+        _Projection(proj),
         mask=mask, fill_value=fill_value
     )
 
@@ -523,7 +523,7 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
-    return _factory(**_fromfile(fname))
+    return _factory(**_fromFile(fname))
     
 class GeoArray(np.ma.MaskedArray):
     """
@@ -536,7 +536,7 @@ class GeoArray(np.ma.MaskedArray):
     fill_value   : scalar
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
-    proj_params  : Projection                # Projection Instance holding projection information
+    proj_params  : _Projection           # Projection Instance holding projection information
 
     Purpose
     -------
@@ -888,7 +888,7 @@ class GeoArray(np.ma.MaskedArray):
         Write GeoArray to file. The output dataset type is derived from
         the file name extension. See _DRIVER_DICT for implemented formats.
         """
-        _tofile(fname, self)
+        _toFile(fname, self)
 
     def coordinatesOf(self, y_idx, x_idx):
         """
@@ -1309,7 +1309,7 @@ class GeoArray(np.ma.MaskedArray):
         xdelta = self.cellsize[0] * self.nrows
         ydelta = self.cellsize[1] * self.ncols
 
-        trans = Transformer(self.proj, Projection(proj))
+        trans = _Transformer(self.proj, _Projection(proj))
         uly, ulx = trans(yorigin         , xorigin)
         lry, lrx = trans(yorigin + ydelta, xorigin + xdelta)
         ury, urx = trans(yorigin         , xorigin + xdelta)

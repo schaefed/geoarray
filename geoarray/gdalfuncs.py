@@ -35,7 +35,7 @@ TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-class Projection(object):
+class _Projection(object):
     def __init__(self, arg):
 
         self._srs = osr.SpatialReference()
@@ -62,13 +62,7 @@ class Projection(object):
         if str(self._srs):
             return self._srs
 
-    # def getTransformer(self, tprojer):
-    #     tx = osr.CoordinateTransformation(
-    #         self.getReference(), tprojer.getReference()
-    #     )
-    #     return tx.TransformPoint
-
-class Transformer(object):
+class _Transformer(object):
     def __init__(self, sproj, tproj):
         """
         Arguments
@@ -90,7 +84,7 @@ class Transformer(object):
             raise AttributeError("Projections not correct or given!")
         return yt, xt
         
-def _fromfile(fname):
+def _fromFile(fname):
     """
     Parameters
     ----------
@@ -141,15 +135,6 @@ def _fromDataset(fobj):
         "proj" : fobj.GetProjection()
     }
 
-# return _factory(
-#         data=data, yorigin=geotrans[3], xorigin=geotrans[0],
-#         origin="ul", fill_value=rasterband.GetNoDataValue(),
-#         cellsize=(geotrans[5], geotrans[1]),
-#         proj = fobj.GetProjection(),
-#         fobj=fobj
-#     )
-
-
 def _memDataset(grid): #, projection):
 
     """
@@ -175,7 +160,7 @@ def _memDataset(grid): #, projection):
     return out
 
 
-def _tofile(fname, geoarray):
+def _toFile(fname, geoarray):
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
