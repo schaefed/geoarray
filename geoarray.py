@@ -564,19 +564,28 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj_params, 
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
-        cellsize[0]
-    except TypeError:
-        cellsize = (cellsize, cellsize)
+        # cellsize[1]
+        origin = "".join(
+            ("l" if cellsize[0] > 0 else "u",
+             "l" if cellsize[1] > 0 else "r")
+        )
+    except (IndexError, TypeError):
+        cs = abs(cellsize)
+        cellsize = (
+            cs if origin[0] == "l" else -cs,
+            cs if origin[1] == "l" else -cs
+        )
+    #     cellsize = (cellsize, cellsize)
 
-    cellsize = list(cellsize)
+    # cellsize = list(cellsize)
         
-    if origin[0] == "u" and cellsize[0] > 0:
-        cellsize[0] *= -1
+    # if origin[0] == "u" and cellsize[0] > 0:
+    #     cellsize[0] *= -1
 
-    if origin[1] == "r" and cellsize[1] > 0:
-        cellsize[1] *= -1
+    # if origin[1] == "r" and cellsize[1] > 0:
+    #     cellsize[1] *= -1
 
-    cellsize = tuple(cellsize)
+    # cellsize = tuple(cellsize)
        
     if fill_value is None:
         mask = np.zeros_like(data, np.bool)
@@ -626,6 +635,10 @@ def _gdal2Proj(fobj):
     srs.ImportFromWkt(fobj.GetProjection())
     proj_params = [x for x in re.split("[+= ]",srs.ExportToProj4()) if x]
     return dict(zip(proj_params[0::2],proj_params[1::2]))
+
+# class Projer(object):
+#     def __init__(self,proj=None, epsg=None):
+#         if 
 
 def _fromDataset(fobj):
 
@@ -1417,57 +1430,56 @@ class GeoArray(np.ma.MaskedArray):
 
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
-    def snap(self,target):
-        """
-        Parameters
-        ----------
-        target : GeoArray
+    # def snap(self,target):
+    #     """
+    #     Parameters
+    #     ----------
+    #     target : GeoArray
 
-        Returns
-        -------
-        None
+    #     Returns
+    #     -------
+    #     None
 
-        Purpose
-        -------
-        Shift the grid origin that it matches the nearest cell origin in target.
+    #     Purpose
+    #     -------
+    #     Shift the grid origin that it matches the nearest cell origin in target.
 
-        Restrictions
-        ------------
-        The shift will only alter the grid coordinates. No changes to the
-        data will be done. In case of large shifts the physical integrety
-        of the data might be disturbed!
+    #     Restrictions
+    #     ------------
+    #     The shift will only alter the grid coordinates. No changes to the
+    #     data will be done. In case of large shifts the physical integrety
+    #     of the data might be disturbed!
 
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
+    #     Examples
+    #     --------
+    #     >>> import numpy as np
+    #     >>> import geoarray as ga
 
-        >>> x = np.arange(20).reshape((4,5))
-        >>> grid1 = ga.array(x,origin="ll",cellsize=25)
-        >>> grid1.bbox
-        {'xmin': 0, 'ymin': 0, 'ymax': 100, 'xmax': 125}
+    #     >>> x = np.arange(20).reshape((4,5))
+    #     >>> grid1 = ga.array(x,origin="ll",cellsize=25)
+    #     >>> grid1.bbox
+    #     {'xmin': 0, 'ymin': 0, 'ymax': 100, 'xmax': 125}
 
-        >>> grid2 = ga.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
-        >>> grid2.bbox
-        {'xmin': 1.24, 'ymin': 3, 'ymax': 77.68, 'xmax': 94.59}
+    #     >>> grid2 = ga.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
+    #     >>> grid2.bbox
+    #     {'xmin': 1.24, 'ymin': 3, 'ymax': 77.68, 'xmax': 94.59}
 
-        >>> grid2.snap(grid1)
-        >>> grid2.bbox
-        {'xmin': 0.0, 'ymin': 0.0, 'ymax': 74.680000000000007, 'xmax': 93.350000000000009}
-        """
+    #     >>> grid2.snap(grid1)
+    #     >>> grid2.bbox
+    #     {'xmin': 0.0, 'ymin': 0.0, 'ymax': 74.680000000000007, 'xmax': 93.350000000000009}
+    #     """
 
-        diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
-        dy, dx = abs(diff)%target.cellsize * np.sign(diff)
-        # dx = abs(diff)%target.cellsize[1] * np.sign(diff)
+    #     diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
+    #     dy, dx = abs(diff)%target.cellsize * np.sign(diff)
 
-        if abs(dy) > self.cellsize[0]/2.:
-            dy += self.cellsize[0]
+    #     if abs(dy) > self.cellsize[0]/2.:
+    #         dy += self.cellsize[0]
 
-        if abs(dx) > self.cellsize[1]/2.:
-            dx += self.cellsize[1]
+    #     if abs(dx) > self.cellsize[1]/2.:
+    #         dx += self.cellsize[1]
 
-        self.xorigin -= dx
-        self.yorigin -= dy
+    #     self.xorigin -= dx
+    #     self.yorigin -= dy
 
     def basicMatch(self, grid):
         """
@@ -1530,25 +1542,16 @@ class GeoArray(np.ma.MaskedArray):
         tx = osr.CoordinateTransformation (fproj, tproj)
         trans = self._fobj.GetGeoTransform()
 
-        print trans
-        
-        # Corner cells in projected coordinates
-        (ulx, uly, ulz ) = tx.TransformPoint(trans[0], trans[3])
-        (lrx, lry, lrz ) = tx.TransformPoint(
-            trans[0] + trans[1]*self.ncols,
-            trans[3] + trans[5]*self.nrows
-        )
-        (urx, ury, urz) = tx.TransformPoint(
-            trans[0] + trans[1]*self.ncols,
-            trans[3]
-        )
-        (llx, lly, llz) = tx.TransformPoint(
-            trans[0],
-            trans[3] + trans[5]*self.nrows
-        )
+        # transform corners
+        yorigin, xorigin = self.getOrigin()
+        xdelta = self.cellsize[0] * self.nrows
+        ydelta = self.cellsize[1] * self.ncols
+        ulx, uly, _ = tx.TransformPoint(xorigin, yorigin)
+        lrx, lry, _ = tx.TransformPoint(xorigin + xdelta, yorigin + ydelta)
+        urx, ury, _ = tx.TransformPoint(xorigin + xdelta, yorigin)
+        llx, lly, _ = tx.TransformPoint(xorigin, yorigin + ydelta)
 
-        # Calculate terget cellsize, i.e. same number of
-        # cells along the diagonal.
+        # Calculate cellsize, i.e. same number of cells along the diagonal.
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
         tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
         tcellsize = tdiag/sdiag

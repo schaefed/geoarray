@@ -406,6 +406,9 @@ class TestGeoArrayFuncs(unittest.TestCase):
                         self.assertTrue(np.all(proj.data == compare.data))
                         self.assertTrue(np.all(proj.mask == compare.mask))
                         self.assertDictEqual(proj.bbox, compare.bbox)
+                        # break
+                    # break
+                # break
             else:
                 self.assertRaises(AttributeError)
                  
