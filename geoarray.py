@@ -1551,9 +1551,6 @@ class GeoArray(np.ma.MaskedArray):
         - Make the resampling strategy an optional argument
         """
 
-        
-        resampling = gdal.GRA_NearestNeighbour
-        
         tx = osr.CoordinateTransformation (
             Projer(self.proj_params).srs,
             Projer(proj_params).srs
@@ -1574,8 +1571,8 @@ class GeoArray(np.ma.MaskedArray):
         tcellsize = tdiag/sdiag
 
         # number of cells
-        ncols = abs(int(np.round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
-        nrows = abs(int(np.round((max(ury, lry) - min(uly, lly))/tcellsize)))
+        ncols = abs(int(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
+        nrows = abs(int(round((max(ury, lry) - min(uly, lly))/tcellsize)))
         
         target = empty(
             shape = (nrows, ncols),
@@ -1587,7 +1584,27 @@ class GeoArray(np.ma.MaskedArray):
             cellsize = tcellsize,
             proj_params = proj_params
         )
-        out = target._fobj
+
+        return self.warpTo(target, max_error)
+        
+    def warpTo(self, grid, max_error=0.125):
+        """
+        Arguments
+        ---------
+        grid: GeoArray
+
+        Return
+        ------
+        GeoArray
+
+        Purpose
+        -------
+        Interpolates self to the target grid, including
+        coordinate transformations if necessary.
+        """
+        
+        out = grid._fobj
+        resampling = gdal.GRA_NearestNeighbour
            
         res = gdal.ReprojectImage(
             self._fobj, out,
