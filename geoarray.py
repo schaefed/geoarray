@@ -1575,7 +1575,7 @@ class GeoArray(np.ma.MaskedArray):
         nrows = abs(int(round((max(ury, lry) - min(uly, lly))/tcellsize)))
         
         target = empty(
-            shape = (nrows, ncols),
+            shape = (self.nbands, nrows, ncols),
             fill_value = self.fill_value,
             dtype = self.dtype,
             yorigin = max(uly, ury, lly, lry),
