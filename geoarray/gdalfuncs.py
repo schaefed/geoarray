@@ -35,7 +35,7 @@ TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-class Projer(object):
+class Projection(object):
     def __init__(self, arg):
 
         self._srs = osr.SpatialReference()
@@ -62,6 +62,34 @@ class Projer(object):
         if str(self._srs):
             return self._srs
 
+    # def getTransformer(self, tprojer):
+    #     tx = osr.CoordinateTransformation(
+    #         self.getReference(), tprojer.getReference()
+    #     )
+    #     return tx.TransformPoint
+
+class Transformer(object):
+    def __init__(self, sproj, tproj):
+        """
+        Arguments
+        ---------
+        sproj, tproj : Projection
+        
+        Purpose
+        -------
+        Encapsulates the osr Cordinate Transformation functionality
+        """
+        self._tx = osr.CoordinateTransformation(
+            sproj.getReference(), tproj.getReference()
+        )
+
+    def __call__(self, y, x):
+        try:
+            xt, yt, _ = self._tx.TransformPoint(x, y)
+        except NotImplementedError:
+            raise AttributeError("Projections not correct or given!")
+        return yt, xt
+        
 def _fromfile(fname):
     """
     Parameters

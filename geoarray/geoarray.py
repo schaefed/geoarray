@@ -39,7 +39,7 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
-from gdalfuncs import _fromfile, _tofile, _memDataset, _fromDataset, Projer
+from gdalfuncs import _fromfile, _tofile, _memDataset, _fromDataset, Projection, Transformer
 
 try:
     xrange
@@ -503,7 +503,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
     
     return GeoArray(
         data, yorigin, xorigin, origin, cellsize,
-        Projer(proj),
+        Projection(proj),
         mask=mask, fill_value=fill_value
     )
 
@@ -536,7 +536,7 @@ class GeoArray(np.ma.MaskedArray):
     fill_value   : scalar
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
-    proj_params  : Projer                # Projer Instance holding projection information
+    proj_params  : Projection                # Projection Instance holding projection information
 
     Purpose
     -------
@@ -1287,12 +1287,6 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
-    # @property
-    # def _fobj(self):
-    #     if self._optinfo["_fobj"] is None:
-    #         self._optinfo["_fobj"] = _memDataset(self)#, _proj2Gdal(self.proj_params))
-    #     return self._optinfo["_fobj"]
-
     def warp(self, proj, max_error=0.125):
         """
         Arguments
@@ -1310,23 +1304,17 @@ class GeoArray(np.ma.MaskedArray):
         - Make the resampling strategy an optional argument
         """
 
-        tx = osr.CoordinateTransformation (
-            self.proj.getReference(),
-            Projer(proj).getReference(),
-        )
-
         # transform corners
         yorigin, xorigin = self.getOrigin()
         xdelta = self.cellsize[0] * self.nrows
         ydelta = self.cellsize[1] * self.ncols
-        try:
-            ulx, uly, _ = tx.TransformPoint(xorigin, yorigin)
-            lrx, lry, _ = tx.TransformPoint(xorigin + xdelta, yorigin + ydelta)
-            urx, ury, _ = tx.TransformPoint(xorigin + xdelta, yorigin)
-            llx, lly, _ = tx.TransformPoint(xorigin, yorigin + ydelta)
-        except NotImplementedError:
-            raise AttributeError("Projections not correct or given!")
-            
+
+        trans = Transformer(self.proj, Projection(proj))
+        uly, ulx = trans(yorigin         , xorigin)
+        lry, lrx = trans(yorigin + ydelta, xorigin + xdelta)
+        ury, urx = trans(yorigin         , xorigin + xdelta)
+        lly, llx = trans(yorigin + ydelta, xorigin)
+        
         # Calculate cellsize, i.e. same number of cells along the diagonal.
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
         tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
