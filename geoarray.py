@@ -885,7 +885,7 @@ class GeoArray(np.ma.MaskedArray):
         >>> import geoarray as ga
         >>> x = ga.full((4,4), 42, yorigin=100, xorigin=55, origin="ur")
         >>> x.header
-        {'origin': 'ur', 'fill_value': -9999.0, 'proj': None, 'cellsize': (-1, -1), 'yorigin': 100, 'xorigin': 55}
+        {'origin': 'ur', 'fill_value': -9999.0, 'cellsize': (-1, -1), 'yorigin': 100, 'proj': {}, 'xorigin': 55}
         """
 
         return {
@@ -894,7 +894,7 @@ class GeoArray(np.ma.MaskedArray):
             "origin"      : self.origin,
             "fill_value"  : self.fill_value,
             "cellsize"    : self.cellsize,
-            "proj" : self.proj.getProj4()
+            "proj"        : self.proj.getProj4()
         }
 
     @property
