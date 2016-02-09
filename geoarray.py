@@ -655,7 +655,7 @@ class Projer(object):
     
     def _proj4(self, proj):
         params =  "+{:}".format(" +".join(
-            ["=".join(map(str, pp)) for pp in proj_params.items()])
+            ["=".join(map(str, pp)) for pp in proj.items()])
         )
         srs = osr.SpatialReference()
         srs.ImportFromProj4(params)
@@ -1553,21 +1553,24 @@ class GeoArray(np.ma.MaskedArray):
         written and a way more flexible interface could be provided (cellsize, bounding
         box, etc).
         """
-        def _projer(params):
-            params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in params.items()])
-            )
-            srs = osr.SpatialReference()
-            srs.ImportFromProj4(params)
-            return srs
+        # def _projer(params):
+        #     params =  "+{:}".format(" +".join(
+        #         ["=".join(map(str, pp)) for pp in params.items()])
+        #     )
+        #     srs = osr.SpatialReference()
+        #     srs.ImportFromProj4(params)
+        #     return srs
 
         
         resampling = gdal.GRA_NearestNeighbour
-
-        fproj = Projer(self.proj_params).srs
-        tproj = Projer(proj_params).srs
-        tx = osr.CoordinateTransformation (fproj, tproj)
-        trans = self._fobj.GetGeoTransform()
+        # sproj = Projer(self.proj_params).srs,
+        # tproj = Projer(proj_params).srs
+        
+        tx = osr.CoordinateTransformation (
+            Projer(self.proj_params).srs,
+            Projer(proj_params).srs
+        )
+        # trans = self._fobj.GetGeoTransform()
 
         # transform corners
         yorigin, xorigin = self.getOrigin()
@@ -1582,35 +1585,29 @@ class GeoArray(np.ma.MaskedArray):
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
         tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
         tcellsize = tdiag/sdiag
-       
-        driver = gdal.GetDriverByName("MEM")
-        out = driver.Create(
-            "",
-            abs(int(np.round((max(urx, lrx) - min(ulx, llx))/tcellsize))),
-            abs(int(np.round((max(ury, lry) - min(uly, lly))/tcellsize))),
-            1,
-            TYPEMAP[str(self.dtype)]
-        )
-        
-        out.SetGeoTransform(
-            (min(ulx, llx, urx, lrx), tcellsize, trans[2], 
-             max(uly, lly, ury, lry), trans[4], -tcellsize if tcellsize > 0 else tcellsize)
-        )
 
-        out.SetProjection(tproj.ExportToWkt())
-        for i in xrange(self.nbands):
-            band = out.GetRasterBand(i+1)
-            band.Fill(float(self.fill_value))
-            band.SetNoDataValue(float(self.fill_value))
-            
-            
+        # number of cells
+        ncols = abs(int(np.round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
+        nrows = abs(int(np.round((max(ury, lry) - min(uly, lly))/tcellsize)))
+        
+        target = empty(
+            shape = (nrows, ncols),
+            fill_value = self.fill_value,
+            dtype = self.dtype,
+            yorigin = max(uly, ury, lly, lry),
+            xorigin = min(ulx, urx, llx, lrx),
+            origin = "ul",
+            cellsize = tcellsize,
+            proj_params = proj_params
+        )
+        out = target._fobj
+           
         res = gdal.ReprojectImage(
             self._fobj, out,
             None, None,
             resampling, 
             0.0, max_error)
-        # print np.mean(out.ReadAsArray())
-        
+
         return _fromDataset(out)
         
     def warp(self, proj_params, max_error=0.125):
