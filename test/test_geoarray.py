@@ -50,7 +50,7 @@ class TestInitialisation(unittest.TestCase):
         self.assertEqual(grid.fill_value, fill_value)
         self.assertEqual(grid.yorigin, yorigin)
         self.assertEqual(grid.xorigin, xorigin)
-        self.assertEqual(grid.cellsize, (cellsize[0]*-1,cellsize[1]))
+        self.assertEqual(grid.cellsize, cellsize)
         self.assertTrue(np.all(grid == data))
         
     def test_zeros(self):
