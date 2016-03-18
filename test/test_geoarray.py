@@ -4,6 +4,7 @@
 import unittest, copy, shutil, os
 import numpy as np
 import geoarray as ga
+import gdal
 import warnings
 import subprocess
 import tempfile
@@ -396,13 +397,21 @@ class TestGeoArrayFuncs(unittest.TestCase):
 
     def test_warp(self):
 
+        """
+        This test fails for gdal versions below 2.0. The warping is correct, but
+        the void space around the original image is filled with fill_value in versions
+        >= 2.0, else with 0. The tested function behaves like the more recent versions
+        of GDAL
+        """
         codes = (2062, 3857)
         tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
+        if gdal.VersionInfo().startswith("1"):
+            return
         for fname, base in zip(FILES, self.grids):
             if base.proj.getReference():
                 for epsg in codes:
-                    # gdalwarp flips the warped image
+                    # gdalwarp flips the warped imagel
                     proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
                     with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                         subprocess.check_output(
