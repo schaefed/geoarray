@@ -402,7 +402,8 @@ class TestGeoArrayFuncs(unittest.TestCase):
         for fname, base in zip(FILES, self.grids):
             if base.proj.getReference():
                 for epsg in codes:
-                    proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
+                    # gdalwarp flips the warped image
+                    proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
                     with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                         subprocess.check_output(
                             "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
@@ -414,33 +415,9 @@ class TestGeoArrayFuncs(unittest.TestCase):
                         self.assertTrue(np.all(proj.data == compare.data))
                         self.assertTrue(np.all(proj.mask == compare.mask))
                         self.assertDictEqual(proj.bbox, compare.bbox)
-                        break
-                    break
-                break
             else:
                 self.assertRaises(AttributeError)
                  
-    # def test_warp(self):
-
-    #     epsg = 2062 #3857
-    #     tmpfile = os.path.join(TMPPATH, "tmp.tif")
-
-    #     for fname, base in zip(FILES, self.grids):
-    #         if base.proj_params:
-    #             proj = base.warp({"init":"epsg:{:}".format(epsg)}, 0)
-    #             with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
-    #                 subprocess.check_output(
-    #                     "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
-    #                         epsg, fname, tf.name
-    #                     ),
-    #                     shell=True
-    #                 )
-    #                 compare = ga.fromfile(tf.name)
-    #                 self.assertTrue(np.all(proj.data == compare.data))
-    #                 self.assertTrue(np.all(proj.mask == compare.mask))
-    #                 self.assertDictEqual(proj.bbox, compare.bbox)
-    #         else:
-    #             self.assertRaises(AttributeError)
-                
+               
 if __name__== "__main__":
     unittest.main()

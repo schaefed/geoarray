@@ -1305,35 +1305,33 @@ class GeoArray(np.ma.MaskedArray):
         """
 
         # transform corners
-        yorigin, xorigin = self.getOrigin()
-        xdelta = self.cellsize[0] * self.nrows
-        ydelta = self.cellsize[1] * self.ncols
-
+        bbox = self.bbox
         trans = _Transformer(self.proj, _Projection(proj))
-        uly, ulx = trans(yorigin         , xorigin)
-        lry, lrx = trans(yorigin + ydelta, xorigin + xdelta)
-        ury, urx = trans(yorigin         , xorigin + xdelta)
-        lly, llx = trans(yorigin + ydelta, xorigin)
-        
+        uly, ulx = trans(bbox["ymax"], bbox["xmin"])
+        lry, lrx = trans(bbox["ymin"], bbox["xmax"])
+        ury, urx = trans(bbox["ymax"], bbox["xmax"])
+        lly, llx = trans(bbox["ymin"], bbox["xmin"])
+
         # Calculate cellsize, i.e. same number of cells along the diagonal.
         sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
-        tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
+        # tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
+        tdiag = np.sqrt((lly - ury)**2 + (llx - urx)**2)
         tcellsize = tdiag/sdiag
 
         # number of cells
-        ncols = abs(int(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
-        nrows = abs(int(round((max(ury, lry) - min(uly, lly))/tcellsize)))
+        ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
+        nrows = int(abs(round((max(ury, lry) - min(uly, lly))/tcellsize)))
         
         target = full(
-            shape = (self.nbands, nrows, ncols),
-            value = self.fill_value,
+            shape      = (self.nbands, nrows, ncols),
+            value      = self.fill_value,
             fill_value = self.fill_value,
-            dtype = self.dtype,
-            yorigin = max(uly, ury, lly, lry),
-            xorigin = min(ulx, urx, llx, lrx),
-            origin = "ul",
-            cellsize = tcellsize,
-            proj = proj
+            dtype      = self.dtype,
+            yorigin    = max(uly, ury, lly, lry),
+            xorigin    = min(ulx, urx, llx, lrx),
+            origin     = "ul",
+            cellsize   = (-tcellsize, tcellsize),
+            proj       = proj
         )
 
         return self.warpTo(target, max_error)
@@ -1362,7 +1360,7 @@ class GeoArray(np.ma.MaskedArray):
             None, None,
             resampling, 
             0.0, max_error)
-
+        
         return _factory(**_fromDataset(out))
   
     def __repr__(self):
