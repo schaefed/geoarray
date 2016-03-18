@@ -127,7 +127,6 @@ def _fromDataset(fobj):
     #     data = fobj.ReadAsArray()
 
     data = fobj.ReadAsArray()
-    
     return {
         "data":data, "yorigin":geotrans[3], "xorigin":geotrans[0],
         "origin":"ul", "fill_value":rasterband.GetNoDataValue(),
@@ -146,10 +145,9 @@ def _memDataset(grid): #, projection):
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
     out.SetGeoTransform(
-        (grid.xorigin, grid.cellsize[1], 0,
-         grid.yorigin, 0, grid.cellsize[0])
+        (grid.bbox["xmin"], abs(grid.cellsize[1]), 0,
+         grid.bbox["ymax"], 0, abs(grid.cellsize[0])*-1)
     )
-
     out.SetProjection(grid.proj.getWkt())
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
