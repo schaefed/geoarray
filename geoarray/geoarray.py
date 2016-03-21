@@ -1351,6 +1351,9 @@ class GeoArray(np.ma.MaskedArray):
         Interpolates self to the target grid, including
         coordinate transformations if necessary.
         """
+
+        if grid.dtype != self.dtype:
+            grid = np.array(grid, subok=True, dtype=self.dtype)
         
         out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
