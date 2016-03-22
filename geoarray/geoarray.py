@@ -55,7 +55,7 @@ ORIGINS = (
 )
 
 def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=(1,1), proj=None):
+          fill_value=None, cellsize=(1,1), proj=None, copy=False):
     """
     Arguments
     ---------
@@ -118,7 +118,8 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
 
     """
     return _factory(
-        np.asarray(data) if not dtype else np.asarray(data, dtype),
+        np.array(data, dtype=dtype, copy=copy), # if not dtype else np.asarray(data, dtype),
+        # np.array(data, copy=copy) if not dtype else np.asarray(data, dtype),
         yorigin, xorigin, origin, fill_value, cellsize, proj
     )
 
@@ -1354,7 +1355,9 @@ class GeoArray(np.ma.MaskedArray):
 
         if grid.dtype != self.dtype:
             grid = np.array(grid, subok=True, dtype=self.dtype)
-        
+        # # if grid.fill_value != self.fill_value:
+        # grid = ga.
+            
         out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
            
