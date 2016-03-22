@@ -41,7 +41,7 @@ class _Projection(object):
         self._srs = osr.SpatialReference()
 
         if isinstance(arg, int):
-            self._srs.ImportFromEpsg(arg)
+            self._srs.ImportFromProj4("+init=epsg:{:}".format(arg))
         elif isinstance(arg, dict):
             params =  "+{:}".format(" +".join(
                 ["=".join(map(str, pp)) for pp in arg.items()])
