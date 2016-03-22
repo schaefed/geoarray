@@ -54,8 +54,8 @@ ORIGINS = (
     "lr",    #     "lr" -> lower right
 )
 
-def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=(1,1), proj=None, copy=False):
+def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
+          fill_value=None, cellsize=None, proj=None, copy=False):
     """
     Arguments
     ---------
@@ -64,17 +64,18 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
     Optional Arguments
     ------------------
     dtype        : str/np.dtype                  # type of the returned grid
-    yorigin      : int/float                     # y-value of the grid's origin
-    xorigin      : int/float                     # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-                                                 #     "ul" : upper left corner
+    yorigin      : int/float, default: 0         # y-value of the grid's origin
+    xorigin      : int/float, default: 0         # x-value of the grid's origin
+    origin       : {"ul","ur","ll","lr"},        # position of the origin. One of:
+                   default: "ul"                 #     "ul" : upper left corner
                                                  #     "ur" : upper right corner
                                                  #     "ll" : lower left corner
                                                  #     "lr" : lower right corner
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj  : dict/None                     # proj4 projection parameters
-
+    proj         : dict/None                     # proj4 projection parameters
+    copy         : bool                          # create a copy of the given data
+    
     Returns
     -------
     GeoArray
@@ -117,10 +118,23 @@ def array(data, dtype=None, yorigin=0, xorigin=0, origin="ul",
               [-- -- -- -- -- --]])
 
     """
+    if isinstance(data, GeoArray):
+        dtype      = dtype or data.dtype
+        yorigin    = yorigin or data.yorigin
+        xorigin    = xorigin or data.xorigin
+        origin     = origin or data.origin
+        fill_value = fill_value or data.fill_value
+        cellsize   = cellsize or data.cellsize
+        proj       = proj or data.proj
+        
     return _factory(
-        np.array(data, dtype=dtype, copy=copy), # if not dtype else np.asarray(data, dtype),
-        # np.array(data, copy=copy) if not dtype else np.asarray(data, dtype),
-        yorigin, xorigin, origin, fill_value, cellsize, proj
+        np.array(data, dtype=dtype, copy=copy), 
+        yorigin or 0,
+        xorigin or 0,
+        origin or "ul",
+        fill_value,
+        cellsize or (1,1),
+        proj
     )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -1357,7 +1371,8 @@ class GeoArray(np.ma.MaskedArray):
             grid = np.array(grid, subok=True, dtype=self.dtype)
         # # if grid.fill_value != self.fill_value:
         # grid = ga.
-            
+        # grid1 = array(grid, fill_value=self.fill_value, dtype=self.dtype, copy=True)
+        
         out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
            
