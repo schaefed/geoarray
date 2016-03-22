@@ -49,6 +49,8 @@ class _Projection(object):
             self._srs.ImportFromProj4(params)
         elif isinstance(arg, str):
             self._srs.ImportFromWkt(arg)
+        elif isinstance(arg, _Projection):
+            self._srs.ImportFromWkt(arg.getWkt())
             
     def getProj4(self):
         tmp = self._srs.ExportToProj4()

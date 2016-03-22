@@ -126,7 +126,7 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
         fill_value = fill_value or data.fill_value
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
-        
+
     return _factory(
         np.array(data, dtype=dtype, copy=copy), 
         yorigin or 0,
@@ -665,12 +665,12 @@ class GeoArray(np.ma.MaskedArray):
 
         obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
 
-        obj._optinfo["yorigin"]     = yorigin
-        obj._optinfo["xorigin"]     = xorigin
-        obj._optinfo["origin"]      = origin
-        obj._optinfo["cellsize"]    = cellsize
-        obj._optinfo["proj"] = proj
-
+        obj._optinfo["yorigin"]  = yorigin
+        obj._optinfo["xorigin"]  = xorigin
+        obj._optinfo["origin"]   = origin
+        obj._optinfo["cellsize"] = cellsize
+        obj._optinfo["proj"]     = proj
+        
         return obj
 
     @property
@@ -1367,11 +1367,7 @@ class GeoArray(np.ma.MaskedArray):
         coordinate transformations if necessary.
         """
 
-        if grid.dtype != self.dtype:
-            grid = np.array(grid, subok=True, dtype=self.dtype)
-        # # if grid.fill_value != self.fill_value:
-        # grid = ga.
-        # grid1 = array(grid, fill_value=self.fill_value, dtype=self.dtype, copy=True)
+        grid = array(grid, fill_value=self.fill_value, dtype=self.dtype, copy=True)
         
         out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
