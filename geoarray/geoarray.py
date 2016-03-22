@@ -126,6 +126,7 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
         fill_value = fill_value or data.fill_value
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
+        
 
     return _factory(
         np.array(data, dtype=dtype, copy=copy), 
@@ -1366,7 +1367,6 @@ class GeoArray(np.ma.MaskedArray):
         Interpolates self to the target grid, including
         coordinate transformations if necessary.
         """
-
         grid = array(grid, fill_value=self.fill_value, dtype=self.dtype, copy=True)
         
         out = _memDataset(grid)
@@ -1379,7 +1379,7 @@ class GeoArray(np.ma.MaskedArray):
             0.0, max_error)
         
         return _factory(**_fromDataset(out))
-  
+        
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
