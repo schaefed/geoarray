@@ -77,7 +77,7 @@ class Slice(object):
                              np.uint,np.uint32,np.uint64)):
             tmp = np.array(obj,ndmin=1)
         elif isinstance(obj,np.ma.MaskedArray):
-            tmp = obj.data[~obj.mask]
+            tmp = np.asarray(obj.data[~obj.mask])
         else:
             tmp = np.asarray(obj)
             
