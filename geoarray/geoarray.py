@@ -518,9 +518,14 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
         mask = data==fill_value
     
     return GeoArray(
-        data, yorigin, xorigin, origin, cellsize,
-        _Projection(proj),
-        mask=mask, fill_value=fill_value
+        data       = data,
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
+        cellsize   = cellsize,
+        proj       = _Projection(proj),
+        fill_value = fill_value,
+        mask       = mask 
     )
 
 
@@ -661,16 +666,19 @@ class GeoArray(np.ma.MaskedArray):
     (7, 5)
     """
 
-    def __new__(cls, data, yorigin, xorigin, origin,
-                cellsize, proj=None, *args, **kwargs):
+    def __new__(
+            cls, data, yorigin, xorigin, origin, cellsize,
+            proj=None, fill_value=None,
+            *args, **kwargs
+    ):
+        obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, *args, **kwargs)
 
-        obj = np.ma.MaskedArray.__new__(cls, data, *args, **kwargs)
-
-        obj._optinfo["yorigin"]  = yorigin
-        obj._optinfo["xorigin"]  = xorigin
-        obj._optinfo["origin"]   = origin
-        obj._optinfo["cellsize"] = cellsize
-        obj._optinfo["proj"]     = proj
+        obj._optinfo["yorigin"]    = yorigin
+        obj._optinfo["xorigin"]    = xorigin
+        obj._optinfo["origin"]     = origin
+        obj._optinfo["cellsize"]   = cellsize
+        obj._optinfo["proj"]       = proj
+        obj._optinfo["fill_value"] = fill_value
         
         return obj
 
@@ -709,7 +717,6 @@ class GeoArray(np.ma.MaskedArray):
         }
 
     @property
-
     def bbox(self):
         """
         Arguments
@@ -739,32 +746,6 @@ class GeoArray(np.ma.MaskedArray):
             "ymin": min(yvals), "ymax": max(yvals),
             "xmin": min(xvals), "xmax": max(xvals),
         }
-
-    def getOrigin(self, origin=None):
-        """
-        Arguments
-        ---------
-        origin : str/None
-
-        Returns
-        -------
-        (scalar, scalar)
-
-        Purpose
-        -------
-        Return the grid's corner coordinates. Defaults to the origin
-        corner. Any other corner may be specifed with the 'origin' argument,
-        which should be one of: 'ul','ur','ll','lr'.
-        """
-
-        if not origin:
-            origin = self.origin
-
-        bbox = self.bbox
-        return (
-            bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
-            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
-        )
 
     @property
     def nbands(self):
@@ -888,6 +869,45 @@ class GeoArray(np.ma.MaskedArray):
             return self.shape[-1]
         except IndexError:
             return 0
+
+    @property
+    def fill_value(self):
+        return self._optinfo["fill_value"]
+        
+    @fill_value.setter
+    def fill_value(self, value):
+        self._optinfo["fill_value"] = value
+        self.mask = self == value
+
+    # def setFillValue(self, value):
+    #     self[self.data == self.fill_value] = value
+    #     grid.fill_value = value
+        
+    def getOrigin(self, origin=None):
+        """
+        Arguments
+        ---------
+        origin : str/None
+
+        Returns
+        -------
+        (scalar, scalar)
+
+        Purpose
+        -------
+        Return the grid's corner coordinates. Defaults to the origin
+        corner. Any other corner may be specifed with the 'origin' argument,
+        which should be one of: 'ul','ur','ll','lr'.
+        """
+
+        if not origin:
+            origin = self.origin
+
+        bbox = self.bbox
+        return (
+            bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
+            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
+        )
 
     def tofile(self,fname):
         """
@@ -1367,7 +1387,9 @@ class GeoArray(np.ma.MaskedArray):
         Interpolates self to the target grid, including
         coordinate transformations if necessary.
         """
-        grid = array(grid, fill_value=self.fill_value, dtype=self.dtype, copy=True)
+        grid = array(grid, dtype=self.dtype, copy=True)
+        grid[grid.mask] = self.fill_value
+        grid.fill_value = self.fill_value
         
         out = _memDataset(grid)
         resampling = gdal.GRA_NearestNeighbour
@@ -1376,7 +1398,8 @@ class GeoArray(np.ma.MaskedArray):
             _memDataset(self), out,
             None, None,
             resampling, 
-            0.0, max_error)
+            0.0, max_error
+        )
         
         return _factory(**_fromDataset(out))
         
