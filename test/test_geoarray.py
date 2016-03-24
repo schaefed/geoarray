@@ -138,7 +138,7 @@ class TestGeoArray(unittest.TestCase):
                     self.assertTrue(np.all(slc1.mask == slc2.mask))
                 except AttributeError: # __getitem__ returned a scalar
                     pass 
-
+        
     def test_getitemOrigin(self):
         grids = (
             ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
@@ -161,7 +161,9 @@ class TestGeoArray(unittest.TestCase):
         for i,grid in enumerate(grids):
             for slc,exp in zip(slices,expected[i]):
                 self.assertTupleEqual( exp, grid[slc].getOrigin() )
-
+                break
+            break
+                
     def test_setitem(self):
         for base in self.grids:
             slices = (
