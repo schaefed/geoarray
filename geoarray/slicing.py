@@ -15,7 +15,7 @@ class Slice(object):
     def __init__(self, slc, shape):
         self._slc = slc
         self._data = np.arange(shape)
-        self._idx = self._data[self._slc]
+        self._idx = np.atleast_1d(self._data[self._slc])
         
     @property
     def min(self):
@@ -165,106 +165,105 @@ def getSlices(slices, shape):
 #     return tuple(out)
 
    
-# TESTCASES = (
-#     Ellipsis,
-#     0,
-#     12,
-#     -1,
-#     -2,
-#     -10,
-#     range(4),
-#     range(4,10),
-#     range(-10,-1),
-#     range(4,100,25),
-#     range(100,10,-2),
-#     np.arange(4),
-#     np.arange(4,10),
-#     np.arange(-10,-1),
-#     np.arange(4,100,25),
-#     np.arange(100,10,-2),
-#     slice(3,None,None),
-#     slice(-3,None,None),
-#     slice(3,-1,None),
-#     slice(5,44,5),
-#     slice(None,-1,None),
-#     #slice(-65,-1,-4),
-#     slice(100,10,-2),
-#     #(5,3,1,3,88,54,-55), 
-# )
+TESTCASES = (
+    Ellipsis,
+    0,
+    12,
+    -1,
+    -2,
+    -10,
+    range(4),
+    range(4,10),
+    range(-10,-1),
+    range(4,100,25),
+    range(100,10,-2),
+    np.arange(4),
+    np.arange(4,10),
+    np.arange(-10,-1),
+    np.arange(4,100,25),
+    np.arange(100,10,-2),
+    slice(3,None,None),
+    slice(-3,None,None),
+    slice(3,-1,None),
+    slice(5,44,5),
+    slice(None,-1,None),
+    #slice(-65,-1,-4),
+    slice(100,10,-2),
+    #(5,3,1,3,88,54,-55), 
+)
         
-# class TestSlice(unittest.TestCase):
-#     def __init__(self,*args,**kwargs):
-#         super(TestSlice,self).__init__(*args,**kwargs)
-#         self.length = 120
-#         self.array = np.arange(self.length)
+class TestSlice(unittest.TestCase):
+    def __init__(self,*args,**kwargs):
+        super(TestSlice,self).__init__(*args,**kwargs)
+        self.length = 120
+        self.array = np.arange(self.length)
 
-#     def test_first(self):
-#         results = (
-#             # Ellipsis
-#             0,
-#             # Integers
-#             0, 12, 119, 118, 110,
-#             # range
-#             0, 4, 110, 4, 100,
-#             # np.arange
-#             0, 4, 110, 4, 100,
-#             # slices
-#             3, 117, 3, 5, 0, 100,
-#             # list
-#             1,
-#         )
+    def test_start(self):
+        results = (
+            # Ellipsis
+            0,
+            # Integers
+            0, 12, 119, 118, 110,
+            # range
+            0, 4, 110, 4, 100,
+            # np.arange
+            0, 4, 110, 4, 100,
+            # slices
+            3, 117, 3, 5, 0, 100,
+            # list
+            1,
+        )
         
-#         for date,expected in zip(TESTCASES,results):
-#             slc = Slice(date,self.length)
-#             self.assertEqual(slc.first,expected)
+        for date,expected in zip(TESTCASES,results):
+            slc = Slice(date,self.length)
+            self.assertEqual(slc.start,expected)
 
-#     def test_last(self):
-#         results = (
-#             # Ellipsis
-#             119,
-#             # Integers
-#             0, 12, 119, 118, 110,
-#             # range
-#             3, 9, 118, 79, 12,
-#             # np.arange
-#             3, 9, 118, 79, 12,
-#             # slices
-#             119, 119, 118, 40, 118, 12,
-#             # # list
-#             88
-#         )
+    def test_stop(self):
+        results = (
+            # Ellipsis
+            119,
+            # Integers
+            0, 12, 119, 118, 110,
+            # range
+            3, 9, 118, 79, 12,
+            # np.arange
+            3, 9, 118, 79, 12,
+            # slices
+            119, 119, 118, 40, 118, 12,
+            # # list
+            88
+        )
 
-#         for date,expected in zip(TESTCASES,results):
-#             slc = Slice(date,self.length)
-#             self.assertEqual(slc.last,expected)
+        for date,expected in zip(TESTCASES,results):
+            slc = Slice(date,self.length)
+            self.assertEqual(slc.stop,expected)
  
             
-#     def test_step(self):
-#         results = (
-#             # Ellipsis
-#             1,
-#             # Integers
-#             1, 1, 1, 1, 1,
-#             # range
-#             1, 1, 1, 25, -2,
-#             # np.arange
-#             1, 1, 1, 25, -2,
-#             # slices
-#             1, 1, 1, 5, 1, -2,
-#             # list
-#             1,
-#         )
-#         for date,expected in zip(TESTCASES, results):
-#             slc = Slice(date, self.length)
-#             self.assertEqual(slc.step, expected)
+    def test_step(self):
+        results = (
+            # Ellipsis
+            1,
+            # Integers
+            None, None, None, None, None,
+            # range
+            1, 1, 1, 25, -2,
+            # np.arange
+            1, 1, 1, 25, -2,
+            # slices
+            1, 1, 1, 5, 1, -2,
+            # list
+            1,
+        )
+        for date,expected in zip(TESTCASES, results):
+            slc = Slice(date, self.length)
+            self.assertEqual(slc.step, expected)
 
-    # def test_handleEllipsis(self):
-    #     dates = (
-    #         ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
-    #     )
+    def test_handleEllipsis(self):
+        dates = (
+            ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
+        )
   
 if __name__== "__main__":
 
-    pass
-    # unittest.main()
+    unittest.main()
     
