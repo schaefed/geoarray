@@ -127,6 +127,18 @@ def _handleArrays(slices):
         else:
             out.append(slc)
     return tuple(out)
+
+def _handleNone(slices, shape):
+
+    outslices = list(slices)
+    outshape = list(shape)
+    
+    for i, slc in enumerate(slices):
+        if slc is None:
+            outslices[i] = 1
+            outshape.insert(i,1)
+        
+    return tuple(outslices), tuple(outshape)
          
 
 def getSlices(slices, shape):
@@ -134,6 +146,7 @@ def getSlices(slices, shape):
     slices = _tupelizeSlices(slices)
     slices = _handleArrays(slices)
     slices = _handleEllipsis(slices, shape)
+    slices, shape = _handleNone(slices, shape)
 
     if len(slices) > len(shape):
         raise IndexError("too many indices")
@@ -141,30 +154,7 @@ def getSlices(slices, shape):
     slices = slices + (Ellipsis,)*len(shape)
     return tuple(Slice(slc, shp) for slc, shp in zip(slices, shape))
    
-# def getSlicesNew(slices, shape):
-#     slices = _tupelizeSlices(slices)
-#     slices = _handleEllipsis(slices, shape)
-    
-#     if len(slices) > len(shape):
-#         raise IndexError("too many indices")
-    
-#     slices += [Ellipsis]*len(shape)
-#     out = []
-#     for i in xrange(len(shape)):
-#         slc = slices[i]
-#         if isinstance(slc,np.ndarray):
-#             if slc.dtype is np.dtype("bool"):
-#                 idx = np.nonzero(slc)
-#                 slc = idx[0]
-#                 for j,other in enumerate(slc[1:]):
-#                     slices.insert(i+j+1,other)
-#             if slc.ndim > 1:
-#                 slc = slc.ravel()
-#         # print slc
-#         out.append(Slice(slc,shape[i]))
-#     return tuple(out)
-
-   
+  
 TESTCASES = (
     Ellipsis,
     0,
