@@ -1387,7 +1387,13 @@ class GeoArray(np.ma.MaskedArray):
         Interpolates self to the target grid, including
         coordinate transformations if necessary.
         """
-        # grid = np.broadcast_to(grid, (25,347,255))#.copy()
+        if grid.ndim == 1:
+            grid = grid[None,:]
+        if grid.ndim < self.ndim:
+            grid = np.broadcast_to(
+                grid, self.shape[:-len(grid.shape)]+grid.shape, subok=True
+            )
+
         grid = array(grid, dtype=self.dtype, copy=True)
         grid[grid.mask] = self.fill_value
         grid.fill_value = self.fill_value

@@ -135,7 +135,7 @@ def _handleNone(slices, shape):
     
     for i, slc in enumerate(slices):
         if slc is None:
-            outslices[i] = 1
+            outslices[i] = 0
             outshape.insert(i,1)
         
     return tuple(outslices), tuple(outshape)
