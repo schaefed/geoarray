@@ -1024,8 +1024,8 @@ class GeoArray(np.ma.MaskedArray):
                   [1 0 1]])
         """
 
-        y_idx, x_idx = np.where(self.data != self.fill_value)
         try:
+            y_idx, x_idx = np.where(self.data != self.fill_value)
             return self.removeCells(
                 top  = min(y_idx), bottom = self.nrows-max(y_idx)-1,
                 left = min(x_idx), right  = self.ncols-max(x_idx)-1
