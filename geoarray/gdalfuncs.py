@@ -64,6 +64,12 @@ class _Projection(object):
         if str(self._srs):
             return self._srs
 
+    def __str__(self):
+        return str(self.getProj4())
+
+    def __repr__(self):
+        return str(self.getProj4())
+    
 class _Transformer(object):
     def __init__(self, sproj, tproj):
         """
