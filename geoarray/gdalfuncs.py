@@ -11,6 +11,7 @@ _DRIVER_DICT = {
     ".tif" : "GTiff",
     ".asc" : "AAIGrid",
     ".img" : "HFA",
+    ".png" : "PNG",
 }
 
 # type mapping: there is no boolean data type in GDAL
