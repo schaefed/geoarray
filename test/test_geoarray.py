@@ -203,11 +203,19 @@ class TestGeoArray(unittest.TestCase):
 
         for base in self.grids:
             for outfile in outfiles:
+                if outfile.endswith(".png"):
+                    # data type conversion is done and precision lost
+                    continue
                 base.tofile(outfile)
                 checkgrid = ga.fromfile(outfile)
                 self.assertTrue(np.all(checkgrid == base))
                 self.assertDictEqual(checkgrid.bbox, base.bbox)
 
+    def test_typeConversion(self):
+        for base in self.grids:
+            with tempfile.NamedTemporaryFile(suffix=".png") as tf:
+                base.tofile(tf.name)
+                
                 
     def test_copy(self):
         for base in self.grids[1:]:

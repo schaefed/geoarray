@@ -26,8 +26,17 @@ TYPEMAP = {
     "float64"    : 7,
     "complex64"  : 10,
     "complex128" : 11,
+    1            : "int8",
+    2            : "uint16",
+    3            : "int16",
+    4            : "uint32",
+    5            : "int32",
+    6            : "float32",
+    7            : "float64",
+    10           : "complex64",
+    11           : "complex128",
+    
 }
-TYPEMAP.update([reversed(x) for x in TYPEMAP.items()])
 
 # The open gdal file objects need to outlive their GeoArray
 # instance. Therefore they are stored globaly.
@@ -170,6 +179,13 @@ def _memDataset(grid): #, projection):
     # out.FlushCache()
     return out
 
+def _adaptPrecision(data, dtype):
+    try:
+        tinfo = np.finfo(dtype)
+    except ValueError:
+        tinfo = np.iinfo(dtype)
+
+    # if np.any(data < tinfo.min):
 
 def _toFile(fname, geoarray):
     def _fnameExtension(fname):
@@ -187,7 +203,16 @@ def _toFile(fname, geoarray):
             raise IOError("Datatype canot be written")
         raise IOError("No driver found for filename extension '{:}'".format(fext))
 
-    memset = _memDataset(geoarray) #, _proj2Gdal(geoarray.proj_params))
-    outdriver = _getDriver(_fnameExtension(fname))
-    outdriver.CreateCopy(fname, memset, 0)
+    def _getDatatype(driver):
+        tnames = tuple(driver.GetMetadata_Dict()["DMD_CREATIONDATATYPES"].split(" "))
+        types = tuple(gdal.GetDataTypeByName(t) for t in tnames)
+        tdict = tuple((gdal.GetDataTypeSize(t), t) for t in types)
+        otype = max(tdict, key=lambda x: x[0])[-1]
+        return np.dtype(TYPEMAP[otype])
 
+        
+    memset = _memDataset(geoarray) #, _proj2Gdal(geoarray.proj_params))
+    driver = _getDriver(_fnameExtension(fname))
+    driver.CreateCopy(fname, memset, 0)
+    _adaptPrecision(geoarray, np.float32)
+    _adaptPrecision(geoarray, _getDatatype(driver))
