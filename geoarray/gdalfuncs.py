@@ -38,10 +38,27 @@ TYPEMAP = {
     
 }
 
-# The open gdal file objects need to outlive their GeoArray
-# instance. Therefore they are stored globaly.
-# _FILEREFS = []
+COLOR_DICT = {
+    1 : "L",
+    2 : "P",
+    3 : "R",
+    4 : "G",
+    5 : "B",
+    6 : "A",
+    7 : "H",
+    8 : "S",
+    9 : "V",
+    10 : "C",
+    11 : "M",
+    12 : "Y",
+    13 : "K",
+    14 : "Y",
+    15 : "Cb",
+    16 : "Cr",
+}
 
+COLOR_MODE_LIST = ("L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr")
+ 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
@@ -122,12 +139,21 @@ def _fromFile(fname):
     if fobj:
         return _fromDataset(fobj)
     raise IOError("Could not open file: {:}".format(fname))
-       
+
+def _getColorMode(fobj):
+
+    tmp = []
+    for i in xrange(fobj.RasterCount):
+        color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
+        tmp.append(COLOR_DICT.get(color, "L"))
+
+    return ''.join(sorted(set(tmp), key=tmp.index))
+   
 def _fromDataset(fobj):
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
-
+    
     return {
         "data"       : fobj.ReadAsArray(),
         "yorigin"    : geotrans[3],
@@ -137,6 +163,7 @@ def _fromDataset(fobj):
         "cellsize"   : (geotrans[5], geotrans[1]),
         "proj"       : fobj.GetProjection(),
         "fobj"       : fobj,
+        "mode"       : _getColorMode(fobj)
     }
 
 def _memDataset(grid): #, projection):
@@ -195,8 +222,8 @@ def _toFile(fname, geoarray):
         return np.dtype(TYPEMAP[otype])
 
         
-    memset = geoarray._fobj if geoarray._fobj else _memDataset(geoarray)
+    tmpset = geoarray._fobj if geoarray._fobj else _memDataset(geoarray)
     driver = _getDriver(_fnameExtension(fname))
-    driver.CreateCopy(fname, memset, 0)
+    driver.CreateCopy(fname, tmpset, 0)
     # _adaptPrecision(geoarray, np.float32)
     # _adaptPrecision(geoarray, _getDatatype(driver))

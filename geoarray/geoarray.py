@@ -55,7 +55,7 @@ ORIGINS = (
 )
 
 def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
-          fill_value=None, cellsize=None, proj=None, copy=False):
+          fill_value=None, cellsize=None, proj=None, mode=None, copy=False):
     """
     Arguments
     ---------
@@ -126,6 +126,7 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
         fill_value = fill_value or data.fill_value
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
+        mode       = mode or data.mode
         
 
     return _factory(
@@ -139,7 +140,7 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
     )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None):
+          fill_value=None, cellsize=1, proj=None, mode=None):
     """
     Arguments
     ---------
@@ -241,7 +242,7 @@ def zeros_like(a, *args, **kwargs):
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None):
+         fill_value=None, cellsize=1, proj=None, mode=None):
     """
     Arguments
     ---------
@@ -340,7 +341,7 @@ def ones_like(a, *args, **kwargs):
 
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None):
+         fill_value=None, cellsize=1, proj=None, mode=None):
     """
     Arguments
     ---------
@@ -439,7 +440,7 @@ def full_like(a, fill_value, *args, **kwargs):
         return array(np.full_like(a,fill_value,*args,**kwargs))
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None):
+          fill_value=None, cellsize=1, proj=None, mode=None):
     """
     Arguments
     ----------
@@ -497,7 +498,7 @@ def empty_like(a, *args, **kwargs):
         return array(np.full_like(a,-9999),*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=None):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=None, mode=None):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
@@ -526,6 +527,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=No
         proj       = _Projection(proj),
         fill_value = fill_value,
         mask       = mask, 
+        mode       = mode or "L",
         fobj       = fobj,
     )
 
@@ -669,7 +671,7 @@ class GeoArray(np.ma.MaskedArray):
 
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
-            proj=None, fill_value=None, fobj=None,
+            proj=None, fill_value=None, fobj=None, mode=None,
             *args, **kwargs
     ):
         obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, *args, **kwargs)
@@ -680,7 +682,9 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["cellsize"]   = cellsize
         obj._optinfo["proj"]       = proj
         obj._optinfo["fill_value"] = fill_value
+        obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
+        
         
         return obj
 
