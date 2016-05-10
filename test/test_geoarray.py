@@ -12,7 +12,7 @@ import tempfile
 # from parent directory run 
 # python -m unittest test.test_geoarray
 
-PWD = os.path.dirname(__file__)
+PWD = os.path.abspath(os.path.dirname(__file__))
 
 # path to testfiles
 PATH = os.path.join(PWD, "files")
@@ -197,10 +197,22 @@ class TestGeoArray(unittest.TestCase):
 
         for g, e in zip(grids, expected):
             self.assertDictEqual(g.bbox, e)
-        
-    def test_tofile(self):
-        outfiles = ("{:}/testout{:}".format(TMPPATH, ext) for ext in ga._DRIVER_DICT)
 
+    def test_simplecopy(self):
+        for infile in FILES:
+            outfile = os.path.join(TMPPATH, os.path.split(infile)[1])
+            base = ga.fromfile(infile)
+            base.tofile(outfile)
+            checkgrid = ga.fromfile(outfile)
+
+            self.assertDictEqual(
+                base._fobj.GetDriver().GetMetadata_Dict(),
+                checkgrid._fobj.GetDriver().GetMetadata_Dict()
+            )
+           
+    def test_tofile(self):
+        outfiles = (os.path.join(TMPPATH, "file{:}".format(ext)) for ext in ga._DRIVER_DICT)
+        
         for base in self.grids:
             for outfile in outfiles:
                 if outfile.endswith(".png"):
