@@ -497,7 +497,7 @@ def empty_like(a, *args, **kwargs):
         return array(np.full_like(a,-9999),*args,**kwargs)
 
 
-def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
+def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=None):
     if origin not in ORIGINS:
         raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
     try:
@@ -525,9 +525,9 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj):
         cellsize   = cellsize,
         proj       = _Projection(proj),
         fill_value = fill_value,
-        mask       = mask 
+        mask       = mask, 
+        fobj       = fobj,
     )
-
 
 def fromfile(fname):
     """
@@ -545,7 +545,8 @@ def fromfile(fname):
 
     """
     return _factory(**_fromFile(fname))
-    
+
+
 class GeoArray(np.ma.MaskedArray):
     """
     Arguments
@@ -668,7 +669,7 @@ class GeoArray(np.ma.MaskedArray):
 
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
-            proj=None, fill_value=None,
+            proj=None, fill_value=None, fobj=None,
             *args, **kwargs
     ):
         obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, *args, **kwargs)
@@ -679,6 +680,7 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["cellsize"]   = cellsize
         obj._optinfo["proj"]       = proj
         obj._optinfo["fill_value"] = fill_value
+        obj._optinfo["_fobj"]      = fobj
         
         return obj
 

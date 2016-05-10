@@ -136,7 +136,7 @@ def _fromDataset(fobj):
         "fill_value" : rasterband.GetNoDataValue(),
         "cellsize"   : (geotrans[5], geotrans[1]),
         "proj"       : fobj.GetProjection(),
-        # "fobj"       : fobj,
+        "fobj"       : fobj,
     }
 
 def _memDataset(grid): #, projection):
@@ -144,8 +144,8 @@ def _memDataset(grid): #, projection):
     """
     Create GDAL memory dataset
     """
-    
     driver = gdal.GetDriverByName("MEM")
+        
     out = driver.Create(
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
@@ -195,8 +195,8 @@ def _toFile(fname, geoarray):
         return np.dtype(TYPEMAP[otype])
 
         
-    memset = _memDataset(geoarray) #, _proj2Gdal(geoarray.proj_params))
+    memset = geoarray._fobj if geoarray._fobj else _memDataset(geoarray)
     driver = _getDriver(_fnameExtension(fname))
     driver.CreateCopy(fname, memset, 0)
-    _adaptPrecision(geoarray, np.float32)
-    _adaptPrecision(geoarray, _getDatatype(driver))
+    # _adaptPrecision(geoarray, np.float32)
+    # _adaptPrecision(geoarray, _getDatatype(driver))
