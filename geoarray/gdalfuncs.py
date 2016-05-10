@@ -121,38 +121,22 @@ def _fromFile(fname):
     fobj = gdal.OpenShared(fname)
     if fobj:
         return _fromDataset(fobj)
-    raise IOError("Could not open file")
+    raise IOError("Could not open file: {:}".format(fname))
        
 def _fromDataset(fobj):
-
-    # _FILEREFS.append(fobj)
 
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
 
-    nrows      = fobj.RasterYSize
-    ncols      = fobj.RasterXSize
-    nbands     = fobj.RasterCount
-
-    dtype      = np.dtype(TYPEMAP[rasterband.DataType])
-
-    # if "linux" in sys.platform:
-    #     # use GDAL's virtual memmory mappings
-    #     data       = fobj.GetVirtualMemArray(
-    #         gdal.GF_Write, cache_size = nbands*nrows*ncols*dtype.itemsize
-    #     )
-    # else:
-    #     data = fobj.ReadAsArray()
-
-    data = fobj.ReadAsArray()
     return {
-        "data"       : data,
+        "data"       : fobj.ReadAsArray(),
         "yorigin"    : geotrans[3],
         "xorigin"    : geotrans[0],
         "origin"     : "ul",
         "fill_value" : rasterband.GetNoDataValue(),
         "cellsize"   : (geotrans[5], geotrans[1]),
         "proj"       : fobj.GetProjection(),
+        # "fobj"       : fobj,
     }
 
 def _memDataset(grid): #, projection):
