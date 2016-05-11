@@ -9,7 +9,10 @@ import warnings
 import subprocess
 import tempfile
 
-# from parent directory run 
+# all tests, run from main directory:
+# python -m unittest discover test
+
+# this test only, run from parent directory run 
 # python -m unittest test.test_methods
 
 PWD = os.path.abspath(os.path.dirname(__file__))
