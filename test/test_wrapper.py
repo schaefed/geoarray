@@ -15,7 +15,7 @@ import tempfile
 # this test only, run from parent directory run 
 # python -m unittest test.test_wrapper
 
-class TestInitialisation(unittest.TestCase):
+class Test(unittest.TestCase):
 
     def test_array(self):
         data = np.arange(48).reshape(2,4,6)

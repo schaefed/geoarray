@@ -21,7 +21,7 @@ FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
 
 TMPPATH = os.path.join(PWD, "out")
 
-class TestGeoArray(unittest.TestCase):
+class Test(unittest.TestCase):
     
     def setUp(self):
         self.grids = [ga.fromfile(f) for f in FILES]

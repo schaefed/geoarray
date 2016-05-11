@@ -164,7 +164,7 @@ def _fromDataset(fobj):
         "origin"     : "ul",
         "fill_value" : rasterband.GetNoDataValue(),
         "cellsize"   : (geotrans[5], geotrans[1]),
-        "proj"       : fobj.GetProjection(),
+        "proj"       : _Projection(fobj.GetProjection()),
         "mode"       : _getColorMode(fobj),
         "fobj"       : fobj,
     }
@@ -196,7 +196,8 @@ def _getDataset(grid):
 def _warp(grid, proj, max_error=0.125):
 
     bbox = grid.bbox
-    trans = _Transformer(grid.proj, _Projection(proj))
+    proj = _Projection(proj)
+    trans = _Transformer(grid.proj, proj)
     uly, ulx = trans(bbox["ymax"], bbox["xmin"])
     lry, lrx = trans(bbox["ymin"], bbox["xmax"])
     ury, urx = trans(bbox["ymax"], bbox["xmax"])
@@ -213,15 +214,15 @@ def _warp(grid, proj, max_error=0.125):
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/tcellsize)))
     
     return {
-        "shape"      : (grid.nbands, nrows, ncols),
-        "value"      : grid.fill_value,
+        "data"       : np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
         "fill_value" : grid.fill_value,
         "dtype"      : grid.dtype,
         "yorigin"    : max(uly, ury, lly, lry),
         "xorigin"    : min(ulx, urx, llx, lrx),
         "origin"     : "ul",
         "cellsize"   : (-tcellsize, tcellsize),
-        "proj"       : proj
+        "proj"       : proj,
+        "mode"       : grid.mode, 
     }
 
 def _warpTo(source, target, max_error=0.125):

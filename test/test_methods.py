@@ -21,7 +21,7 @@ FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
 
 TMPPATH = os.path.join(PWD, "out")
 
-class TestGeoArrayFuncs(unittest.TestCase):
+class Test(unittest.TestCase):
 
     def setUp(self):
         self.grids = [ga.fromfile(f) for f in FILES]
@@ -194,6 +194,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
 
         if gdal.VersionInfo().startswith("1"):
             return
+
         for fname, base in zip(FILES, self.grids):
             if base.proj.getReference():
                 for epsg in codes:
