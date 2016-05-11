@@ -67,11 +67,11 @@ class GeoArray(np.ma.MaskedArray):
 
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
-            proj=None, fill_value=None, fobj=None, mode=None, mask=None,
+            proj=None, fill_value=None, fobj=None, mode=None, # mask=None,
             *args, **kwargs
     ):
-        if mask is None:
-            mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
+        # if mask is None:
+        mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
 
         if origin not in ORIGINS:
             raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))

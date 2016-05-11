@@ -234,11 +234,17 @@ def _warpTo(source, target, max_error=0.125):
         target = np.broadcast_to(
             target, source.shape[:-len(target.shape)]+target.shape, subok=True
         )
-        
-    target = np.array(target, dtype=source.dtype, copy=True, subok=True)
+       
+    target = np.ma.array(
+        target,
+        mask=target==target.fill_value,
+        dtype=source.dtype,
+        copy=True,
+        subok=True
+    )
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
-        
+
     out = _getDataset(target, True)
     resampling = gdal.GRA_NearestNeighbour
     
