@@ -4,6 +4,8 @@
 import re, os
 import gdal, osr
 import numpy as np
+import geoarray as ga
+
 
 # should be extended, for available options see:
 # http://www.gdal.org/formats_list.html
@@ -57,7 +59,9 @@ COLOR_DICT = {
     16 : "Cr",
 }
 
-COLOR_MODE_LIST = ("L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr")
+COLOR_MODE_LIST = (
+    "L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr"
+)
  
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -118,7 +122,7 @@ class _Transformer(object):
         except NotImplementedError:
             raise AttributeError("Projections not correct or given!")
         return yt, xt
-        
+
 def _fromFile(fname):
     """
     Parameters
@@ -149,32 +153,33 @@ def _getColorMode(fobj):
     return ''.join(sorted(set(tmp), key=tmp.index))
    
 def _fromDataset(fobj):
-
+    
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
     
-    return {
-        "data"       : fobj.ReadAsArray(),
-        "yorigin"    : geotrans[3],
-        "xorigin"    : geotrans[0],
-        "origin"     : "ul",
-        "fill_value" : rasterband.GetNoDataValue(),
-        "cellsize"   : (geotrans[5], geotrans[1]),
-        "proj"       : fobj.GetProjection(),
-        "mode"       : _getColorMode(fobj),
-        "fobj"       : fobj,
-    }
+    return ga._factory (
+        data       = fobj.ReadAsArray(),
+        yorigin    = geotrans[3],
+        xorigin    = geotrans[0],
+        origin     = "ul",
+        fill_value = rasterband.GetNoDataValue(),
+        cellsize   = (geotrans[5], geotrans[1]),
+        proj       = fobj.GetProjection(),
+        mode       = _getColorMode(fobj),
+        fobj       = fobj,
+    )
 
-def _memDataset(grid): #, projection):
+def _getDataset(grid):
 
-    """
-    Create GDAL memory dataset
-    """
+    if grid._fobj:
+        return grid._fobj
+    
     driver = gdal.GetDriverByName("MEM")
         
     out = driver.Create(
         "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
     )
+
     out.SetGeoTransform(
         (
             grid.bbox["xmin"], abs(grid.cellsize[1]), 0,
@@ -184,20 +189,114 @@ def _memDataset(grid): #, projection):
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
-        band.WriteArray(grid[n] if grid.ndim>2 else grid)
+        band.WriteArray(grid[n] if grid.ndim > 2 else grid)
             
-    # out.FlushCache()
     return out
 
-# def _adaptPrecision(data, dtype):
-#     try:
-#         tinfo = np.finfo(dtype)
-#     except ValueError:
-#         tinfo = np.iinfo(dtype)
+def _warp(grid, proj, max_error=0.125):
 
-    # if np.any(data < tinfo.min):
+    """
+    Arguments
+    ---------
+    proj       : dict   -> proj4 parameters of the target coordinate system
+    max_error  : float  -> Maximum error (in pixels) allowed in transformation
+                           approximation (default: value of gdalwarp)
+    
+    Return
+    ------
+    GeoArray
+    
+    Todo
+    ----
+    - Make the resampling strategy an optional argument
+    """
 
-def _toFile(fname, geoarray):
+    bbox = grid.bbox
+    trans = _Transformer(grid.proj, _Projection(proj))
+    uly, ulx = trans(bbox["ymax"], bbox["xmin"])
+    lry, lrx = trans(bbox["ymin"], bbox["xmax"])
+    ury, urx = trans(bbox["ymax"], bbox["xmax"])
+    lly, llx = trans(bbox["ymin"], bbox["xmin"])
+
+    # Calculate cellsize, i.e. same number of cells along the diagonal.
+    sdiag = np.sqrt(grid.nrows**2 + grid.ncols**2)
+    # tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
+    tdiag = np.sqrt((lly - ury)**2 + (llx - urx)**2)
+    tcellsize = tdiag/sdiag
+    
+    # number of cells
+    ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
+    nrows = int(abs(round((max(ury, lry) - min(uly, lly))/tcellsize)))
+    
+    target = ga.full (
+        shape      = (grid.nbands, nrows, ncols),
+        value      = grid.fill_value,
+        fill_value = grid.fill_value,
+        dtype      = grid.dtype,
+        yorigin    = max(uly, ury, lly, lry),
+        xorigin    = min(ulx, urx, llx, lrx),
+        origin     = "ul",
+        cellsize   = (-tcellsize, tcellsize),
+        proj       = proj
+    )
+
+    return _warpTo(grid, target, max_error)
+    
+def _warpTo(source, target, max_error=0.125):
+
+    """
+    Arguments
+    ---------
+    grid: GeoArray
+    
+    Return
+    ------
+    GeoArray
+    
+    Purpose
+    -------
+    Interpolates self to the target grid, including
+    coordinate transformations if necessary.
+    """
+
+    if target.ndim == 1:
+        target = target[None,:]
+    if target.ndim < source.ndim:
+        target = np.broadcast_to(
+            target, source.shape[:-len(target.shape)]+target.shape, subok=True
+        )
+
+    target = ga.array(target, dtype=source.dtype, copy=True)
+    target[target.mask] = source.fill_value
+    target.fill_value = source.fill_value
+        
+    out = _getDataset(target)
+    resampling = gdal.GRA_NearestNeighbour
+    
+    gdal.ReprojectImage(
+        _getDataset(source), out,
+        None, None,
+        resampling, 
+        0.0, max_error
+    )
+    return _fromDataset(out)
+
+def _toFile(geoarray, fname):
+    """
+    Arguments
+    ---------
+    fname : str  # file name
+    
+    Returns
+    -------
+    None
+    
+    Purpose
+    -------
+    Write GeoArray to file. The output dataset type is derived from
+    the file name extension. See _DRIVER_DICT for implemented formats.
+    """
+    
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
@@ -221,8 +320,6 @@ def _toFile(fname, geoarray):
         return np.dtype(TYPEMAP[otype])
 
         
-    tmpset = geoarray._fobj if geoarray._fobj else _memDataset(geoarray)
+    dataset = _getDataset(geoarray)
     driver = _getDriver(_fnameExtension(fname))
-    driver.CreateCopy(fname, tmpset, 0)
-    # _adaptPrecision(geoarray, np.float32)
-    # _adaptPrecision(geoarray, _getDatatype(driver))
+    driver.CreateCopy(fname, dataset, 0)

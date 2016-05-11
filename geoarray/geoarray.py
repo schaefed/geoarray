@@ -39,7 +39,7 @@ import gdal, osr
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
-from gdalfuncs import _fromFile, _toFile, _memDataset, _fromDataset, _Projection, _Transformer
+from gdalfuncs import _fromFile, _toFile, _getDataset, _fromDataset, _Projection, _Transformer, _warp, _warpTo
 
 try:
     xrange
@@ -421,7 +421,7 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
-    return _factory(**_fromFile(fname))
+    return _fromFile(fname)
 
 def _dtypeInfo(dtype):
     try:
@@ -633,23 +633,6 @@ class GeoArray(np.ma.MaskedArray):
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
             bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
         )
-
-    def tofile(self,fname):
-        """
-        Arguments
-        ---------
-        fname : str  # file name
-
-        Returns
-        -------
-        None
-
-        Purpose
-        -------
-        Write GeoArray to file. The output dataset type is derived from
-        the file name extension. See _DRIVER_DICT for implemented formats.
-        """
-        _toFile(fname, self)
 
     def coordinatesOf(self, y_idx, x_idx):
         """
@@ -876,25 +859,6 @@ class GeoArray(np.ma.MaskedArray):
     #     data will be done. In case of large shifts the physical integrety
     #     of the data might be disturbed!
 
-    #     Examples
-    #     --------
-    #     >>> import numpy as np
-    #     >>> import geoarray as ga
-
-    #     >>> x = np.arange(20).reshape((4,5))
-    #     >>> grid1 = ga.array(x,origin="ll",cellsize=25)
-    #     >>> grid1.bbox
-    #     {'xmin': 0, 'ymin': 0, 'ymax': 100, 'xmax': 125}
-
-    #     >>> grid2 = ga.array(x,yorigin=3,xorigin=1.24,origin="ll",cellsize=18.67)
-    #     >>> grid2.bbox
-    #     {'xmin': 1.24, 'ymin': 3, 'ymax': 77.68, 'xmax': 94.59}
-
-    #     >>> grid2.snap(grid1)
-    #     >>> grid2.bbox
-    #     {'xmin': 0.0, 'ymin': 0.0, 'ymax': 74.680000000000007, 'xmax': 93.350000000000009}
-    #     """
-
     #     diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
     #     dy, dx = abs(diff)%target.cellsize * np.sign(diff)
 
@@ -927,93 +891,6 @@ class GeoArray(np.ma.MaskedArray):
             (self.cellsize == grid.cellsize)
         )
 
-    def warp(self, proj, max_error=0.125):
-        """
-        Arguments
-        ---------
-        proj       : dict   -> proj4 parameters of the target coordinate system
-        max_error  : float  -> Maximum error (in pixels) allowed in transformation
-                               approximation (default: value of gdalwarp)
-        
-        Return
-        ------
-        GeoArray
-        
-        Todo
-        ----
-        - Make the resampling strategy an optional argument
-        """
-
-        # transform corners
-        bbox = self.bbox
-        trans = _Transformer(self.proj, _Projection(proj))
-        uly, ulx = trans(bbox["ymax"], bbox["xmin"])
-        lry, lrx = trans(bbox["ymin"], bbox["xmax"])
-        ury, urx = trans(bbox["ymax"], bbox["xmax"])
-        lly, llx = trans(bbox["ymin"], bbox["xmin"])
-
-        # Calculate cellsize, i.e. same number of cells along the diagonal.
-        sdiag = np.sqrt(self.nrows**2 + self.ncols**2)
-        # tdiag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
-        tdiag = np.sqrt((lly - ury)**2 + (llx - urx)**2)
-        tcellsize = tdiag/sdiag
-
-        # number of cells
-        ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
-        nrows = int(abs(round((max(ury, lry) - min(uly, lly))/tcellsize)))
-        
-        target = full(
-            shape      = (self.nbands, nrows, ncols),
-            value      = self.fill_value,
-            fill_value = self.fill_value,
-            dtype      = self.dtype,
-            yorigin    = max(uly, ury, lly, lry),
-            xorigin    = min(ulx, urx, llx, lrx),
-            origin     = "ul",
-            cellsize   = (-tcellsize, tcellsize),
-            proj       = proj
-        )
-
-        return self.warpTo(target, max_error)
-        
-    def warpTo(self, grid, max_error=0.125):
-        """
-        Arguments
-        ---------
-        grid: GeoArray
-
-        Return
-        ------
-        GeoArray
-
-        Purpose
-        -------
-        Interpolates self to the target grid, including
-        coordinate transformations if necessary.
-        """
-        if grid.ndim == 1:
-            grid = grid[None,:]
-        if grid.ndim < self.ndim:
-            grid = np.broadcast_to(
-                grid, self.shape[:-len(grid.shape)]+grid.shape, subok=True
-            )
-
-        grid = array(grid, dtype=self.dtype, copy=True)
-        grid[grid.mask] = self.fill_value
-        grid.fill_value = self.fill_value
-        
-        out = _memDataset(grid)
-        resampling = gdal.GRA_NearestNeighbour
-           
-        res = gdal.ReprojectImage(
-            _memDataset(self), out,
-            None, None,
-            resampling, 
-            0.0, max_error
-        )
-        
-        return _factory(**_fromDataset(out))
-        
     def __repr__(self):
         return super(self.__class__,self).__repr__()
 
@@ -1068,6 +945,9 @@ class GeoArray(np.ma.MaskedArray):
 
         return out
 
+    warp   = _warp
+    warpTo = _warpTo
+    tofile = _toFile
     
 if __name__ == "__main__":
 
