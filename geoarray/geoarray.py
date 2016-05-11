@@ -34,12 +34,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
-import re, os, sys
-import gdal, osr
+import os
 import numpy as np
 from math import floor, ceil
 from slicing import getSlices
-from gdalfuncs import _fromFile, _toFile, _getDataset, _fromDataset, _Projection, _Transformer, _warp, _warpTo
+from gdalfuncs import _fromFile, _toFile, _Projection, _Transformer, _warp, _warpTo
 
 try:
     xrange
@@ -421,7 +420,7 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
-    return _fromFile(fname)
+    return _factory(**_fromFile(fname))
 
 def _dtypeInfo(dtype):
     try:
@@ -945,8 +944,44 @@ class GeoArray(np.ma.MaskedArray):
 
         return out
 
-    warp   = _warp
-    warpTo = _warpTo
+    def warp(self, proj, max_error=0.125):
+        """
+        Arguments
+        ---------
+        proj       : dict   -> proj4 parameters of the target coordinate system
+        max_error  : float  -> Maximum error (in pixels) allowed in transformation
+                               approximation (default: value of gdalwarp)
+
+        Return
+        ------
+        GeoArray
+
+        Todo
+        ----
+        - Make the resampling strategy an optional argument
+        """
+
+        target = full(**_warp(self, proj, max_error))
+        return self.warpTo(target, max_error)
+
+    def warpTo(self, target, max_error=0.125):
+        """
+        Arguments
+        ---------
+        grid: GeoArray
+        
+        Return
+        ------
+        GeoArray
+        
+        Purpose
+        -------
+        Interpolates self to the target grid, including
+        coordinate transformations if necessary.
+        """
+
+        return _factory(**_warpTo(self, target, max_error))
+ 
     tofile = _toFile
     
 if __name__ == "__main__":

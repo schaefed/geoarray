@@ -4,7 +4,7 @@
 import re, os
 import gdal, osr
 import numpy as np
-import geoarray as ga
+# import geoarray as ga
 
 
 # should be extended, for available options see:
@@ -157,17 +157,17 @@ def _fromDataset(fobj):
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
     
-    return ga._factory (
-        data       = fobj.ReadAsArray(),
-        yorigin    = geotrans[3],
-        xorigin    = geotrans[0],
-        origin     = "ul",
-        fill_value = rasterband.GetNoDataValue(),
-        cellsize   = (geotrans[5], geotrans[1]),
-        proj       = fobj.GetProjection(),
-        mode       = _getColorMode(fobj),
-        fobj       = fobj,
-    )
+    return {
+        "data"       : fobj.ReadAsArray(),
+        "yorigin"    : geotrans[3],
+        "xorigin"    : geotrans[0],
+        "origin"     : "ul",
+        "fill_value" : rasterband.GetNoDataValue(),
+        "cellsize"   : (geotrans[5], geotrans[1]),
+        "proj"       : fobj.GetProjection(),
+        "mode"       : _getColorMode(fobj),
+        "fobj"       : fobj,
+    }
 
 def _getDataset(grid):
 
@@ -195,22 +195,6 @@ def _getDataset(grid):
 
 def _warp(grid, proj, max_error=0.125):
 
-    """
-    Arguments
-    ---------
-    proj       : dict   -> proj4 parameters of the target coordinate system
-    max_error  : float  -> Maximum error (in pixels) allowed in transformation
-                           approximation (default: value of gdalwarp)
-    
-    Return
-    ------
-    GeoArray
-    
-    Todo
-    ----
-    - Make the resampling strategy an optional argument
-    """
-
     bbox = grid.bbox
     trans = _Transformer(grid.proj, _Projection(proj))
     uly, ulx = trans(bbox["ymax"], bbox["xmin"])
@@ -228,36 +212,19 @@ def _warp(grid, proj, max_error=0.125):
     ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/tcellsize)))
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/tcellsize)))
     
-    target = ga.full (
-        shape      = (grid.nbands, nrows, ncols),
-        value      = grid.fill_value,
-        fill_value = grid.fill_value,
-        dtype      = grid.dtype,
-        yorigin    = max(uly, ury, lly, lry),
-        xorigin    = min(ulx, urx, llx, lrx),
-        origin     = "ul",
-        cellsize   = (-tcellsize, tcellsize),
-        proj       = proj
-    )
+    return {
+        "shape"      : (grid.nbands, nrows, ncols),
+        "value"      : grid.fill_value,
+        "fill_value" : grid.fill_value,
+        "dtype"      : grid.dtype,
+        "yorigin"    : max(uly, ury, lly, lry),
+        "xorigin"    : min(ulx, urx, llx, lrx),
+        "origin"     : "ul",
+        "cellsize"   : (-tcellsize, tcellsize),
+        "proj"       : proj
+    }
 
-    return _warpTo(grid, target, max_error)
-    
 def _warpTo(source, target, max_error=0.125):
-
-    """
-    Arguments
-    ---------
-    grid: GeoArray
-    
-    Return
-    ------
-    GeoArray
-    
-    Purpose
-    -------
-    Interpolates self to the target grid, including
-    coordinate transformations if necessary.
-    """
 
     if target.ndim == 1:
         target = target[None,:]
@@ -266,7 +233,7 @@ def _warpTo(source, target, max_error=0.125):
             target, source.shape[:-len(target.shape)]+target.shape, subok=True
         )
 
-    target = ga.array(target, dtype=source.dtype, copy=True)
+    target = np.array(target, dtype=source.dtype, copy=True, subok=True)
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
         
@@ -296,7 +263,7 @@ def _toFile(geoarray, fname):
     Write GeoArray to file. The output dataset type is derived from
     the file name extension. See _DRIVER_DICT for implemented formats.
     """
-    
+ 
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
