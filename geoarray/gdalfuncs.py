@@ -170,9 +170,9 @@ def _fromDataset(fobj):
         "fobj"       : fobj,
     }
 
-def _getDataset(grid):
-
-    if grid._fobj:
+def _getDataset(grid, mem=False):
+    
+    if grid._fobj and not mem:
         return grid._fobj
     
     driver = gdal.GetDriverByName("MEM")
@@ -234,12 +234,12 @@ def _warpTo(source, target, max_error=0.125):
         target = np.broadcast_to(
             target, source.shape[:-len(target.shape)]+target.shape, subok=True
         )
-
+        
     target = np.array(target, dtype=source.dtype, copy=True, subok=True)
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
         
-    out = _getDataset(target)
+    out = _getDataset(target, True)
     resampling = gdal.GRA_NearestNeighbour
     
     gdal.ReprojectImage(
