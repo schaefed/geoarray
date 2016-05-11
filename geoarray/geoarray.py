@@ -83,41 +83,8 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
     Purpose
     -------
     Create a GeoArray from data.
-
-    Examples
-    --------
-    >>> import geoarray as ga
-
-    >>> yorigin      = 63829.3
-    >>> xorigin      = 76256.6
-    >>> origin       = "ul"
-    >>> fill_value = -9
-    >>> cellsize     = 55
-    >>> data         = np.array([[-9 ,-9, -9, -9, -9, -9],
-    ...                          [-9 , 4,  4,  0,  2, -9],
-    ...                          [-9 , 0,  5,  8,  5, -9],
-    ...                          [-9 , 0,  0,  1,  0, -9],
-    ...                          [-9 , 2,  3,  3,  3, -9],
-    ...                          [-9 , 0,  1,  0,  6, -9],
-    ...                          [-9 , 0,  3,  3,  3, -9],
-    ...                          [-9 , 4,  6,  2,  4, -9],
-    ...                          [-9 , 2,  1,  0,  1, -9],
-    ...                          [-9 ,-9, -9, -9, -9, -9],])
-
-    >>> grid = ga.array(data,yorigin=yorigin,xorigin=xorigin,fill_value=fill_value,cellsize=cellsize)
-    >>> print(grid)
-    GeoArray([[-- -- -- -- -- --]
-              [-- 4 4 0 2 --]
-              [-- 0 5 8 5 --]
-              [-- 0 0 1 0 --]
-              [-- 2 3 3 3 --]
-              [-- 0 1 0 6 --]
-              [-- 0 3 3 3 --]
-              [-- 4 6 2 4 --]
-              [-- 2 1 0 1 --]
-              [-- -- -- -- -- --]])
-
     """
+
     if isinstance(data, GeoArray):
         dtype      = dtype or data.dtype
         yorigin    = yorigin or data.yorigin
@@ -130,13 +97,14 @@ def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
         
 
     return _factory(
-        np.array(data, dtype=dtype, copy=copy), 
-        yorigin or 0,
-        xorigin or 0,
-        origin or "ul",
-        fill_value,
-        cellsize or (1,1),
-        proj
+        data       = np.array(data, dtype=dtype, copy=copy), 
+        yorigin    = yorigin or 0,
+        xorigin    = xorigin or 0,
+        origin     = origin or "ul",
+        fill_value = fill_value,
+        cellsize   = cellsize or (1,1),
+        proj       = proj,
+        mode       = mode,
     )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -167,19 +135,17 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Purpose
     -------
     Return a new GeoArray of given shape and type, filled with zeros.
-
-    Examples
-    --------
-    >>> import geoarray as ga
-    >>> print(ga.zeros((4,4)))
-    GeoArray([[0.0 0.0 0.0 0.0]
-              [0.0 0.0 0.0 0.0]
-              [0.0 0.0 0.0 0.0]
-              [0.0 0.0 0.0 0.0]])
     """
+
     return _factory(
-        np.zeros(shape, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj
+        data       = np.zeros(shape, dtype),
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
+        fill_value = fill_value,
+        cellsize   = cellsize,
+        proj       = proj,
+        mode       = mode,
     )
 
 def zeros_like(a, *args, **kwargs):
@@ -203,42 +169,12 @@ def zeros_like(a, *args, **kwargs):
     -------
     Return a GeoArray of zeros with the same shape and type as a given array.
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geoarray as ga
-
-    >>> x = np.arange(6).reshape((3,2))
-    >>> x
-    array([[0, 1],
-           [2, 3],
-           [4, 5]])
-
-    >>> print(ga.zeros_like(x))
-    GeoArray([[0 0]
-              [0 0]
-              [0 0]])
-
-    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> print(y)
-    GeoArray([[0 1]
-              [2 3]
-              [4 5]])
-
-    >>> z = ga.zeros_like(y)
-    >>> print(z)
-    GeoArray([[0 0]
-              [0 0]
-              [0 0]])
-
-    >>> z.header == y.header
-    True
-
     """
+
     try:
-        return array(np.zeros_like(a, *args, **kwargs), **a.header)
+        return array(data = np.zeros_like(a, *args, **kwargs), **a.header)
     except AttributeError:
-        return array(np.zeros_like(a, *args, **kwargs))
+        return array(data = np.zeros_like(a, *args, **kwargs))
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -265,20 +201,17 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Purpose
     -------
     Return a new GeoArray of given shape and type, filled with ones.
-
-    Examples
-    --------
-    >>> import geoarray as ga
-    >>> print(ga.ones((4,4)))
-    GeoArray([[1.0 1.0 1.0 1.0]
-              [1.0 1.0 1.0 1.0]
-              [1.0 1.0 1.0 1.0]
-              [1.0 1.0 1.0 1.0]])
     """
 
     return _factory(
-        np.ones(shape,dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj
+        data       = np.ones(shape, dtype),
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
+        fill_value = fill_value,
+        cellsize   = cellsize,
+        proj       = proj,
+        mode       = mode,
     )
 
 def ones_like(a, *args, **kwargs):
@@ -301,43 +234,12 @@ def ones_like(a, *args, **kwargs):
     Purpose
     -------
     Return a GeoArray of ones with the same shape and type as a given array.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geoarray as ga
-
-    >>> x = np.arange(6).reshape((3,2))
-    >>> x
-    array([[0, 1],
-           [2, 3],
-           [4, 5]])
-
-    >>> print(ga.ones_like(x))
-    GeoArray([[1 1]
-              [1 1]
-              [1 1]])
-
-    >>> y = ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42)
-    >>> print(y)
-    GeoArray([[0 1]
-              [2 3]
-              [4 5]])
-
-    >>> z = ga.ones_like(y)
-    >>> print(z)
-    GeoArray([[1 1]
-              [1 1]
-              [1 1]])
-
-    >>> z.header == y.header
-    True
-
     """
+
     try:
-        return array(np.ones_like(a,*args,**kwargs),**a.header)
+        return array(data = np.ones_like(a,*args,**kwargs), **a.header)
     except AttributeError:
-        return array(np.ones_like(a,*args,**kwargs))
+        return array(data = np.ones_like(a,*args,**kwargs))
 
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -356,7 +258,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
     fill_value   : inf/float                     # fill or fill value
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj  : dict/None                     # proj4 projection parameters
+    proj         : dict/None                     # proj4 projection parameters
 
     Returns
     -------
@@ -365,19 +267,17 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     Purpose
     -------
     Return a new GeoArray of given shape and type, filled with fill_value.
-
-    Examples
-    --------
-    >>> import geoarray as ga
-    >>> print(ga.full((4,4), 42))
-    GeoArray([[42.0 42.0 42.0 42.0]
-              [42.0 42.0 42.0 42.0]
-              [42.0 42.0 42.0 42.0]
-              [42.0 42.0 42.0 42.0]])
     """
+
     return _factory(
-        np.full(shape, value, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj
+        data       = np.full(shape, value, dtype),
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
+        fill_value = fill_value,
+        cellsize   = cellsize,
+        proj       = proj,
+        mode       = mode,
     )
 
 def full_like(a, fill_value, *args, **kwargs):
@@ -401,43 +301,12 @@ def full_like(a, fill_value, *args, **kwargs):
     Purpose
     -------
     Return a full GeoArray with the same shape and type as a given array.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geoarray as ga
-
-    >>> x = np.arange(6).reshape((3,2))
-    >>> x
-    array([[0, 1],
-           [2, 3],
-           [4, 5]])
-
-    >>> print(ga.full_like(x,42))
-    GeoArray([[42 42]
-              [42 42]
-              [42 42]])
-
-    >>> y = (ga.array(x,yorigin=-5555,xorigin=4444,cellsize=42))
-    >>> print(y)
-    GeoArray([[0 1]
-              [2 3]
-              [4 5]])
-
-    >>> z = ga.full_like(y,42)
-    >>> print(z)
-    GeoArray([[42 42]
-              [42 42]
-              [42 42]])
-
-    >>> z.header == y.header
-    True
-
     """
+
     try:
-        return array(np.full_like(a,fill_value,*args,**kwargs),**a.header)
+        return array(data = np.full_like(a, fill_value, *args, **kwargs), **a.header)
     except AttributeError:
-        return array(np.full_like(a,fill_value,*args,**kwargs))
+        return array(data = np.full_like(a, fill_value, *args, **kwargs))
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=1, proj=None, mode=None):
@@ -466,8 +335,14 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
     """
 
     return _factory(
-        np.empty(shape, dtype), yorigin, xorigin,
-        origin, fill_value, cellsize, proj
+        data       = np.empty(shape, dtype),
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
+        fill_value = fill_value,
+        cellsize   = cellsize,
+        proj       = proj,
+        mode       = mode,
     )
 
 def empty_like(a, *args, **kwargs):
@@ -493,9 +368,9 @@ def empty_like(a, *args, **kwargs):
     """
 
     try:
-        return array(np.full_like(a,a.fill_value,*args,**kwargs),**a.header)
+        return array(data = np.full_like(a, a.fill_value, *args, **kwargs), **a.header)
     except AttributeError:
-        return array(np.full_like(a,-9999),*args,**kwargs)
+        return array(data = np.full_like(a, -9999), *args, **kwargs)
 
 
 def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=None, mode=None):
@@ -526,7 +401,7 @@ def _factory(data, yorigin, xorigin, origin, fill_value, cellsize, proj, fobj=No
         cellsize   = cellsize,
         proj       = _Projection(proj),
         fill_value = fill_value,
-        mask       = mask, 
+        mask       = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value,
         mode       = mode or "L",
         fobj       = fobj,
     )
@@ -580,93 +455,6 @@ class GeoArray(np.ma.MaskedArray):
        of the user to check whether a given operation makes sense within a geographic context
        (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
        Overriding the operators could fix this.
-    
-    --------
-    array : construct a GeoArray.
-    zeros : construct a GeoArray, each element of which is zero.
-    ones  : construct a GeoArray, each element of which is one.
-    empty : construct a GeoArray, each element of which is fill_value.
-    full  : construct a GeoArray, each element of which is a given value.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import geoarray as ga
-
-    >>> data = np.array([[-9 ,-9, -9, -9, -9],
-    ...                  [-9 , 0,  5,  8, -9],
-    ...                  [-9 , 0,  0,  1, -9],
-    ...                  [-9 , 2,  3,  3, -9],
-    ...                  [-9 , 0,  1,  0, -9],
-    ...                  [-9 , 0,  3,  3, -9],
-    ...                  [-9 ,-9, -9, -9, -9],])
-
-    >>> grid = ga.GeoArray(data,yorigin=63829.3,xorigin=76256.6,origin="ul",
-    ...                    fill_value=-9,cellsize=(55, 55))
-
-    >>> print(grid)
-    GeoArray([[-9 -9 -9 -9 -9]
-              [-9  0  5  8 -9]
-              [-9  0  0  1 -9]
-              [-9  2  3  3 -9]
-              [-9  0  1  0 -9]
-              [-9  0  3  3 -9]
-              [-9 -9 -9 -9 -9]])
-
-    # all numpy operators are supported
-    >>> print(grid + 5)
-    GeoArray([[-4 -4 -4 -4 -4]
-              [-4  5 10 13 -4]
-              [-4  5  5  6 -4]
-              [-4  7  8  8 -4]
-              [-4  5  6  5 -4]
-              [-4  5  8  8 -4]
-              [-4 -4 -4 -4 -4]])
-
-    # all numpy methods are supported
-    >>> print(np.exp(grid).astype(np.int64))
-    GeoArray([[0 0 0 0 0]
-              [0 1 148 2980 0]
-              [0 1 1 2 0]
-              [0 7 20 20 0]
-              [0 1 2 1 0]
-              [0 1 20 20 0]
-              [0 0 0 0 0]])
-
-    >>> np.sum(grid)
-    -151
-
-    # all np.ndarray methods are supported
-    >>> grid.max()
-    8
-
-    >>> grid.argsort()
-    array([ 0, 32, 31, 30, 29, 25, 24, 20, 19, 33, 15, 14, 34, 10,  1,  9,  2,
-            3,  4,  5, 23, 11, 21, 26, 12,  6, 13, 22, 16, 27, 28, 18, 17,  7,
-            8])
-
-    >>> print(grid.clip(0,3))
-    GeoArray([[0 0 0 0 0]
-              [0 0 3 3 0]
-              [0 0 0 1 0]
-              [0 2 3 3 0]
-              [0 0 1 0 0]
-              [0 0 3 3 0]
-              [0 0 0 0 0]])
-
-    # all np.ndarray attributes are supported
-    >>> print(grid.T)
-    GeoArray([[-9 -9 -9 -9 -9 -9 -9]
-              [-9  0  0  2  0  0 -9]
-              [-9  5  0  3  1  3 -9]
-              [-9  8  1  3  0  3 -9]
-              [-9 -9 -9 -9 -9 -9 -9]])
-
-    >>> grid.nbytes
-    280
-
-    >>> grid.shape
-    (7, 5)
     """
 
     def __new__(
@@ -674,6 +462,7 @@ class GeoArray(np.ma.MaskedArray):
             proj=None, fill_value=None, fobj=None, mode=None,
             *args, **kwargs
     ):
+        print "in __init__: {:}".format(fill_value)
         obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, *args, **kwargs)
 
         obj._optinfo["yorigin"]    = yorigin
@@ -704,15 +493,7 @@ class GeoArray(np.ma.MaskedArray):
         Return the basic definition of the grid. Together
         with a numpy.ndarray this information
         can be passed to any of the factory functions.
-
-        Examples
-        --------
-        >>> import geoarray as ga
-        >>> x = ga.full((4,4), 42, yorigin=100, xorigin=55, origin="ur", fill_value=-9999)
-        >>> x.header
-        {'origin': 'ur', 'fill_value': -9999.0, 'cellsize': (-1, -1), 'yorigin': 100, 'proj': {}, 'xorigin': 55}
         """
-
         return {
             "yorigin"     : self.yorigin,
             "xorigin"     : self.xorigin,
@@ -736,16 +517,8 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Return the grid's bounding box.
-
-        Examples
-        --------
-        >>> import geoarray as ga
-        >>> x = ga.full((4,4),42,yorigin=100,xorigin=55,origin="ur")
-        >>> x.bbox
-        {'xmin': 51, 'ymin': 96, 'ymax': 100, 'xmax': 55}
         """
         
-        # print self.cellsize
         yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
         xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
         return {
@@ -768,25 +541,6 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Return the number of bands in the dataset, i.e. the third last element
         in the shape tuple.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-
-        >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (2, 4, 5)
-        >>> grid.nbands
-        2
-
-        >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (3, 2, 4, 5)
-        >>> grid.nbands
-        2
         """
 
         try:
@@ -809,25 +563,6 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Return the number of rows in the dataset, i.e. the second last element
         in the shape tuple.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-
-        >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (2, 4, 5)
-        >>> grid.nrows
-        4
-
-        >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (3, 2, 4, 5)
-        >>> grid.nrows
-        4
         """
 
         try:
@@ -850,25 +585,6 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Return the number of columns in the dataset, i.e. the last element
         in the shape tuple.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-
-        >>> x = np.arange(40).reshape((2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (2, 4, 5)
-        >>> grid.ncols
-        5
-
-        >>> x = np.arange(120).reshape((3,2,4,5))
-        >>> grid = ga.array(x)
-        >>> grid.shape
-        (3, 2, 4, 5)
-        >>> grid.ncols
-        5
         """
 
         try:
@@ -885,10 +601,6 @@ class GeoArray(np.ma.MaskedArray):
         self._optinfo["fill_value"] = value
         self.mask = self == value
 
-    # def setFillValue(self, value):
-    #     self[self.data == self.fill_value] = value
-    #     grid.fill_value = value
-        
     def getOrigin(self, origin=None):
         """
         Arguments
@@ -1002,32 +714,6 @@ class GeoArray(np.ma.MaskedArray):
         -------
         Removes rows and columns from the margins of the
         grid if they contain only fill value.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-        >>> data = np.array([[-9 ,-9, -9, -9, -9],
-        ...                  [-9 , 4,  0,  2, -9],
-        ...                  [-9 , 3,  3,  3, -9],
-        ...                  [-9 , 1,  0,  6, -9],
-        ...                  [-9 , 1,  0,  1, -9],
-        ...                  [-9 ,-9, -9, -9, -9],])
-
-        >>> grid = ga.array(data,fill_value=-9)
-        >>> print(grid)
-        GeoArray([[-- -- -- -- --]
-                  [-- 4 0 2 --]
-                  [-- 3 3 3 --]
-                  [-- 1 0 6 --]
-                  [-- 1 0 1 --]
-                  [-- -- -- -- --]])
-
-        >>> print(grid.trim())
-        GeoArray([[4 0 2]
-                  [3 3 3]
-                  [1 0 6]
-                  [1 0 1]])
         """
 
         try:
@@ -1052,23 +738,6 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Remove the number of given cells from the respective margin of the grid.
-
-        Example
-        -------
-        >>> import geoarray as ga
-        >>> x = ga.array(np.arange(36).reshape(6,6))
-        >>> print(x)
-        GeoArray([[0 1 2 3 4 5]
-                  [6 7 8 9 10 11]
-                  [12 13 14 15 16 17]
-                  [18 19 20 21 22 23]
-                  [24 25 26 27 28 29]
-                  [30 31 32 33 34 35]])
-
-        >>> print(x.removeCells(top=1,left=2,bottom=2,right=1))
-        GeoArray([[8 9 10]
-                  [14 15 16]
-                  [20 21 22]])
         """
 
         top    = int(max(top,0))
@@ -1091,34 +760,6 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Shrinks the grid in a way that the given bbox is still within the grid domain.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-
-        >>> x = np.arange(20).reshape((4,5))
-        >>> grid = ga.array(x,origin="ll",cellsize=20)
-
-        >>> grid.bbox
-        {'xmin': 0, 'ymin': 0, 'ymax': 80, 'xmax': 100}
-        >>> grid.shape
-        (4, 5)
-        >>> print(grid)
-        GeoArray([[0 1 2 3 4]
-                  [5 6 7 8 9]
-                  [10 11 12 13 14]
-                  [15 16 17 18 19]])
-
-        >>> shrinked = grid.shrink(ymin=18,ymax=56,xmin=22,xmax=92)
-        >>> shrinked.bbox
-        {'xmin': 20, 'ymin': 0, 'ymax': 60, 'xmax': 100}
-        >>> shrinked.shape
-        (3, 4)
-        >>> print(shrinked)
-        GeoArray([[6 7 8 9]
-                  [11 12 13 14]
-                  [16 17 18 19]])
         """
 
         bbox = {
@@ -1149,27 +790,7 @@ class GeoArray(np.ma.MaskedArray):
         Purpose
         -------
         Add the number of given cells to the respective margin of the grid.
-
-        Example
-        -------
-        >>> import geoarray as ga
-
-        >>> grid = ga.full((4,5), 42, fill_value=-9)
-        >>> print(grid)
-        GeoArray([[42.0 42.0 42.0 42.0 42.0]
-                  [42.0 42.0 42.0 42.0 42.0]
-                  [42.0 42.0 42.0 42.0 42.0]
-                  [42.0 42.0 42.0 42.0 42.0]])
-
-        >>> print(grid.addCells(top=1,left=1,bottom=2))
-        GeoArray([[-- -- -- -- -- --]
-                  [-- 42.0 42.0 42.0 42.0 42.0]
-                  [-- 42.0 42.0 42.0 42.0 42.0]
-                  [-- 42.0 42.0 42.0 42.0 42.0]
-                  [-- 42.0 42.0 42.0 42.0 42.0]
-                  [-- -- -- -- -- --]
-                  [-- -- -- -- -- --]])
-       """
+        """
         
         top    = int(max(top,0))
         left   = int(max(left,0))
@@ -1211,37 +832,7 @@ class GeoArray(np.ma.MaskedArray):
         Enlarge the grid in a way that the given coordinates will
         be part of the grid domain. Added rows/cols are filled with
         the grid's fill value.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import geoarray as ga
-
-        >>> x = np.arange(20).reshape((4,5))
-        >>> grid = ga.array(x, yorigin=100, xorigin=200, origin="ll", cellsize=20, fill_value=-9)
-
-        >>> grid.bbox
-        {'xmin': 200, 'ymin': 100, 'ymax': 180, 'xmax': 300}
-        >>> grid.shape
-        (4, 5)
-        >>> print(grid)
-        GeoArray([[0 1 2 3 4]
-                  [5 6 7 8 9]
-                  [10 11 12 13 14]
-                  [15 16 17 18 19]])
-
-        >>> enlarged = grid.enlarge(xmin=130, xmax=200, ymin=66)
-        >>> enlarged.bbox
-        {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
-
-        >>> print(enlarged)
-        GeoArray([[-- -- -- -- 0 1 2 3 4]
-                  [-- -- -- -- 5 6 7 8 9]
-                  [-- -- -- -- 10 11 12 13 14]
-                  [-- -- -- -- 15 16 17 18 19]
-                  [-- -- -- -- -- -- -- -- --]
-                  [-- -- -- -- -- -- -- -- --]])
-       """
+        """
 
         bbox = {
             "ymin": ymin if ymin else self.bbox["ymin"],
