@@ -109,35 +109,6 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         mode       = mode,
     )
 
-def zeros_like(a, *args, **kwargs):
-    """
-    Arguments
-    ---------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes
-
-    Optional Arguments
-    ------------------
-    dtype       : str/np.dtype      # overrides the data stype of the result
-    order       : {"C","F","A","K"} # overrides the memory layout of the result
-    subok       : bool              # If True, then the newly created array will use the
-                                    # sub-class type of ‘a’, otherwise it will be a base-class
-                                    # array
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a GeoArray of zeros with the same shape and type as a given array.
-
-    """
-
-    try:
-        return array(data = np.zeros_like(a, *args, **kwargs), **a.header)
-    except AttributeError:
-        return array(data = np.zeros_like(a, *args, **kwargs))
-
-
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
          fill_value=None, cellsize=1, proj=None, mode=None):
     """
@@ -174,34 +145,6 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         proj       = proj,
         mode       = mode,
     )
-
-def ones_like(a, *args, **kwargs):
-    """
-    Arguments
-    ---------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes
-
-    Optional Arguments
-    -------------------
-    dtype       : str/np.dtype       # overrides the data stype of the result
-    order       : {"C","F","A","K"}  # overrides the memory layout of the result
-    subok       : bool               # If True, then the newly created array will use the
-                                     # sub-class type of ‘a’, otherwise it will be a base-class
-                                     # array
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a GeoArray of ones with the same shape and type as a given array.
-    """
-
-    try:
-        return array(data = np.ones_like(a,*args,**kwargs), **a.header)
-    except AttributeError:
-        return array(data = np.ones_like(a,*args,**kwargs))
-
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
          fill_value=None, cellsize=1, proj=None, mode=None):
@@ -241,34 +184,6 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         mode       = mode,
     )
 
-def full_like(a, fill_value, *args, **kwargs):
-    """
-    Arguments
-    ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes
-    fill_value  : scalar             # fill value
-
-    Optional Arguments
-    -------------------
-    dtype       : str/np.dtype      # overrides the data stype of the result
-    order       : {"C","F","A","K"} # overrides the memory layout of the result
-    subok       : bool              # If True, then the newly created array will use the
-                                    # sub-class type of ‘a’, otherwise it will be a base-class
-                                    # array
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a full GeoArray with the same shape and type as a given array.
-    """
-
-    try:
-        return array(data = np.full_like(a, fill_value, *args, **kwargs), **a.header)
-    except AttributeError:
-        return array(data = np.full_like(a, fill_value, *args, **kwargs))
-
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=1, proj=None, mode=None):
     """
@@ -306,33 +221,6 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         mode       = mode,
     )
 
-def empty_like(a, *args, **kwargs):
-    """
-    Arguments
-    ----------
-    a           : np.ndarray         # the array to derive the shape and dtype attributes
-
-    Optional Arguments
-    -------------------
-    dtype       : str/np.dtype       # overrides the data stype of the result
-    order       : {"C","F","A","K"}  # overrides the memory layout of the result
-    subok       : bool               # If True, then the newly created array will use the
-                                     # sub-class type of ‘a’, otherwise it will be a base-class
-                                     # array
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a empty GeoArray with the same shape and type as a given array.
-    """
-
-    try:
-        return array(data = np.full_like(a, a.fill_value, *args, **kwargs), **a.header)
-    except AttributeError:
-        return array(data = np.full_like(a, -9999), *args, **kwargs)
-
 def fromfile(fname):
     """
     Arguments
@@ -349,8 +237,3 @@ def fromfile(fname):
 
     """
     return GeoArray(**_fromFile(fname))
-
-   
-if __name__ == "__main__":
-
-    pass

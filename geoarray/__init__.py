@@ -7,10 +7,6 @@ from geoarray import (
     ones,
     full,
     empty,
-    zeros_like,
-    ones_like,
-    full_like,
-    empty_like,
     fromfile,
 )
 
