@@ -92,7 +92,7 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["xorigin"]    = xorigin
         obj._optinfo["origin"]     = origin
         obj._optinfo["cellsize"]   = cellsize
-        obj._optinfo["proj"]       = proj
+        obj._optinfo["proj"]       = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value if fill_value else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
