@@ -146,7 +146,6 @@ def _getColorMode(fobj):
     for i in xrange(fobj.RasterCount):
         color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
         tmp.append(COLOR_DICT.get(color, "L"))
-
     return ''.join(sorted(set(tmp), key=tmp.index))
    
 def _fromDataset(fobj):
@@ -162,8 +161,8 @@ def _fromDataset(fobj):
         "fill_value" : rasterband.GetNoDataValue(),
         "cellsize"   : (geotrans[5], geotrans[1]),
         "proj"       : fobj.GetProjection(),
+        "mode"       : _getColorMode(fobj),
         "fobj"       : fobj,
-        "mode"       : _getColorMode(fobj)
     }
 
 def _memDataset(grid): #, projection):
@@ -190,11 +189,11 @@ def _memDataset(grid): #, projection):
     # out.FlushCache()
     return out
 
-def _adaptPrecision(data, dtype):
-    try:
-        tinfo = np.finfo(dtype)
-    except ValueError:
-        tinfo = np.iinfo(dtype)
+# def _adaptPrecision(data, dtype):
+#     try:
+#         tinfo = np.finfo(dtype)
+#     except ValueError:
+#         tinfo = np.iinfo(dtype)
 
     # if np.any(data < tinfo.min):
 

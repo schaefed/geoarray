@@ -121,6 +121,8 @@ class TestGeoArray(unittest.TestCase):
            
     def test_getitem(self):        
         for base in self.grids:
+            # simplifies the tests...
+            base = base[0] if base.ndim > 2 else base
             grid = base.copy()
             slices = (
                 base < 3,
@@ -166,6 +168,8 @@ class TestGeoArray(unittest.TestCase):
                 
     def test_setitem(self):
         for base in self.grids:
+            # simplifies the tests...
+            base = base[0] if base.ndim > 2 else base
             slices = (
                 np.arange(12,20).reshape(1,-1),
                 base.data < 3,
@@ -175,11 +179,12 @@ class TestGeoArray(unittest.TestCase):
                 Ellipsis
             )
             value = 11
-            grid = copy.deepcopy(base)
+            # grid = copy.deepcopy(base)
             for slc in slices:
                 grid = copy.deepcopy(base)
                 grid[slc] = value
                 self.assertTrue(np.all(grid[slc] == value))
+                       
 
     def test_bbox(self):
         grids = (
@@ -202,6 +207,7 @@ class TestGeoArray(unittest.TestCase):
         for infile in FILES:
             outfile = os.path.join(TMPPATH, os.path.split(infile)[1])
             base = ga.fromfile(infile)
+            
             base.tofile(outfile)
             checkgrid = ga.fromfile(outfile)
 
@@ -209,7 +215,7 @@ class TestGeoArray(unittest.TestCase):
                 base._fobj.GetDriver().GetMetadata_Dict(),
                 checkgrid._fobj.GetDriver().GetMetadata_Dict()
             )
-           
+            
     def test_tofile(self):
         outfiles = (os.path.join(TMPPATH, "file{:}".format(ext)) for ext in ga._DRIVER_DICT)
         
@@ -217,6 +223,9 @@ class TestGeoArray(unittest.TestCase):
             for outfile in outfiles:
                 if outfile.endswith(".png"):
                     # data type conversion is done and precision lost
+                    continue
+                if outfile.endswith(".asc") and base.nbands > 1:
+                    self.assertRaises(RuntimeError)
                     continue
                 base.tofile(outfile)
                 checkgrid = ga.fromfile(outfile)
@@ -231,7 +240,6 @@ class TestGeoArray(unittest.TestCase):
                 
     def test_copy(self):
         for base in self.grids[1:]:
-
             deep_copy = copy.deepcopy(base)        
             self.assertDictEqual(base.header, deep_copy.header)
             self.assertNotEqual(id(base),id(deep_copy))
@@ -286,8 +294,9 @@ class TestGeoArrayFuncs(unittest.TestCase):
         
     def test_addCells(self):
         for base in self.grids:
+             
             padgrid = base.addCells(1, 1, 1, 1)
-            self.assertTrue(np.sum(padgrid[1:-1,1:-1] == base))
+            self.assertTrue(np.sum(padgrid[...,1:-1,1:-1] == base))
 
             padgrid = base.addCells(0, 0, 0, 0)
             self.assertTrue(np.sum(padgrid[:] == base))
@@ -298,6 +307,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
             padgrid = base.addCells(-1000, -4.55, 0, -6765.222)
             self.assertTrue(np.all(padgrid == base))
 
+            
     def test_enlarge(self):
         for base in self.grids:
             bbox = base.bbox
@@ -336,7 +346,7 @@ class TestGeoArrayFuncs(unittest.TestCase):
     def test_removeCells(self):
         for base in self.grids:
             rmgrid = base.removeCells(1,1,1,1)
-            self.assertEqual(np.sum(rmgrid - base[1:-1,1:-1]) , 0)
+            self.assertEqual(np.sum(rmgrid - base[...,1:-1,1:-1]) , 0)
             rmgrid = base.removeCells(0,0,0,0)
             self.assertEqual(np.sum(rmgrid - base) , 0)
 

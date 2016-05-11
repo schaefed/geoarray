@@ -423,6 +423,14 @@ def fromfile(fname):
     """
     return _factory(**_fromFile(fname))
 
+def _dtypeInfo(dtype):
+    try:
+        tinfo = np.finfo(dtype)
+    except ValueError:
+        tinfo = np.iinfo(dtype)
+
+    return {"min": tinfo.min, "max": tinfo.max}
+
 
 class GeoArray(np.ma.MaskedArray):
     """
@@ -462,7 +470,6 @@ class GeoArray(np.ma.MaskedArray):
             proj=None, fill_value=None, fobj=None, mode=None,
             *args, **kwargs
     ):
-        print "in __init__: {:}".format(fill_value)
         obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, *args, **kwargs)
 
         obj._optinfo["yorigin"]    = yorigin
@@ -470,10 +477,9 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["origin"]     = origin
         obj._optinfo["cellsize"]   = cellsize
         obj._optinfo["proj"]       = proj
-        obj._optinfo["fill_value"] = fill_value
+        obj._optinfo["fill_value"] = fill_value if fill_value else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
-        
         
         return obj
 
@@ -598,6 +604,7 @@ class GeoArray(np.ma.MaskedArray):
         
     @fill_value.setter
     def fill_value(self, value):
+        
         self._optinfo["fill_value"] = value
         self.mask = self == value
 
@@ -1028,8 +1035,14 @@ class GeoArray(np.ma.MaskedArray):
 
     def __deepcopy__(self, memo):
         return array(
-            self.data.copy(), self.dtype, self.yorigin, self.xorigin, self.origin,
-            self.fill_value, self.cellsize, self.proj.getWkt()
+            data       = self.data.copy(),
+            dtype      = self.dtype,
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            origin     = self.origin,
+            fill_value = self.fill_value,
+            cellsize   = self.cellsize,
+            proj       = self.proj.getWkt()
         )
         
     def __getitem__(self, slc):
