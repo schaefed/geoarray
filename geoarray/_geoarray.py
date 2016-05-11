@@ -46,8 +46,9 @@ class GeoArray(np.ma.MaskedArray):
     fill_value   : scalar
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
-    proj_params  : _Projection           # Projection Instance holding projection information
-
+    proj         : _Projection           # Projection Instance holding projection information
+    mode         : string
+    
     Purpose
     -------
     This numpy.ndarray subclass adds geographic context to data.
