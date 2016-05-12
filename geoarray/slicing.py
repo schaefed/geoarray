@@ -10,7 +10,57 @@ try:
 except NameError:
     xrange = range
 
+def _handleEllipsis(slices, shape):
+    out = []
+    found = False
+    for i, slc in enumerate(slices):
+        if slc is Ellipsis and not found:
+            # The first ellipsis 'fills' the slice
+            for _ in xrange((len(shape)-len(slices))+1):
+                out.append(Ellipsis)
+            found = True
+            continue
+        out.append(slc)
+    return tuple(out)
+
+def _handleArrays(slices):
+    out = []
+    for slc in slices:
+        if isinstance(slc, np.ndarray):
+            if slc.dtype is np.dtype("bool"):
+                out.extend(list(np.nonzero(slc)))
+            else:
+                out.append(slc.ravel())
+        else:
+            out.append(slc)
+    return tuple(out)
+
+def _handleNone(slices, shape):
+
+    outslices = list(slices)
+    outshape = list(shape)
     
+    for i, slc in enumerate(slices):
+        if slc is None:
+            outslices[i] = 1
+            outshape.insert(i,1)
+        
+    return tuple(outslices), tuple(outshape)
+
+def getSlices(slices, shape):
+    
+    slices = _tupelizeSlices(slices)
+    slices = _handleArrays(slices)
+    slices = _handleEllipsis(slices, shape)
+    slices, shape = _handleNone(slices, shape)
+
+    if len(slices) > len(shape):
+        raise IndexError("too many indices")
+
+    slices = slices + (Ellipsis,)*len(shape)
+    return tuple(Slice(slc, shp) for slc, shp in zip(slices, shape))
+   
+     
 class Slice(object):
     def __init__(self, slc, shape):
         self._slc = slc
@@ -103,157 +153,5 @@ def _tupelizeSlices(slices):
 
     return slices
 
-def _handleEllipsis(slices, shape):
-    out = []
-    found = False
-    for i, slc in enumerate(slices):
-        if slc is Ellipsis and not found:
-            # The first ellipsis 'fills' the slice
-            for _ in xrange((len(shape)-len(slices))+1):
-                out.append(Ellipsis)
-            found = True
-            continue
-        out.append(slc)
-    return tuple(out)
-
-def _handleArrays(slices):
-    out = []
-    for slc in slices:
-        if isinstance(slc, np.ndarray):
-            if slc.dtype is np.dtype("bool"):
-                out.extend(list(np.nonzero(slc)))
-            else:
-                out.append(slc.ravel())
-        else:
-            out.append(slc)
-    return tuple(out)
-
-def _handleNone(slices, shape):
-
-    outslices = list(slices)
-    outshape = list(shape)
-    
-    for i, slc in enumerate(slices):
-        if slc is None:
-            outslices[i] = 0
-            outshape.insert(i,1)
-        
-    return tuple(outslices), tuple(outshape)
-         
-
-def getSlices(slices, shape):
-    
-    slices = _tupelizeSlices(slices)
-    slices = _handleArrays(slices)
-    slices = _handleEllipsis(slices, shape)
-    slices, shape = _handleNone(slices, shape)
-
-    if len(slices) > len(shape):
-        raise IndexError("too many indices")
-
-    slices = slices + (Ellipsis,)*len(shape)
-    return tuple(Slice(slc, shp) for slc, shp in zip(slices, shape))
-   
-  
-TESTCASES = (
-    Ellipsis,
-    0,
-    12,
-    -1,
-    -2,
-    -10,
-    range(4),
-    range(4,10),
-    range(-10,-1),
-    range(4,100,25),
-    range(100,10,-2),
-    np.arange(4),
-    np.arange(4,10),
-    np.arange(-10,-1),
-    np.arange(4,100,25),
-    np.arange(100,10,-2),
-    slice(3,None,None),
-    slice(-3,None,None),
-    slice(3,-1,None),
-    slice(5,44,5),
-    slice(None,-1,None),
-    #slice(-65,-1,-4),
-    slice(100,10,-2),
-    #(5,3,1,3,88,54,-55), 
-)
-        
-class TestSlice(unittest.TestCase):
-    def __init__(self,*args,**kwargs):
-        super(TestSlice,self).__init__(*args,**kwargs)
-        self.length = 120
-        self.array = np.arange(self.length)
-
-    def test_start(self):
-        results = (
-            # Ellipsis
-            0,
-            # Integers
-            0, 12, 119, 118, 110,
-            # range
-            0, 4, 110, 4, 100,
-            # np.arange
-            0, 4, 110, 4, 100,
-            # slices
-            3, 117, 3, 5, 0, 100,
-            # list
-            1,
-        )
-        
-        for date,expected in zip(TESTCASES,results):
-            slc = Slice(date,self.length)
-            self.assertEqual(slc.start,expected)
-
-    def test_stop(self):
-        results = (
-            # Ellipsis
-            119,
-            # Integers
-            0, 12, 119, 118, 110,
-            # range
-            3, 9, 118, 79, 12,
-            # np.arange
-            3, 9, 118, 79, 12,
-            # slices
-            119, 119, 118, 40, 118, 12,
-            # # list
-            88
-        )
-
-        for date,expected in zip(TESTCASES,results):
-            slc = Slice(date,self.length)
-            self.assertEqual(slc.stop,expected)
  
-            
-    def test_step(self):
-        results = (
-            # Ellipsis
-            1,
-            # Integers
-            None, None, None, None, None,
-            # range
-            1, 1, 1, 25, -2,
-            # np.arange
-            1, 1, 1, 25, -2,
-            # slices
-            1, 1, 1, 5, 1, -2,
-            # list
-            1,
-        )
-        for date,expected in zip(TESTCASES, results):
-            slc = Slice(date, self.length)
-            self.assertEqual(slc.step, expected)
-
-    def test_handleEllipsis(self):
-        dates = (
-            ((0,Ellipsis,1,Ellipsis,Ellipsis), (1,2,6,6)),
-        )
-  
-if __name__== "__main__":
-
-    unittest.main()
-    
+       

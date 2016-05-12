@@ -15,7 +15,7 @@ This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster func
 import os
 import numpy as np
 from math import floor, ceil
-from slicing import getSlices
+from slicing import Slices
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
 # Possible positions of the grid origin
@@ -546,7 +546,7 @@ class GeoArray(np.ma.MaskedArray):
         
     def __getitem__(self, slc):
         out = super(GeoArray, self).__getitem__(slc)
-        slices = getSlices(slc, self.shape)
+        slices = Slices(slc, self.shape)
         try:
             yorigin, xorigin = self.getOrigin("ul")
             if self.origin[0] == "u":
