@@ -16,6 +16,7 @@ import os
 import numpy as np
 from math import floor, ceil
 from slicing import Slices
+from _meta import GeoArrayMeta
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
 # Possible positions of the grid origin
@@ -65,6 +66,10 @@ class GeoArray(np.ma.MaskedArray):
     Overriding the operators could fix this.
     """
 
+    # a usefull _Projection class implementing a meaningful comparison
+    # of projections is needed first
+    # __metaclass__ = GeoArrayMeta
+    
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
             proj=None, fill_value=None, fobj=None, mode=None, # mask=None,

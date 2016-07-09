@@ -73,7 +73,6 @@ class _Projection(object):
 
         if isinstance(arg, int):
             self._srs.ImportFromProj4("+init=epsg:{:}".format(arg))
-            
         elif isinstance(arg, dict):
             params =  "+{:}".format(" +".join(
                 ["=".join(map(str, pp)) for pp in arg.items()])
@@ -146,7 +145,6 @@ def _fromFile(fname):
     raise IOError("Could not open file: {:}".format(fname))
 
 def _getColorMode(fobj):
-
     tmp = []
     for i in xrange(fobj.RasterCount):
         color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
@@ -155,6 +153,7 @@ def _getColorMode(fobj):
    
 def _fromDataset(fobj):
     
+    # check the bands have different datatypes and raise
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
     
@@ -282,9 +281,9 @@ def _toFile(geoarray, fname):
         if fext in _DRIVER_DICT:
             driver = gdal.GetDriverByName(_DRIVER_DICT[fext])
             metadata = driver.GetMetadata_Dict()
-            if "YES" == metadata.get("DCAP_CREATE",metadata.get("DCAP_CREATECOPY")):
+            if "YES" == metadata.get("DCAP_CREATE", metadata.get("DCAP_CREATECOPY")):
                 return driver
-            raise IOError("Datatype canot be written")
+            raise IOError("Datatype cannot be written")
         raise IOError("No driver found for filename extension '{:}'".format(fext))
 
     def _getDatatype(driver):
