@@ -68,39 +68,36 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 class _Projection(object):
     def __init__(self, arg):
-
+        """
+        Arguments:
+        arg can be:
+        1. int  : EPSG code
+        2. dict : pyproj compatable dictionary
+        3. str  : WKT string
+        4. _Projection
+        """
         self._srs = osr.SpatialReference()
-
-        if isinstance(arg, int):
-            self._srs.ImportFromProj4("+init=epsg:{:}".format(arg))
-        elif isinstance(arg, dict):
+        self._import(arg)
+        
+    def _import(self, value):
+        if isinstance(value, _Projection):
+            self._srs = value._srs
+        elif isinstance(value, int):
+            self._srs.ImportFromProj4("+init=epsg:{:}".format(value))
+        elif isinstance(value, dict):
             params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in arg.items()])
+                ["=".join(map(str, pp)) for pp in value.items()])
             )
             self._srs.ImportFromProj4(params)
-        elif isinstance(arg, str):
-            self._srs.ImportFromWkt(arg)
-        elif isinstance(arg, _Projection):
-            self._srs.ImportFromWkt(arg.getWkt())
+        elif isinstance(value, str):
+            self._srs.ImportFromWkt(value)
             
-    def getProj4(self):
-        tmp = self._srs.ExportToProj4()
-        proj = [x for x in re.split("[+= ]", tmp) if x]
-        return dict(zip(proj[0::2], proj[1::2]))
-        
-    def getWkt(self):
+    def __get__(self, obj, type=None):
         return self._srs.ExportToWkt()
 
-    def getReference(self):
-        if str(self._srs):
-            return self._srs
-
-    def __str__(self):
-        return str(self.getProj4())
-
-    def __repr__(self):
-        return str(self.getProj4())
-    
+    def __set__(self, obj, val):
+        self._import(val)
+   
 class _Transformer(object):
     def __init__(self, sproj, tproj):
         """
@@ -185,7 +182,7 @@ def _getDataset(grid, mem=False):
             grid.bbox["xmin"], abs(grid.cellsize[1]), 0,
             grid.bbox["ymax"], 0, abs(grid.cellsize[0])*-1)
     )
-    out.SetProjection(grid.proj.getWkt())
+    out.SetProjection(grid.proj)
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))

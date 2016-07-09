@@ -128,7 +128,7 @@ class GeoArray(np.ma.MaskedArray):
             "origin"      : self.origin,
             "fill_value"  : self.fill_value,
             "cellsize"    : self.cellsize,
-            "proj"        : self.proj.getProj4(),
+            "proj"        : self.proj.__get__(self),
             "mode"        : self.mode,
         }
 
@@ -422,7 +422,7 @@ class GeoArray(np.ma.MaskedArray):
             origin      = "ul",
             fill_value  = self.fill_value,
             cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
-            proj = self.proj,
+            proj        = self.proj,
         )
         
         # out = full(
