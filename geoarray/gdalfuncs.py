@@ -93,7 +93,8 @@ class _Projection(object):
             self._srs.ImportFromWkt(value)
             
     def __get__(self, obj, type=None):
-        return self._srs.ExportToWkt()
+        out = self._srs.ExportToWkt()
+        return out or None
 
     def __set__(self, obj, val):
         self._import(val)
