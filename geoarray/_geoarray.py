@@ -98,7 +98,7 @@ class GeoArray(np.ma.MaskedArray):
         obj._optinfo["xorigin"]    = xorigin
         obj._optinfo["origin"]     = origin
         obj._optinfo["cellsize"]   = cellsize
-        obj._optinfo["proj"]       = _Projection(proj)
+        obj._optinfo["_proj"]      = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value if fill_value else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
@@ -128,7 +128,7 @@ class GeoArray(np.ma.MaskedArray):
             "origin"      : self.origin,
             "fill_value"  : self.fill_value,
             "cellsize"    : self.cellsize,
-            "proj"        : self.proj.__get__(self),
+            "proj"        : self.proj,
             "mode"        : self.mode,
         }
 
@@ -222,12 +222,19 @@ class GeoArray(np.ma.MaskedArray):
             return 0
 
     @property
+    def proj(self):
+        return self._proj.get()
+
+    @proj.setter
+    def proj(self, value):
+        self.__proj.set(value)
+        
+    @property
     def fill_value(self):
         return self._optinfo["fill_value"]
         
     @fill_value.setter
     def fill_value(self, value):
-        
         self._optinfo["fill_value"] = value
         self.mask = self == value
 
@@ -526,7 +533,8 @@ class GeoArray(np.ma.MaskedArray):
         )
 
     def __repr__(self):
-        return super(self.__class__,self).__repr__()
+        return str(self)
+        # return super(self.__class__,self).__repr__()
 
     def __str__(self):
         out = super(self.__class__,self).__str__()

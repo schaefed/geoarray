@@ -92,11 +92,11 @@ class _Projection(object):
         elif isinstance(value, str):
             self._srs.ImportFromWkt(value)
             
-    def __get__(self, obj, type=None):
+    def get(self):
         out = self._srs.ExportToWkt()
         return out or None
 
-    def __set__(self, obj, val):
+    def set(self, val):
         self._import(val)
    
 class _Transformer(object):
