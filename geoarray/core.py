@@ -14,6 +14,7 @@ This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster func
 
 import os
 import warnings
+import copy
 import numpy as np
 from numpy.ma import MaskedArray
 from math import floor, ceil
@@ -117,7 +118,7 @@ class GeoArray(MaskedArray):
                 cs if origin[1] == "l" else -cs
             )
             
-        obj = np.ma.MaskedArray.__new__(cls, data, fill_value=fill_value, mask=mask, *args, **kwargs)
+        obj = MaskedArray.__new__(cls, data, fill_value=fill_value, mask=mask, *args, **kwargs)
 
         obj._optinfo["yorigin"]    = yorigin
         obj._optinfo["xorigin"]    = xorigin
@@ -580,7 +581,14 @@ class GeoArray(MaskedArray):
 
     def __deepcopy__(self, memo):
         return GeoArray(
-            data = self.data.copy(), **self._optinfo
+            data       = self.data.copy(),
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            origin     = self.origin,
+            cellsize   = self.cellsize,
+            proj       = copy.deepcopy(self.proj),
+            fill_value = self.fill_value,
+            mode       = self.mode,
         )
         
     def __getitem__(self, slc):
