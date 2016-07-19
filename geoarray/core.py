@@ -33,7 +33,7 @@ _METHODS = (
     "__add__",
 )
 
-def checkProjection(func):
+def _checkProjection(func):
     def inner(*args):
         tmp = set()
         for a in args:
@@ -45,8 +45,28 @@ def checkProjection(func):
             warnings.warn("Incompatible map projections!", RuntimeWarning)
         return func(*args)
     return inner
-
    
+def _basicMatch(self, grid):
+    """
+    Arguments
+    ---------
+    grid : GeoArray
+
+    Returns
+    -------
+    bool
+
+    Purpose
+    -------
+    Check if two grids are broadcastable.
+    """
+    
+    return (
+        (self.proj == grid.proj) and
+        (self.getOrigin() == grid.getOrigin(self.origin)) and
+        (self.cellsize == grid.cellsize)
+    )
+
 def _dtypeInfo(dtype):
     try:
         tinfo = np.finfo(dtype)
@@ -59,7 +79,7 @@ def _dtypeInfo(dtype):
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
         for key in _METHODS:
-            attrs[key] = checkProjection(getattr(MaskedArray, key))
+            attrs[key] = _checkProjection(getattr(MaskedArray, key))
         return type(name, bases, attrs)
 
 class GeoArray(MaskedArray):
@@ -458,17 +478,6 @@ class GeoArray(MaskedArray):
             proj        = self.proj,
         )
         
-        # out = full(
-        #     shape       = shape,
-        #     value       = self.fill_value,
-        #     dtype       = self.dtype,
-        #     yorigin     = yorigin - top*abs(self.cellsize[0]),
-        #     xorigin     = xorigin - left*abs(self.cellsize[1]),
-        #     origin      = "ul",
-        #     fill_value  = self.fill_value,
-        #     cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
-        #     proj = self.proj,
-        # )
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
         out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
@@ -537,27 +546,6 @@ class GeoArray(MaskedArray):
 
     #     self.xorigin -= dx
     #     self.yorigin -= dy
-
-    def basicMatch(self, grid):
-        """
-        Arguments
-        ---------
-        grid : GeoArray
-
-        Returns
-        -------
-        bool
-
-        Purpose
-        -------
-        Check if two grids are broadcastable.
-        """
-        
-        return (
-            (self.proj == grid.proj) and
-            (self.getOrigin() == grid.getOrigin(self.origin)) and
-            (self.cellsize == grid.cellsize)
-        )
 
     def __repr__(self):
         return str(self)
