@@ -42,11 +42,11 @@ class Test(unittest.TestCase):
             grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
             grid2.xorigin -= 1
             grid3.cellsize = (grid3.cellsize[0] + 1, grid3.cellsize[0] + 1)
-            grid4.proj = {"invalid":"key"}
+            grid4.proj = {"invalid":"key"} # sets proj to False
             self.assertTrue(base.basicMatch(grid1))
             self.assertFalse(base.basicMatch(grid2))
             self.assertFalse(base.basicMatch(grid3))
-            self.assertFalse(base.basicMatch(grid4))
+            self.assertTrue(base.basicMatch(grid4))
  
     def test_addCells(self):
         for base in self.grids:

@@ -252,7 +252,7 @@ class GeoArray(MaskedArray):
 
     @proj.setter
     def proj(self, value):
-        self.__proj.set(value)
+        self._proj.set(value)
         
     @property
     def fill_value(self):
@@ -551,6 +551,7 @@ class GeoArray(MaskedArray):
         -------
         Check if two grids are broadcastable.
         """
+        
         return (
             (self.proj == grid.proj) and
             (self.getOrigin() == grid.getOrigin(self.origin)) and
