@@ -13,10 +13,11 @@ This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster func
 """
 
 import os
+import warnings
 import numpy as np
+from numpy.ma import MaskedArray
 from math import floor, ceil
 from slicing import Slices
-from _meta import GeoArrayMeta
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
 # Possible positions of the grid origin
@@ -27,6 +28,24 @@ ORIGINS = (
     "lr",    #     "lr" -> lower right
 )
 
+_METHODS = (
+    "__add__",
+)
+
+def checkProjection(func):
+    def inner(*args):
+        tmp = set()
+        for a in args:
+            try:
+                tmp.add(a.proj)
+            except AttributeError:
+                pass
+        if len(tmp) > 1:
+            warnings.warn("Incompatible map projections!", RuntimeWarning)
+        return func(*args)
+    return inner
+
+   
 def _dtypeInfo(dtype):
     try:
         tinfo = np.finfo(dtype)
@@ -36,7 +55,13 @@ def _dtypeInfo(dtype):
     return {"min": tinfo.min, "max": tinfo.max}
 
 
-class GeoArray(np.ma.MaskedArray):
+class GeoArrayMeta(object):
+    def __new__(cls, name, bases, attrs):
+        for key in _METHODS:
+            attrs[key] = checkProjection(getattr(MaskedArray, key))
+        return type(name, bases, attrs)
+
+class GeoArray(MaskedArray):
     """
     Arguments
     ----------

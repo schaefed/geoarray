@@ -8,12 +8,12 @@ David Schaefer
 
 Purpose
 -------
-This module provides initializer function for _geoarray.GeoArray
+This module provides initializer function for core.GeoArray
 """
 
 import numpy as np
 from gdalfuncs import _fromFile
-from _geoarray import GeoArray
+from core import GeoArray
 
 def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
           fill_value=None, cellsize=None, proj=None, mode=None, copy=False):
