@@ -548,11 +548,10 @@ class GeoArray(MaskedArray):
     #     self.yorigin -= dy
 
     def __repr__(self):
-        return str(self)
-        # return super(self.__class__,self).__repr__()
+        return super(self.__class__, self).__repr__()
 
     def __str__(self):
-        out = super(self.__class__,self).__str__()
+        out = super(self.__class__, self).__str__()
         name = self.__class__.__name__
         pad = " "*(len(name)+1)
         return "{:}({:})".format(
