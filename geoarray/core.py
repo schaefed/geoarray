@@ -18,7 +18,6 @@ import copy
 import numpy as np
 from numpy.ma import MaskedArray
 from math import floor, ceil
-from slicing import Slices
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
 # Possible positions of the grid origin
@@ -75,6 +74,19 @@ def _dtypeInfo(dtype):
 
     return {"min": tinfo.min, "max": tinfo.max}
 
+def _broadcastTo(array, shape, dims):
+    """
+    array, shape: see numpy.broadcast_to
+    dims: tuple, the dimensions the array dimensions should end up in the output array
+    """
+    assert len(array.shape) == len(dims)
+    assert len(set(dims)) == len(dims) # no duplicates
+    # handle negative indices
+    dims = [d if d >= 0 else d+len(shape) for d in dims]
+    # bring array to the desired dimensionality
+    slc = [slice(None, None, None) if i in dims else None for i in range(len(shape))]
+    return np.broadcast_to(array[slc], shape)
+
 
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
@@ -112,8 +124,6 @@ class GeoArray(MaskedArray):
     Overriding the operators could fix this.
     """
 
-    # a usefull _Projection class implementing a meaningful comparison
-    # of projections is needed first
     # __metaclass__ = GeoArrayMeta
     
     def __new__(
@@ -122,15 +132,18 @@ class GeoArray(MaskedArray):
             *args, **kwargs
     ):
         # if mask is None:
+        # The mask will always be calculated, even if its already present or not needed at all...
         mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
 
         if origin not in ORIGINS:
             raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
         try:
+            # Does this work for grids crossing the equator??
             origin = "".join(
                 ("l" if cellsize[0] > 0 else "u",
                  "l" if cellsize[1] > 0 else "r")
             )
+        # iterable of len < 2, numeric value
         except (IndexError, TypeError):
             cs = abs(cellsize)
             cellsize = (
@@ -577,27 +590,35 @@ class GeoArray(MaskedArray):
             fill_value = self.fill_value,
             mode       = self.mode,
         )
-        
-    def __getitem__(self, slc):
-        out = super(GeoArray, self).__getitem__(slc)
-        slices = Slices(slc, self.shape)
-        try:
-            yorigin, xorigin = self.getOrigin("ul")
-            if self.origin[0] == "u":
-                if slices[-2].start:
-                    out.yorigin = yorigin + slices[-2].start * self.cellsize[0]
-            else:
-                if slices[-2].stop:
-                    out.yorigin = yorigin - (slices[-2].stop + 1) * self.cellsize[0]
-            if self.origin[1] == "l":
-                if slices[-1].start:
-                    out.xorigin = xorigin + slices[-1].start * self.cellsize[1]
-            else:
-                if slices[-1].stop:
-                    out.xorigin = xorigin - (slices[-1].stop + 1) * self.cellsize[1]
 
-        except AttributeError: # out is scalar
-            pass
+    @property
+    def coordinates(self):
+        """
+        Returns the coordinates of the instance
+        """
+        bbox = self.bbox
+        cellsize = map(abs, self.cellsize)
+        return (np.arange(bbox["ymin"], bbox["ymax"], cellsize[0]), np.arange(bbox["xmin"], bbox["xmax"], cellsize[1]))
+    
+    def __getitem__(self, slc):
+
+        out = super(GeoArray, self).__getitem__(slc)
+
+        # May throw IndexErrors or TypeErrors
+        if self.shape[-2:] != out.shape[-2:]:
+            x, y = np.meshgrid(*self.coordinates[::-1])
+            bbox = []
+            for arr, idx in zip((y, x), (-2, -1)):
+                arr = _broadcastTo(arr, self.shape, (-2, -1))
+                bbox.append((arr.max(), arr.min()))
+
+            try:
+                out.yorigin = max(bbox[0]) if out.origin[0] == "u" else min(bbox[0]) 
+                out.xorigin = max(bbox[1]) if out.origin[1] == "r" else min(bbox[1]) 
+                # cellsize adaption is missing
+            except AttributeError:
+                # out is scalar
+                pass
 
         return out
 
