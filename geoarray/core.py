@@ -597,25 +597,36 @@ class GeoArray(MaskedArray):
         Returns the coordinates of the instance
         """
         bbox = self.bbox
-        cellsize = map(abs, self.cellsize)
-        return (np.arange(bbox["ymin"], bbox["ymax"], cellsize[0]), np.arange(bbox["xmin"], bbox["xmax"], cellsize[1]))
-    
+        cellsize = self.cellsize
+        yorigin, xorigin = self.getOrigin()
+
+        return (
+            np.arange(yorigin, yorigin + cellsize[0]*self.nrows, cellsize[0]),
+            np.arange(xorigin, xorigin + cellsize[1]*self.ncols, cellsize[1])
+        )
+   
     def __getitem__(self, slc):
 
+        # I guess it is cleaner if attributes are not changed in place
+        # and the GeoArray will be construcetd from values instead
         out = super(GeoArray, self).__getitem__(slc)
 
-        # May throw IndexErrors or TypeErrors
-        if self.shape[-2:] != out.shape[-2:]:
+        if out.size and (self.shape[-2:] != out.shape[-2:]):
             x, y = np.meshgrid(*self.coordinates[::-1])
             bbox = []
             for arr, idx in zip((y, x), (-2, -1)):
-                arr = _broadcastTo(arr, self.shape, (-2, -1))
-                bbox.append((arr.max(), arr.min()))
-
+                arr = _broadcastTo(arr, self.shape, (-2, -1))[slc]
+                bbox.append((arr.min(), arr.max()))
             try:
-                out.yorigin = max(bbox[0]) if out.origin[0] == "u" else min(bbox[0]) 
-                out.xorigin = max(bbox[1]) if out.origin[1] == "r" else min(bbox[1]) 
-                # cellsize adaption is missing
+                ystart, ystop = sorted(bbox[0], reverse=out.origin[0]=="l")
+                xstart, xstop = sorted(bbox[1], reverse=out.origin[1]=="r")
+                out.yorigin = ystart
+                out.xorigin = xstart
+                # not tested yet
+                out.cellsize = (
+                    (ystop-ystart)/out.nrows if out.nrows else 0,
+                    (xstop-xstart)/out.ncols if out.ncols else 0,
+                )
             except AttributeError:
                 # out is scalar
                 pass
