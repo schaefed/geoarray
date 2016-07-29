@@ -71,6 +71,34 @@ class Test(unittest.TestCase):
                 except AttributeError: # __getitem__ returned a scalar
                     pass 
         
+    def test_getitemCellsize(self):
+
+        grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ul")
+        print grid[[0,10,5]].cellsize
+
+        self.assertTupleEqual(grid[3:4].cellsize, (-10, 10))
+        self.assertTupleEqual(grid[0::2, 0::4].cellsize, (-20, 40))
+        self.assertTupleEqual(grid[0::3, 0::5].cellsize, (-30, 50))
+        self.assertTupleEqual(grid[0::1, 0::7].cellsize, (-10, 70))
+        # needs to be extended...
+        self.assertTupleEqual(grid[[1,2,5]].cellsize, (-20, 10))
+        self.assertTupleEqual(grid[[1,2,4,10]].cellsize, (-30, 10))
+
+        # self.assertTupleEqual(grid[[0,10,5]].cellsize, (-25, 10))
+
+        grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10,origin="ll")
+        self.assertTupleEqual(grid[3:4].cellsize, (10, 10))
+        self.assertTupleEqual(grid[0::2, 0::4].cellsize, (20, 40))
+        self.assertTupleEqual(grid[0::3, 0::5].cellsize, (30, 50))
+        self.assertTupleEqual(grid[0::1, 0::7].cellsize, (10, 70))
+
+        grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="lr")
+        self.assertTupleEqual(grid[3:4].cellsize, (10, -10))
+ 
+        grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ur")
+        self.assertTupleEqual(grid[3:4].cellsize, (-10, -10))
+        
+        
     def test_getitemOrigin(self):
         grids = (
             ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
