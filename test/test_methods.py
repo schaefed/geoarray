@@ -196,7 +196,7 @@ class Test(unittest.TestCase):
             return
 
         for fname, base in zip(FILES, self.grids):
-            if base.proj.getReference():
+            if base.proj:
                 for epsg in codes:
                     # gdalwarp flips the warped imagel
                     proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)

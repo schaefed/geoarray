@@ -111,7 +111,7 @@ class _Transformer(object):
         Encapsulates the osr Cordinate Transformation functionality
         """
         self._tx = osr.CoordinateTransformation(
-            sproj.getReference(), tproj.getReference()
+            sproj._srs, tproj._srs
         )
 
     def __call__(self, y, x):
@@ -195,7 +195,7 @@ def _warp(grid, proj, max_error=0.125):
 
     bbox = grid.bbox
     proj = _Projection(proj)
-    trans = _Transformer(grid.proj, proj)
+    trans = _Transformer(grid._proj, proj)
     uly, ulx = trans(bbox["ymax"], bbox["xmin"])
     lry, lrx = trans(bbox["ymin"], bbox["xmax"])
     ury, urx = trans(bbox["ymax"], bbox["xmax"])
