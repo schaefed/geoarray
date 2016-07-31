@@ -74,7 +74,6 @@ class Test(unittest.TestCase):
     def test_getitemCellsize(self):
 
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ul")
-        print grid[[0,10,5]].cellsize
 
         self.assertTupleEqual(grid[3:4].cellsize, (-10, 10))
         self.assertTupleEqual(grid[0::2, 0::4].cellsize, (-20, 40))
@@ -84,7 +83,7 @@ class Test(unittest.TestCase):
         self.assertTupleEqual(grid[[1,2,5]].cellsize, (-20, 10))
         self.assertTupleEqual(grid[[1,2,4,10]].cellsize, (-30, 10))
 
-        # self.assertTupleEqual(grid[[0,10,5]].cellsize, (-25, 10))
+        self.assertTupleEqual(grid[[0,10,5]].cellsize, (-25, 10))
 
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10,origin="ll")
         self.assertTupleEqual(grid[3:4].cellsize, (10, 10))
@@ -97,7 +96,6 @@ class Test(unittest.TestCase):
  
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ur")
         self.assertTupleEqual(grid[3:4].cellsize, (-10, -10))
-        
         
     def test_getitemOrigin(self):
         grids = (

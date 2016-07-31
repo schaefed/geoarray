@@ -615,21 +615,19 @@ class GeoArray(MaskedArray):
             x, y = np.meshgrid(*self.coordinates[::-1])
             bbox = []
             for arr, idx in zip((y, x), (-2, -1)):
-                arr = _broadcastTo(arr, self.shape, (-2, -1))[slc]
-                # bbox.append((arr.min(), arr.max()+self.cellsize[idx]))
-                # tmp = np.unique(arr)
-                # print tmp
-                # bbox.append((tmp[0], tmp[-1]))
-                bbox.append((arr.min(), arr.max()))
+                arr = np.array(
+                    _broadcastTo(arr, self.shape, (-2, -1))[slc],
+                    copy=False, ndmin=abs(idx)
+                )
+                s = [0] * arr.ndim
+                s[idx] = slice(None, None, None)
+                bbox.append((arr[s][0], arr[s][-1]))
             try:
                 ystart, ystop = sorted(bbox[0], reverse=out.origin[0]=="u")
                 xstart, xstop = sorted(bbox[1], reverse=out.origin[1]=="r")
                 out.yorigin = ystart
                 out.xorigin = xstart
-                # not tested yet
                 out.cellsize = (
-                    # float(ystop-ystart+self.cellsize[-2])/out.nrows if out.nrows else 0,
-                    # float(xstop-xstart+self.cellsize[-1])/out.ncols if out.ncols else 0,
                     float(ystop-ystart)/(out.nrows-1) if out.nrows > 1 else self.cellsize[-2],
                     float(xstop-xstart)/(out.ncols-1) if out.ncols > 1 else self.cellsize[-1],
                 )
