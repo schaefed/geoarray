@@ -134,7 +134,8 @@ class GeoArray(MaskedArray):
         # if mask is None:
         # The mask will always be calculated, even if its already present or not needed at all...
         mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
-
+        
+        
         if origin not in ORIGINS:
             raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
         try:
@@ -158,14 +159,16 @@ class GeoArray(MaskedArray):
         obj._optinfo["origin"]     = origin
         obj._optinfo["cellsize"]   = cellsize
         obj._optinfo["_proj"]      = _Projection(proj)
-        obj._optinfo["fill_value"] = fill_value if fill_value else _dtypeInfo(obj.dtype)["min"]
+        obj._optinfo["fill_value"] = fill_value if fill_value is not None else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
         
         return obj
 
-    @property
-    def header(self):
+    # @property
+    def header(self,
+               yorigin=None, xorigin=None, origin=None,
+               fill_value=None, cellsize=None, proj=None, mode=None):
         """
         Arguments
         ---------
@@ -181,15 +184,26 @@ class GeoArray(MaskedArray):
         with a numpy.ndarray this information
         can be passed to any of the factory functions.
         """
+
         return {
-            "yorigin"     : self.yorigin,
-            "xorigin"     : self.xorigin,
-            "origin"      : self.origin,
-            "fill_value"  : self.fill_value,
-            "cellsize"    : self.cellsize,
-            "proj"        : self.proj,
-            "mode"        : self.mode,
+            "yorigin"     : yorigin     if yorigin    is not None else self.yorigin,
+            "xorigin"     : xorigin     if xorigin    is not None else self.xorigin,
+            "origin"      : origin      if origin     is not None else self.origin,
+            "fill_value"  : fill_value  if fill_value is not None else self.fill_value,
+            "cellsize"    : cellsize    if cellsize   is not None else self.cellsize,
+            "proj"        : proj        if proj       is not None else self.proj,
+            "mode"        : mode        if mode       is not None else self.mode,
         }
+
+        # return {
+        #     "yorigin"     : reduce(None, [yorigin, self.yorigin])[0]
+        #     "xorigin"     : reduce(None, [xorigin, self.xorigin])[0]
+        #     "origin"      : reduce(None, [origin, self.origin])[0]
+        #     "fill_value"  : reduce(None, [fill_value, self.fill_value])[0]
+        #     "cellsize"    : reduce(None, [cellsize, self.cellsize])[0]
+        #     "proj"        : reduce(None, [proj, self.proj])[0]
+        #     "mode"        : reduce(None, [mode, self.mode])[0]
+        # }
 
     @property
     def bbox(self):
@@ -392,7 +406,7 @@ class GeoArray(MaskedArray):
         Purpose
         -------
         Removes rows and columns from the margins of the
-        grid if they contain only fill value.
+        grid if they contain only fill values.
         """
 
         try:
