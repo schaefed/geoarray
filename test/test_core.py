@@ -55,11 +55,12 @@ class Test(unittest.TestCase):
             base = base[0] if base.ndim > 2 else base
             grid = base.copy()
             slices = (
-                base < 3,
-                base == 10,
-                np.where(base>6),
-                (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
+                 base < 3,
+                 base == 10,
+                 np.where(base>6),
+                 (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
             )
+            
             idx = np.arange(12,20)
             self.assertTrue(np.all(grid[idx].data == base[ga.array(idx)].data))
             for i,s in enumerate(slices):

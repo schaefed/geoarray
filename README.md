@@ -6,7 +6,7 @@ functions to facilitate the work with array-like data in a geographically explic
 
 #Requirements
 - GDAL >= 1.11
-- numpy >= 1.8
+- numpy >= 1.11
 
 #General
 This module tries to imitate the general numpy functionality as closly as possible.

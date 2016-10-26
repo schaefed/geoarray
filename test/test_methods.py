@@ -87,11 +87,12 @@ class Test(unittest.TestCase):
     def test_shrink(self):
         for base in self.grids:
             bbox = base.bbox
+            cellsize = map(abs, base.cellsize)
             newbbox = {
-                "ymin" : bbox["ymin"] +  .7 * base.cellsize[0],
-                "xmin" : bbox["xmin"] + 2.5 * base.cellsize[1],
-                "ymax" : bbox["ymax"] - 6.1 * base.cellsize[0],
-                "xmax" : bbox["xmax"] -  .1 * base.cellsize[1],
+                "ymin" : bbox["ymin"] +  .7 * cellsize[0],
+                "xmin" : bbox["xmin"] + 2.5 * cellsize[1],
+                "ymax" : bbox["ymax"] - 6.1 * cellsize[0],
+                "xmax" : bbox["xmax"] -  .1 * cellsize[1],
             }
             shrgrid = base.shrink(**newbbox)        
             self.assertEqual(shrgrid.nrows, base.nrows - 0 - 6)

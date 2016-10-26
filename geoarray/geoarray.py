@@ -14,9 +14,20 @@ This module provides initializer function for core.GeoArray
 import numpy as np
 from gdalfuncs import _fromFile
 from core import GeoArray
+from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
-def array(data, dtype=None, yorigin=None, xorigin=None, origin=None,
-          fill_value=None, cellsize=None, proj=None, mode=None, copy=False):
+def array(data,            # type: np.ndarray       
+          dtype=None,      # type: Optional[Union[AnyStr, np.dtype]]
+          yorigin=None,    # type: Optional[float]
+          xorigin=None,    # type: Optional[float]
+          origin=None,     # type: Optional[AnyStr]
+          fill_value=None, # type: Optional[float]
+          cellsize=None,   # type: Optional[Union[float, Tuple[float, float]]]
+          proj=None,       # type: Mapping[AnyStr, Union[AnyStr, float]]
+          mode=None,       # type: AnyStr
+          copy=False       # type: bool
+):
+    # type: (...) -> GeoArray
     """
     Arguments
     ---------

@@ -440,7 +440,6 @@ class GeoArray(MaskedArray):
         -------
         Shrinks the grid in a way that the given bbox is still within the grid domain.
         """
-
         bbox = {
             "ymin": ymin if ymin else self.bbox["ymin"],
             "ymax": ymax if ymax else self.bbox["ymax"],
@@ -448,12 +447,12 @@ class GeoArray(MaskedArray):
             "xmax": xmax if xmax else self.bbox["xmax"],
             }
 
-        cellsize = map(float, self.cellsize)
+        cellsize = map(lambda x : float(abs(x)), self.cellsize)
         top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
         left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
         bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
         right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
-
+        
         return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
     def addCells(self, top=0, left=0, bottom=0, right=0):
@@ -607,36 +606,47 @@ class GeoArray(MaskedArray):
    
     def __getitem__(self, slc):
 
-        # I guess it is cleaner if attributes are not changed in place
-        # and the GeoArray will be construcetd from values instead
-        out = super(GeoArray, self).__getitem__(slc)
+        data = super(GeoArray, self).__getitem__(slc)
 
-        if out.size and (self.shape[-2:] != out.shape[-2:]):
-            x, y = np.meshgrid(*self.coordinates[::-1])
-            bbox = []
-            for arr, idx in zip((y, x), (-2, -1)):
-                arr = np.array(
-                    _broadcastTo(arr, self.shape, (-2, -1))[slc],
-                    copy=False, ndmin=abs(idx)
-                )
-                s = [0] * arr.ndim
-                s[idx] = slice(None, None, None)
-                bbox.append((arr[s][0], arr[s][-1]))
-            try:
-                ystart, ystop = sorted(bbox[0], reverse=out.origin[0]=="u")
-                xstart, xstop = sorted(bbox[1], reverse=out.origin[1]=="r")
-                out.yorigin = ystart
-                out.xorigin = xstart
-                out.cellsize = (
-                    float(ystop-ystart)/(out.nrows-1) if out.nrows > 1 else self.cellsize[-2],
-                    float(xstop-xstart)/(out.ncols-1) if out.ncols > 1 else self.cellsize[-1],
-                )
-            except AttributeError:
-                # out is scalar
-                pass
+        # empty array
+        if data.size == 0:
+            return data
 
-        return out
+        x, y = np.meshgrid(*self.coordinates[::-1])
+        bbox = []
+        for arr, idx in zip((y, x), (-2, -1)):
+            arr = np.array(
+                _broadcastTo(arr, self.shape, (-2, -1))[slc],
+                copy=False, ndmin=abs(idx)
+            )
+            s = [0] * arr.ndim
+            s[idx] = slice(None, None, None)
+            bbox.append((arr[s][0], arr[s][-1]))
 
+        try:
+            # scalar
+            ystart, ystop = sorted(bbox[0], reverse=data.origin[0]=="u")
+            xstart, xstop = sorted(bbox[1], reverse=data.origin[1]=="r")
+        except AttributeError:
+            return data
+
+        nrows, ncols = ((1, 1) + data.shape)[-2:]
+        cellsize = (
+            float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
+            float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
+        )
+
+        return GeoArray(
+            data       = data.data,
+            yorigin    = ystart,
+            xorigin    = xstart,
+            origin     = self.origin,
+            cellsize   = cellsize,
+            proj       = self.proj,
+            fill_value = self.fill_value,
+            mode       = self.mode
+        )
+        
     def warp(self, proj, max_error=0.125):
         """
         Arguments
@@ -677,7 +687,7 @@ class GeoArray(MaskedArray):
  
     tofile = _toFile
     
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    import doctest
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+#     import doctest
+#     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
