@@ -16,16 +16,16 @@ from gdalfuncs import _fromFile
 from core import GeoArray
 from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
-def array(data,            # type: np.ndarray       
-          dtype=None,      # type: Optional[Union[AnyStr, np.dtype]]
-          yorigin=None,    # type: Optional[float]
-          xorigin=None,    # type: Optional[float]
-          origin=None,     # type: Optional[AnyStr]
-          fill_value=None, # type: Optional[float]
-          cellsize=None,   # type: Optional[Union[float, Tuple[float, float]]]
-          proj=None,       # type: Mapping[AnyStr, Union[AnyStr, float]]
-          mode=None,       # type: AnyStr
-          copy=False       # type: bool
+def array(data,              # type: Union[np.ndarray, GeoArray]       
+          dtype      = None, # type: Optional[Union[AnyStr, np.dtype]]
+          yorigin    = None, # type: Optional[float]
+          xorigin    = None, # type: Optional[float]
+          origin     = None, # type: Optional[AnyStr]
+          fill_value = None, # type: Optional[float]
+          cellsize   = None, # type: Optional[Union[float, Tuple[float, float]]]
+          proj       = None, # type: Mapping[AnyStr, Union[AnyStr, float]]
+          mode       = None, # type: AnyStr
+          copy       = False # type: bool
 ):
     # type: (...) -> GeoArray
     """
@@ -58,6 +58,7 @@ def array(data,            # type: np.ndarray
     """
 
     if isinstance(data, GeoArray):
+        data       = data.data
         dtype      = dtype or data.dtype
         yorigin    = yorigin or data.yorigin
         xorigin    = xorigin or data.xorigin

@@ -183,7 +183,8 @@ def _getDataset(grid, mem=False):
             grid.bbox["xmin"], abs(grid.cellsize[1]), 0,
             grid.bbox["ymax"], 0, abs(grid.cellsize[0])*-1)
     )
-    out.SetProjection(grid.proj)
+    if grid.proj:
+        out.SetProjection(grid.proj)
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
