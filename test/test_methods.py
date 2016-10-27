@@ -64,13 +64,14 @@ class Test(unittest.TestCase):
             self.assertTrue(np.all(padgrid == base))
 
     def test_enlarge(self):
-        for base in self.grids:
+        for base in self.grids[1:]:
             bbox = base.bbox
+            cellsize = map(abs, base.cellsize)
             newbbox = {
-                "ymin" : bbox["ymin"] -  .7 * base.cellsize[0],
-                "xmin" : bbox["xmin"] - 2.5 * base.cellsize[1],
-                "ymax" : bbox["ymax"] + 6.1 * base.cellsize[0],
-                "xmax" : bbox["xmax"] +  .1 * base.cellsize[1]
+                "ymin" : bbox["ymin"] -  .7 * cellsize[0],
+                "xmin" : bbox["xmin"] - 2.5 * cellsize[1],
+                "ymax" : bbox["ymax"] + 6.1 * cellsize[0],
+                "xmax" : bbox["xmax"] +  .1 * cellsize[1]
             }
             enlrgrid = base.enlarge(**newbbox)
             self.assertEqual(enlrgrid.nrows, base.nrows + 1 + 7)

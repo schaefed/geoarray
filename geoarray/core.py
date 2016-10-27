@@ -165,10 +165,8 @@ class GeoArray(MaskedArray):
         
         return obj
 
-    # @property
-    def header(self,
-               yorigin=None, xorigin=None, origin=None,
-               fill_value=None, cellsize=None, proj=None, mode=None):
+    @property
+    def header(self):
         """
         Arguments
         ---------
@@ -186,24 +184,14 @@ class GeoArray(MaskedArray):
         """
 
         return {
-            "yorigin"     : yorigin     if yorigin    is not None else self.yorigin,
-            "xorigin"     : xorigin     if xorigin    is not None else self.xorigin,
-            "origin"      : origin      if origin     is not None else self.origin,
-            "fill_value"  : fill_value  if fill_value is not None else self.fill_value,
-            "cellsize"    : cellsize    if cellsize   is not None else self.cellsize,
-            "proj"        : proj        if proj       is not None else self.proj,
-            "mode"        : mode        if mode       is not None else self.mode,
+            "yorigin"     : self.yorigin,
+            "xorigin"     : self.xorigin,
+            "origin"      : self.origin,
+            "fill_value"  : self.fill_value,
+            "cellsize"    : self.cellsize,
+            "proj"        : self.proj,
+            "mode"        : self.mode,
         }
-
-        # return {
-        #     "yorigin"     : reduce(None, [yorigin, self.yorigin])[0]
-        #     "xorigin"     : reduce(None, [xorigin, self.xorigin])[0]
-        #     "origin"      : reduce(None, [origin, self.origin])[0]
-        #     "fill_value"  : reduce(None, [fill_value, self.fill_value])[0]
-        #     "cellsize"    : reduce(None, [cellsize, self.cellsize])[0]
-        #     "proj"        : reduce(None, [proj, self.proj])[0]
-        #     "mode"        : reduce(None, [mode, self.mode])[0]
-        # }
 
     @property
     def bbox(self):
@@ -308,6 +296,7 @@ class GeoArray(MaskedArray):
         
     @fill_value.setter
     def fill_value(self, value):
+        # change fill_value and update mask
         self._optinfo["fill_value"] = value
         self.mask = self == value
 
@@ -393,6 +382,22 @@ class GeoArray(MaskedArray):
 
         return yidx, xidx
 
+    def fill(self, fill_value):
+        """
+        works similar to MaskedArray.filled(value) but also changes the fill_value
+        and returns an GeoArray instance
+        """
+        return GeoArray(
+            data       = self.filled(fill_value),
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            origin     = self.origin,
+            cellsize   = self.cellsize,
+            proj       = self.proj,
+            fill_value = fill_value,
+            mode       = self.mode
+        )
+
     def trim(self):
         """
         Arguments
@@ -455,10 +460,10 @@ class GeoArray(MaskedArray):
         Shrinks the grid in a way that the given bbox is still within the grid domain.
         """
         bbox = {
-            "ymin": ymin if ymin else self.bbox["ymin"],
-            "ymax": ymax if ymax else self.bbox["ymax"],
-            "xmin": xmin if xmin else self.bbox["xmin"],
-            "xmax": xmax if xmax else self.bbox["xmax"],
+            "ymin": ymin if ymin is not None else self.bbox["ymin"],
+            "ymax": ymax if ymax is not None else self.bbox["ymax"],
+            "xmin": xmin if xmin is not None else self.bbox["xmin"],
+            "xmax": xmax if xmax is not None else self.bbox["xmax"],
             }
 
         cellsize = map(lambda x : float(abs(x)), self.cellsize)
@@ -496,17 +501,18 @@ class GeoArray(MaskedArray):
         out = GeoArray(
             data        = np.full(shape, self.fill_value, self.dtype),
             dtype       = self.dtype,
-            yorigin     = yorigin - top*abs(self.cellsize[0]),
+            yorigin     = yorigin + top*abs(self.cellsize[0]),
             xorigin     = xorigin - left*abs(self.cellsize[1]),
             origin      = "ul",
             fill_value  = self.fill_value,
             cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
             proj        = self.proj,
+            mode        = self.mode,
         )
         
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
-        out[Ellipsis, top:top+self.nrows, left:left+self.ncols] = self
+        out[..., top:top+self.nrows, left:left+self.ncols] = self
         return out
 
     def enlarge(self, ymin=None, ymax=None, xmin=None, xmax=None):
@@ -527,19 +533,36 @@ class GeoArray(MaskedArray):
         """
 
         bbox = {
-            "ymin": ymin if ymin else self.bbox["ymin"],
-            "ymax": ymax if ymax else self.bbox["ymax"],
-            "xmin": xmin if xmin else self.bbox["xmin"],
-            "xmax": xmax if xmax else self.bbox["xmax"],
+            "ymin": ymin if ymin is not None else self.bbox["ymin"],
+            "ymax": ymax if ymax is not None else self.bbox["ymax"],
+            "xmin": xmin if xmin is not None else self.bbox["xmin"],
+            "xmax": xmax if xmax is not None else self.bbox["xmax"],
             }
 
-        cellsize = map(float, self.cellsize)
+        cellsize = map(lambda x : float(abs(x)), self.cellsize)
+
         top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize[0])
         left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize[1])
         bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize[0])
         right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize[1])
-
+        
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
+
+        # bbox = {
+        #     "ymin": ymin if ymin else self.bbox["ymin"],
+        #     "ymax": ymax if ymax else self.bbox["ymax"],
+        #     "xmin": xmin if xmin else self.bbox["xmin"],
+        #     "xmax": xmax if xmax else self.bbox["xmax"],
+        #     }
+
+        # cellsize = map(lambda x : float(abs(x)), self.cellsize)
+        # top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
+        # left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
+        # bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
+        # right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
+        
+        # return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
+
 
     # def snap(self,target):
     #     """
