@@ -20,6 +20,9 @@ from numpy.ma import MaskedArray
 from math import floor, ceil
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
+# to avoid rounding errors when dealing with coordinates
+MAXPRECISION = 10
+
 # Possible positions of the grid origin
 ORIGINS = (
     "ul",    #     "ul" -> upper left
@@ -211,6 +214,7 @@ class GeoArray(MaskedArray):
         
         yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
         xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
+
         return {
             "ymin": min(yvals), "ymax": max(yvals),
             "xmin": min(xvals), "xmax": max(xvals),
@@ -548,22 +552,6 @@ class GeoArray(MaskedArray):
         
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
-        # bbox = {
-        #     "ymin": ymin if ymin else self.bbox["ymin"],
-        #     "ymax": ymax if ymax else self.bbox["ymax"],
-        #     "xmin": xmin if xmin else self.bbox["xmin"],
-        #     "xmax": xmax if xmax else self.bbox["xmax"],
-        #     }
-
-        # cellsize = map(lambda x : float(abs(x)), self.cellsize)
-        # top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
-        # left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
-        # bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
-        # right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
-        
-        # return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
-
-
     # def snap(self,target):
     #     """
     #     Arguments
@@ -632,15 +620,18 @@ class GeoArray(MaskedArray):
         """
         Returns the coordinates of the instance
         """
-        bbox = self.bbox
+
+        def _arange(start, step, count):
+            return tuple(start + step * i for i in xrange(count))
+
         cellsize = self.cellsize
         yorigin, xorigin = self.getOrigin()
-
+        
         return (
-            np.arange(yorigin, yorigin + cellsize[0]*self.nrows, cellsize[0]),
-            np.arange(xorigin, xorigin + cellsize[1]*self.ncols, cellsize[1])
+            _arange(yorigin, cellsize[0], self.nrows),
+            _arange(xorigin, cellsize[1], self.ncols)
         )
-   
+
     def __getitem__(self, slc):
 
         data = super(GeoArray, self).__getitem__(slc)
@@ -650,6 +641,7 @@ class GeoArray(MaskedArray):
             return data
 
         x, y = np.meshgrid(*self.coordinates[::-1])
+
         bbox = []
         for arr, idx in zip((y, x), (-2, -1)):
             arr = np.array(
@@ -724,7 +716,3 @@ class GeoArray(MaskedArray):
  
     tofile = _toFile
     
-# if __name__ == "__main__":
-
-#     import doctest
-#     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)

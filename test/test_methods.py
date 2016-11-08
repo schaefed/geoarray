@@ -196,8 +196,9 @@ class Test(unittest.TestCase):
 
         if gdal.VersionInfo().startswith("1"):
             return
-
+        
         for fname, base in zip(FILES, self.grids):
+            # break
             if base.proj:
                 for epsg in codes:
                     # gdalwarp flips the warped imagel

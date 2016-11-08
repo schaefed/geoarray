@@ -169,6 +169,8 @@ def _fromDataset(fobj):
 
 def _getDataset(grid, mem=False):
     
+    # Returns an gdal memory dataset created from the given grid
+    
     if grid._fobj and not mem:
         return grid._fobj
     
@@ -185,6 +187,7 @@ def _getDataset(grid, mem=False):
     )
     if grid.proj:
         out.SetProjection(grid.proj)
+
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
         band.SetNoDataValue(float(grid.fill_value))
