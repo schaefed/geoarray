@@ -20,9 +20,6 @@ from numpy.ma import MaskedArray
 from math import floor, ceil
 from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
 
-# to avoid rounding errors when dealing with coordinates
-MAXPRECISION = 10
-
 # Possible positions of the grid origin
 ORIGINS = (
     "ul",    #     "ul" -> upper left
@@ -32,43 +29,52 @@ ORIGINS = (
 )
 
 _METHODS = (
+    # comparison
+    "__lt__", "__le__", "__gt__", "__ge__", "__eq__", "__ne__", 
+    "__nonzero__",
+
+    # unary
+    "__neg__",
+    "__pos__",
+    "__abs__",
+    "__invert__",
+
+    # arithmetic
     "__add__",
+    "__sub__",
+    "__mul__",
+    "__div__",
+    "__truediv__",
+    "__floordiv__",
+    "__mod__",
+    "__divmod__",
+    "__pow__",
+    "__lshift__",
+    "__rshift__",
+    "__and__",
+    "__or__",
+    "__xor__",
+    # "__matmul__",
+
+    # arithmetic, in-place
+    "__iadd__",
+    "__isub__",
+    "__imul__",
+    "__idiv__",
+    "__itruediv__",
+    "__ifloordiv__",
+    "__imod__",
+    "__ipow__",
+    "__ilshift__",
+    "__irshift__",
+    "__iand__",
+    "__ior__",
+    "__ixor__",
+    # "__imatmul__",
 )
 
-def _checkProjection(func):
-    def inner(*args):
-        tmp = set()
-        for a in args:
-            try:
-                tmp.add(a.proj)
-            except AttributeError:
-                pass
-        if len(tmp) > 1:
-            warnings.warn("Incompatible map projections!", RuntimeWarning)
-        return func(*args)
-    return inner
-   
-def _basicMatch(self, grid):
-    """
-    Arguments
-    ---------
-    grid : GeoArray
 
-    Returns
-    -------
-    bool
-
-    Purpose
-    -------
-    Check if two grids are broadcastable.
-    """
-    
-    return (
-        (self.proj == grid.proj) and
-        (self.getOrigin() == grid.getOrigin(self.origin)) and
-        (self.cellsize == grid.cellsize)
-    )
-
+  
 def _dtypeInfo(dtype):
     try:
         tinfo = np.finfo(dtype)
@@ -90,12 +96,23 @@ def _broadcastTo(array, shape, dims):
     slc = [slice(None, None, None) if i in dims else None for i in range(len(shape))]
     return np.broadcast_to(array[slc], shape)
 
-
+def _checkMatch(func):
+    def inner(*args):
+        if len({a._proj.get() for a in args if isinstance(a, GeoArray)}) > 1:
+            warnings.warn("Incompatible map projections!", RuntimeWarning)
+        if len({a.cellsize for a in args if isinstance(a, GeoArray)}) != 1:
+            warnings.warn("Incompatible cellsizes", RuntimeWarning)
+        if len({a.getOrigin("ul") for a in args if isinstance(a, GeoArray)}) != 1:
+            warnings.warn("Incompatible origins", RuntimeWarning)
+        return func(*args)
+    return inner
+ 
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
         for key in _METHODS:
-            attrs[key] = _checkProjection(getattr(MaskedArray, key))
+            attrs[key] = _checkMatch(getattr(MaskedArray, key))
         return type(name, bases, attrs)
+
 
 class GeoArray(MaskedArray):
     """
@@ -127,7 +144,7 @@ class GeoArray(MaskedArray):
     Overriding the operators could fix this.
     """
 
-    # __metaclass__ = GeoArrayMeta
+    __metaclass__ = GeoArrayMeta
     
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
@@ -137,6 +154,7 @@ class GeoArray(MaskedArray):
         # if mask is None:
         # The mask will always be calculated, even if its already present or not needed at all...
         mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
+        # print "here:", fill_value, np.sum(mask)
         
         
         if origin not in ORIGINS:
@@ -160,14 +178,14 @@ class GeoArray(MaskedArray):
         obj._optinfo["yorigin"]    = yorigin
         obj._optinfo["xorigin"]    = xorigin
         obj._optinfo["origin"]     = origin
-        obj._optinfo["cellsize"]   = cellsize
+        obj._optinfo["cellsize"]   = tuple(cellsize)
         obj._optinfo["_proj"]      = _Projection(proj)
-        obj._optinfo["fill_value"] = fill_value if fill_value is not None else _dtypeInfo(obj.dtype)["min"]
+        obj._optinfo["fill_value"] = fill_value #if fill_value is not None else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
         
         return obj
-
+   
     @property
     def header(self):
         """
@@ -501,9 +519,14 @@ class GeoArray(MaskedArray):
         shape = list(self.shape)
         shape[-2:] = self.nrows + top  + bottom, self.ncols + left + right
         yorigin, xorigin = self.getOrigin("ul")
+        try:
+            data        = np.full(shape, self.fill_value, self.dtype),
+        except TypeError:
+            # fill_value is set to none
+            raise AttributeError("Valid fill_value needed, actual value is {:}".format(self.fill_value))
 
         out = GeoArray(
-            data        = np.full(shape, self.fill_value, self.dtype),
+            data        = data,
             dtype       = self.dtype,
             yorigin     = yorigin + top*abs(self.cellsize[0]),
             xorigin     = xorigin - left*abs(self.cellsize[1]),
@@ -602,6 +625,19 @@ class GeoArray(MaskedArray):
             raise AttributeError(
                 "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
             )
+
+        
+    def copy(self):
+        return GeoArray(
+            data       = self.data,
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            origin     = self.origin,
+            cellsize   = self.cellsize,
+            proj       = copy.deepcopy(self.proj),
+            fill_value = self.fill_value,
+            mode       = self.mode,
+        )
 
     def __deepcopy__(self, memo):
         return GeoArray(

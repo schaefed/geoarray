@@ -37,6 +37,7 @@ class Test(unittest.TestCase):
         except:
             pass
 
+
     def test_setFillValue(self):
         rpcvalue = -2222
         for base in self.grids:
@@ -200,16 +201,20 @@ class Test(unittest.TestCase):
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
 
+    def assertArrayEqual(self, a1, a2):
+        print "here"
+        # self.assertEqual(np.sum(np.abs(a1 - a2)), 0)
+
     def test_numpyFunctions(self):
         # Ignore over/underflow warnings in function calls
         warnings.filterwarnings("ignore")
         # funcs tuple could be extended
         funcs = (np.exp,
-                 np.sin,np.cos,np.tan,np.arcsinh,
-                 np.around,np.rint,np.fix,
-                 np.prod,np.sum,
+                 np.sin, np.cos, np.tan, np.arcsinh,
+                 np.around, np.rint, np.fix,
+                 np.prod, np.sum,
                  np.trapz,
-                 np.i0,np.sinc,
+                 np.i0, np.sinc,
                  np.arctanh,
                  np.gradient,                
         )
@@ -219,12 +224,12 @@ class Test(unittest.TestCase):
             for f in funcs:
                 r1 = f(base)
                 r2 = f(grid)
+                
                 try:
-                    np.testing.assert_equal(r1,r2)
-                except AssertionError:
-                    # masked array
                     np.testing.assert_equal(r1.data,r2.data)
                     np.testing.assert_equal(r1.mask,r2.mask)
+                except AttributeError:
+                    np.testing.assert_equal(r1,r2)
                
 if __name__== "__main__":
     unittest.main()

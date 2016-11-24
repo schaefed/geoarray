@@ -294,7 +294,6 @@ def _toFile(geoarray, fname):
         tdict = tuple((gdal.GetDataTypeSize(t), t) for t in types)
         otype = max(tdict, key=lambda x: x[0])[-1]
         return np.dtype(TYPEMAP[otype])
-
         
     dataset = _getDataset(geoarray)
     driver = _getDriver(_fnameExtension(fname))
