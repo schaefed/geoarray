@@ -90,6 +90,5 @@ grid[np.array([0,3,21,6])]
 ```
 
 #Restrictions
-- Although GeoArray can store projection information, there are currently no checks on this. The only restriction when doing calculations with GeoArray instances are those of numpy: if two objects are broadcastable, these computations will be done, regardless of mismatching map projections. 
 - GDAL supports many different raster data formats, but only the Geotiff, Arc/Info Ascii Grid, Erdas Imagine and PNG formats are currently supported by geoarray.
 - When converting between data formats, GDAL automatically adjusts the datatypes and truncates values. You might loose information that way.

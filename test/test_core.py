@@ -12,7 +12,7 @@ import tempfile
 # all tests, run from main directory:
 # python -m unittest discover test
 
-# this test only, run from parent directory run 
+# this test only, run from main directory
 # python -m unittest test.test_core
 
 PWD = os.path.abspath(os.path.dirname(__file__))
