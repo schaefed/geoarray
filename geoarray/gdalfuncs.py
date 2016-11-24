@@ -3,8 +3,8 @@
 
 import re, os
 import gdal, osr
+import warnings
 import numpy as np
-# import geoarray as ga
 
 
 # should be extended, for available options see:
@@ -91,9 +91,12 @@ class _Projection(object):
             self._srs.ImportFromProj4(params)
         elif isinstance(value, str):
             self._srs.ImportFromWkt(value)
-            
+
+        if value and self.get() is None:
+            warnings.warn("Projection not understood", RuntimeWarning)
+        
     def get(self):
-        out = self._srs.ExportToWkt()
+        out = self._srs.ExportToPrettyWkt()
         return out or None
 
     def set(self, val):
