@@ -1,17 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from geoarray import (
+from wrapper import (
     array,
     zeros,
     ones,
     full,
     empty,
-    fromfile,
 )
 
 from gdalfuncs import (
-    _DRIVER_DICT,
     resample,
     project,
+)
+
+from gdalio import (
+    _DRIVER_DICT,
+    fromfile,
 )

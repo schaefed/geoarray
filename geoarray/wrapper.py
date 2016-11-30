@@ -12,7 +12,6 @@ This module provides initializer function for core.GeoArray
 """
 
 import numpy as np
-from gdalfuncs import _fromFile
 from core import GeoArray
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
@@ -234,19 +233,3 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         mode       = mode,
     )
 
-def fromfile(fname):
-    """
-    Arguments
-    ---------
-    fname : str  # file name
-    
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Create GeoArray from file
-
-    """
-    return _fromFile(fname)
