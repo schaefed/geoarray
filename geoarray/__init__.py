@@ -11,5 +11,7 @@ from geoarray import (
 )
 
 from gdalfuncs import (
-    _DRIVER_DICT
+    _DRIVER_DICT,
+    resample,
+    project,
 )

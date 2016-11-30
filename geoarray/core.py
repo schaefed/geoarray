@@ -18,7 +18,7 @@ import copy
 import numpy as np
 from numpy.ma import MaskedArray
 from math import floor, ceil
-from gdalfuncs import _toFile, _Projection, _Transformer, _warp, _warpTo
+from gdalfuncs import _toFile, _Projection, _Transformer #, _warp, _warpTo
 
 # Possible positions of the grid origin
 ORIGINS = (
@@ -73,15 +73,13 @@ _METHODS = (
     # "__imatmul__",
 )
 
-
   
-def _dtypeInfo(dtype):
-    try:
-        tinfo = np.finfo(dtype)
-    except ValueError:
-        tinfo = np.iinfo(dtype)
-
-    return {"min": tinfo.min, "max": tinfo.max}
+# def _dtypeInfo(dtype):
+#     try:
+#         tinfo = np.finfo(dtype)
+#     except ValueError:
+#         tinfo = np.iinfo(dtype)
+#     return {"min": tinfo.min, "max": tinfo.max}
 
 def _broadcastTo(array, shape, dims):
     """
@@ -626,19 +624,6 @@ class GeoArray(MaskedArray):
                 "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
             )
 
-        
-    def copy(self):
-        return GeoArray(
-            data       = self.data,
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            origin     = self.origin,
-            cellsize   = self.cellsize,
-            proj       = copy.deepcopy(self.proj),
-            fill_value = self.fill_value,
-            mode       = self.mode,
-        )
-
     def __deepcopy__(self, memo):
         return GeoArray(
             data       = self.data.copy(),
@@ -712,43 +697,43 @@ class GeoArray(MaskedArray):
             mode       = self.mode
         )
         
-    def warp(self, proj, max_error=0.125):
-        """
-        Arguments
-        ---------
-        proj       : dict   -> proj4 parameters of the target coordinate system
-        max_error  : float  -> Maximum error (in pixels) allowed in transformation
-                               approximation (default: value of gdalwarp)
+    # def warp(self, proj, max_error=0.125):
+    #     """
+    #     Arguments
+    #     ---------
+    #     proj       : dict   -> proj4 parameters of the target coordinate system
+    #     max_error  : float  -> Maximum error (in pixels) allowed in transformation
+    #                            approximation (default: value of gdalwarp)
 
-        Return
-        ------
-        GeoArray
+    #     Return
+    #     ------
+    #     GeoArray
 
-        Todo
-        ----
-        - Make the resampling strategy an optional argument
-        """
+    #     Todo
+    #     ----
+    #     - Make the resampling strategy an optional argument
+    #     """
 
-        target = GeoArray(**_warp(self, proj, max_error))
-        return self.warpTo(target, max_error)
+    #     target = GeoArray(**_warp(self, proj, max_error))
+    #     return self.warpTo(target, max_error)
 
-    def warpTo(self, target, max_error=0.125):
-        """
-        Arguments
-        ---------
-        grid: GeoArray
+    # def warpTo(self, target, max_error=0.125):
+    #     """
+    #     Arguments
+    #     ---------
+    #     grid: GeoArray
         
-        Return
-        ------
-        GeoArray
+    #     Return
+    #     ------
+    #     GeoArray
         
-        Purpose
-        -------
-        Interpolates self to the target grid, including
-        coordinate transformations if necessary.
-        """
+    #     Purpose
+    #     -------
+    #     Interpolates self to the target grid, including
+    #     coordinate transformations if necessary.
+    #     """
 
-        return GeoArray(**_warpTo(self, target, max_error))
+    #     return GeoArray(**_warpTo(self, target, max_error))
  
     tofile = _toFile
     

@@ -14,20 +14,20 @@ This module provides initializer function for core.GeoArray
 import numpy as np
 from gdalfuncs import _fromFile
 from core import GeoArray
-from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
+# from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
-def array(data,              # type: Union[np.ndarray, GeoArray]       
-          dtype      = None, # type: Optional[Union[AnyStr, np.dtype]]
-          yorigin    = None, # type: Optional[float]
-          xorigin    = None, # type: Optional[float]
-          origin     = None, # type: Optional[AnyStr]
-          fill_value = None, # type: Optional[float]
-          cellsize   = None, # type: Optional[Union[float, Tuple[float, float]]]
-          proj       = None, # type: Mapping[AnyStr, Union[AnyStr, float]]
-          mode       = None, # type: AnyStr
-          copy       = False # type: bool
-):
-    # type: (...) -> GeoArray
+def array(data,               # type: Union[np.ndarray, GeoArray]       
+          dtype      = None,  # type: Optional[Union[AnyStr, np.dtype]]
+          yorigin    = None,  # type: Optional[float]
+          xorigin    = None,  # type: Optional[float]
+          origin     = None,  # type: Optional[AnyStr]
+          fill_value = None,  # type: Optional[float]
+          cellsize   = None,  # type: Optional[Union[float, Tuple[float, float]]]
+          proj       = None,  # type: Mapping[AnyStr, Union[AnyStr, float]]
+          mode       = None,  # type: AnyStr
+          copy       = False, # type: bool
+          fobj       = None,  # type: Optional[osgeo.gdal.Dataset]
+):                            # type: (...) -> GeoArray
     """
     Arguments
     ---------
@@ -67,8 +67,8 @@ def array(data,              # type: Union[np.ndarray, GeoArray]
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
         mode       = mode or data.mode
+        fobj       = fobj
         
-
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy), 
         yorigin    = yorigin or 0,
@@ -78,6 +78,7 @@ def array(data,              # type: Union[np.ndarray, GeoArray]
         cellsize   = cellsize or (1,1),
         proj       = proj,
         mode       = mode,
+        fobj       = fobj,
     )
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
@@ -248,4 +249,4 @@ def fromfile(fname):
     Create GeoArray from file
 
     """
-    return GeoArray(**_fromFile(fname))
+    return _fromFile(fname)

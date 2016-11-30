@@ -187,7 +187,7 @@ class Test(unittest.TestCase):
             for c, e in zip(coodinates, expected):
                 self.assertTupleEqual(base.indexOf(*c), e)
 
-    def test_warp(self):
+    def test_project(self):
 
         """
         This test fails for gdal versions below 2.0. The warping is correct, but
@@ -199,6 +199,7 @@ class Test(unittest.TestCase):
         tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
         if gdal.VersionInfo().startswith("1"):
+            warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)
             return
         
         for fname, base in zip(FILES, self.grids):
@@ -206,7 +207,12 @@ class Test(unittest.TestCase):
             if base.proj:
                 for epsg in codes:
                     # gdalwarp flips the warped imagel
-                    proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
+                    proj = ga.project(
+                        grid      = base[::-1],
+                        proj      = {"init":"epsg:{:}".format(epsg)},
+                        max_error = 0
+                    )
+                    # proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
                     with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                         subprocess.check_output(
                             "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
