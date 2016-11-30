@@ -18,7 +18,9 @@ import copy
 import numpy as np
 from numpy.ma import MaskedArray
 from math import floor, ceil
-from gdalfuncs import _toFile, _Projection, _Transformer #, _warp, _warpTo
+from gdalio import _toFile
+from gdaltrans import _Projection
+
 
 # Possible positions of the grid origin
 ORIGINS = (
@@ -149,11 +151,8 @@ class GeoArray(MaskedArray):
             proj=None, fill_value=None, fobj=None, mode=None, # mask=None,
             *args, **kwargs
     ):
-        # if mask is None:
         # The mask will always be calculated, even if its already present or not needed at all...
         mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
-        # print "here:", fill_value, np.sum(mask)
-        
         
         if origin not in ORIGINS:
             raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
