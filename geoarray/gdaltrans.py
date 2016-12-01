@@ -7,7 +7,6 @@ import warnings
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-
 class _Projection(object):
     def __init__(self, arg):
         """
@@ -36,7 +35,11 @@ class _Projection(object):
 
         if value and self.get() is None:
             warnings.warn("Projection not understood", RuntimeWarning)
-        
+
+    def __nonzero__(self):
+        # is a an projection set?
+        return self.get() is not None
+    
     def get(self):
         out = self._srs.ExportToPrettyWkt()
         return out or None
