@@ -4,7 +4,6 @@
 import os
 import numpy as np
 import gdal, osr
-import geoarray as ga
 from gdaltrans import _Projection
 
 gdal.UseExceptions()
@@ -96,11 +95,12 @@ def _getColorMode(fobj):
    
 def _fromDataset(fobj):
     
-    # check the bands have different datatypes and raise
+    from wrapper import array
+
     rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
     
-    return ga.array(
+    return array(
         data       = fobj.ReadAsArray(),
         yorigin    = geotrans[3],
         xorigin    = geotrans[0],

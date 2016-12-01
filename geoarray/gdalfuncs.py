@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import gdal, osr
-import geoarray as ga
 import numpy as np
+from wrapper import array
 from gdalio import _getDataset, _fromDataset
 from gdaltrans import _Projection, _Transformer
 
@@ -61,7 +61,7 @@ def project(grid, proj, cellsize=None, max_error=0.125):
     ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/cellsize)))
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/cellsize)))
     
-    target = ga.array(
+    target = array(
         data       = np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
         fill_value = grid.fill_value,
         dtype      = grid.dtype,
