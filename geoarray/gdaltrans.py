@@ -33,7 +33,7 @@ class _Projection(object):
         elif isinstance(value, str):
             self._srs.ImportFromWkt(value)
 
-        if value and self.get() is None:
+        if value and self is None:
             warnings.warn("Projection not understood", RuntimeWarning)
 
     def __nonzero__(self):

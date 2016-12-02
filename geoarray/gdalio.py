@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import warnings
 import numpy as np
 import gdal, osr
 import wrapper as ga
@@ -96,15 +97,23 @@ def _getColorMode(fobj):
    
 def _fromDataset(fobj):
     
-    rasterband = fobj.GetRasterBand(1)
     geotrans   = fobj.GetGeoTransform()
+
+    fill_values = tuple(
+        fobj.GetRasterBand(i+1).GetNoDataValue() for i in xrange(fobj.RasterCount)
+    )
+    if len(set(fill_values)) > 1:
+        warnings.warn(
+            "More then on fill value found. Only {:} will be used".format(fill_values[0]),
+            RuntimeWarning
+        )
     
     return ga.array(
         data       = fobj.ReadAsArray(),
         yorigin    = geotrans[3],
         xorigin    = geotrans[0],
         origin     = "ul",
-        fill_value = rasterband.GetNoDataValue(),
+        fill_value = fill_values[0],
         cellsize   = (geotrans[5], geotrans[1]),
         proj       = _Projection(fobj.GetProjection()),
         mode       = _getColorMode(fobj),

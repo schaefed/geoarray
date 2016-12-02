@@ -10,10 +10,21 @@ from gdaltrans import _Projection, _Transformer
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-def _warpTo(source, target, max_error=0.125):
+_RESAMPLING = {
+    # A documentation would be nice.
+    # There seem to be more functions in GDAL > 2 
+    "average"     : gdal.GRA_Average,
+    "bilinear"    : gdal.GRA_Bilinear,
+    "cubic"       : gdal.GRA_Cubic,
+    "cubicspline" : gdal.GRA_CubicSpline,
+    "lanczos"     : gdal.GRA_Lanczos,
+    "mode"        : gdal.GRA_Mode,
+    "nearest"     : gdal.GRA_NearestNeighbour,
+}
 
-    if target.ndim == 1:
-        target = target[None,:]
+def _warpTo(source, target, func, max_error=0.125):
+
+    target = np.atleast_2d(target)
     if target.ndim < source.ndim:
         target = np.broadcast_to(
             target, source.shape[:-len(target.shape)]+target.shape, subok=True
@@ -26,21 +37,22 @@ def _warpTo(source, target, max_error=0.125):
         copy  = True,
         subok = True
     )
+
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
 
     out = _getDataset(target, True)
-    resampling = gdal.GRA_NearestNeighbour
     
     gdal.ReprojectImage(
         _getDataset(source), out,
         None, None,
-        resampling, 
+        _RESAMPLING[func], 
         0.0, max_error
     )
+    
     return _fromDataset(out)
 
-def project(grid, proj, cellsize=None, max_error=0.125):
+def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
 
     bbox = grid.bbox
     proj = _Projection(proj)
@@ -76,13 +88,15 @@ def project(grid, proj, cellsize=None, max_error=0.125):
     return resample(
         source    = grid,
         target    = target,
+        func      = func,
         max_error = max_error,
     )   
 
-def resample(source, target, max_error=0.125):
+def resample(source, target, func="nearest", max_error=0.125):
     return _warpTo(
-        source=source,
-        target=target,
-        max_error=max_error
-    )
+        source    = source,
+        target    = target,
+        func      = func,
+        max_error = max_error,
+    )               
     
