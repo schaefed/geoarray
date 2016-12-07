@@ -8,6 +8,7 @@ import gdal
 import warnings
 import subprocess
 import tempfile
+from test_utils import testFiles, TMPPATH, FILES
 
 # all tests, run from main directory:
 # python -m unittest discover test
@@ -15,21 +16,16 @@ import tempfile
 # this test only, run from parent directory run 
 # python -m unittest test.test_methods
 
-PWD = os.path.abspath(os.path.dirname(__file__))
-PATH = os.path.join(PWD, "files")
-FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
-
-TMPPATH = os.path.join(PWD, "out")
-
 class Test(unittest.TestCase):
 
     def setUp(self):
-        self.grids = [ga.fromfile(f) for f in FILES]
 
         try:
             os.mkdir(TMPPATH)
         except OSError:
             pass
+
+        self.grids = testFiles(FILES)
         
     def tearDown(self):        
         try:
@@ -70,6 +66,8 @@ class Test(unittest.TestCase):
     def test_enlarge(self):
         for base in self.grids[1:]:
             bbox = base.bbox
+            if base.fill_value is None:
+                base.fill_value = -9999
             cellsize = map(abs, base.cellsize)
             newbbox = {
                 "ymin" : bbox["ymin"] -  .7 * cellsize[0],
@@ -206,7 +204,7 @@ class Test(unittest.TestCase):
             # break
             if base.proj:
                 for epsg in codes:
-                    # gdalwarp flips the warped imagel
+                    # gdalwarp flips the warped image
                     proj = ga.project(
                         grid      = base[::-1],
                         proj      = {"init":"epsg:{:}".format(epsg)},

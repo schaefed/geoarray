@@ -8,6 +8,7 @@ import gdal
 import warnings
 import subprocess
 import tempfile
+from test_utils import testFiles, FILES, TMPPATH
 
 # all tests, run from main directory:
 # python -m unittest discover test
@@ -15,21 +16,14 @@ import tempfile
 # this test only, run from main directory
 # python -m unittest test.test_core
 
-PWD = os.path.abspath(os.path.dirname(__file__))
-PATH = os.path.join(PWD, "files")
-FILES = [os.path.join(PATH, f) for f in os.listdir(PATH)]
-
-TMPPATH = os.path.join(PWD, "out")
-
 class Test(unittest.TestCase):
     
     def setUp(self):
-        self.grids = [ga.fromfile(f) for f in FILES]
-
         try:
             os.mkdir(TMPPATH)
         except OSError:
             pass
+        self.grids = testFiles(FILES)
         
     def tearDown(self):        
         try:

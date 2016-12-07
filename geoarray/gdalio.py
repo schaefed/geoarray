@@ -17,10 +17,12 @@ _DRIVER_DICT = {
     ".tif" : "GTiff",
     ".asc" : "AAIGrid",
     ".img" : "HFA",
-    ".png" : "PNG",
+    ".png" : "PNG", # not working properly
 }
 
-# type mapping: there is no boolean data type in GDAL
+# type mapping:
+#     - there is no boolean data type in GDAL
+#     - there is no int64 data type in GDAL
 TYPEMAP = {
     "uint8"      : 1,
     "int8"       : 1,
