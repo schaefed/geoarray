@@ -14,7 +14,7 @@ FILES = tuple(
 def testArray(shape):
     dinfo = dtypeInfo(np.int32)
     return ga.array(
-        data = np.random.randint(dinfo["min"], high=dinfo["max"], size=shape, dtype=np.int32),
+        data = np.random.randint(dinfo["min"], high=dinfo["max"], size=shape, dtype=np.int64),
         proj = 9001,
         yorigin = 7235561,
         xorigin = 3820288,

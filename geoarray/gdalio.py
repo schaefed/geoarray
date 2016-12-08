@@ -22,7 +22,6 @@ _DRIVER_DICT = {
 
 # type mapping:
 #     - there is no boolean data type in GDAL
-#     - there is no int64 data type in GDAL
 TYPEMAP = {
     "uint8"      : 1,
     "int8"       : 1,
@@ -30,6 +29,7 @@ TYPEMAP = {
     "int16"      : 3,
     "uint32"     : 4,
     "int32"      : 5,
+    # "int64"      : 5, # there is no int64 data type in GDAL, map to int32 and issue a warning
     "float32"    : 6,
     "float64"    : 7,
     "complex64"  : 10,
@@ -131,9 +131,12 @@ def _getDataset(grid, mem=False):
     
     driver = gdal.GetDriverByName("MEM")
         
-    out = driver.Create(
-        "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
-    )
+    try:
+        out = driver.Create(
+            "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
+        )
+    except KeyError:
+        raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
     out.SetGeoTransform(
         (
@@ -183,12 +186,12 @@ def _toFile(geoarray, fname):
 
     def _getDatatype(driver):
         tnames = tuple(driver.GetMetadata_Dict()["DMD_CREATIONDATATYPES"].split(" "))
-        types = tuple(gdal.GetDataTypeByName(t) for t in tnames)
-        tdict = tuple((gdal.GetDataTypeSize(t), t) for t in types)
-        otype = max(tdict, key=lambda x: x[0])[-1]
+        types  = tuple(gdal.GetDataTypeByName(t) for t in tnames)
+        tdict  = tuple((gdal.GetDataTypeSize(t), t) for t in types)
+        otype  = max(tdict, key=lambda x: x[0])[-1]
         return np.dtype(TYPEMAP[otype])
         
     dataset = _getDataset(geoarray)
-    driver = _getDriver(_fnameExtension(fname))
+    driver  = _getDriver(_fnameExtension(fname))
     driver.CreateCopy(fname, dataset, 0)
 
