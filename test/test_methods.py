@@ -8,7 +8,7 @@ import gdal
 import warnings
 import subprocess
 import tempfile
-from test_utils import testFiles, TMPPATH, FILES
+from test_utils import createTestFiles, removeTestFiles, TMPPATH, FILES
 
 # all tests, run from main directory:
 # python -m unittest discover test
@@ -19,20 +19,11 @@ from test_utils import testFiles, TMPPATH, FILES
 class Test(unittest.TestCase):
 
     def setUp(self):
-
-        try:
-            os.mkdir(TMPPATH)
-        except OSError:
-            pass
-
-        self.grids = testFiles(FILES)
+        self.grids = createTestFiles()
         
     def tearDown(self):        
-        try:
-            shutil.rmtree(TMPPATH)
-        except:
-            pass
-        
+        removeTestFiles()
+       
     # def test_basicMatch(self):
     #     for base in self.grids:
     #         grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
@@ -194,7 +185,6 @@ class Test(unittest.TestCase):
         of GDAL
         """
         codes = (2062, 3857)
-        tmpfile = os.path.join(TMPPATH, "tmp.tif")
 
         if gdal.VersionInfo().startswith("1"):
             warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)

@@ -9,24 +9,22 @@ from test_utils import testArray, dtypeInfo
 
 class Test(unittest.TestCase):
 
-    def setUp(self):
-        self.grid = testArray()
-        
-    def test_fromfile(self):
+    def test_io(self):
+        test_array = testArray((340, 270))
         endings = ga._DRIVER_DICT.keys()
         for ending in endings:
             with tempfile.NamedTemporaryFile(suffix=ending) as tf:
                 # write and read again
-                self.grid.tofile(tf.name)
-                check = ga.fromfile(tf.name)
+                test_array.tofile(tf.name)
+                check_array = ga.fromfile(tf.name)
                 # gdal truncates values smaller/larger than the datatype, numpy wraps around.
                 # clip array to make things comparable.
-                dinfo = dtypeInfo(check.dtype)
-                grid = self.grid.clip(dinfo["min"], dinfo["max"])
+                dinfo = dtypeInfo(check_array.dtype)
+                grid = test_array.clip(dinfo["min"], dinfo["max"])
 
-                np.testing.assert_almost_equal(check, grid)
-                self.assertDictEqual(check.bbox, self.grid.bbox)
-                self.assertEqual(check.cellsize, self.grid.cellsize)
-                self.assertEqual(check.proj, self.grid.proj)
-                self.assertEqual(check.fill_value, self.grid.fill_value)
-                self.assertEqual(check.mode, self.grid.mode)
+                np.testing.assert_almost_equal(check_array, grid)
+                self.assertDictEqual(check_array.bbox, test_array.bbox)
+                self.assertEqual(check_array.cellsize, test_array.cellsize)
+                self.assertEqual(check_array.proj, test_array.proj)
+                self.assertEqual(check_array.fill_value, test_array.fill_value)
+                self.assertEqual(check_array.mode, test_array.mode)
