@@ -8,7 +8,7 @@ import gdal
 import warnings
 import subprocess
 import tempfile
-from test_utils import createTestFiles, removeTestFiles, TMPPATH, FILES
+from test_utils import createTestFiles, removeTestFiles
 
 # all tests, run from main directory:
 # python -m unittest discover test
@@ -19,7 +19,7 @@ from test_utils import createTestFiles, removeTestFiles, TMPPATH, FILES
 class Test(unittest.TestCase):
 
     def setUp(self):
-        self.grids = createTestFiles()
+        self.fnames, self.grids = createTestFiles()
         
     def tearDown(self):        
         removeTestFiles()
@@ -190,7 +190,7 @@ class Test(unittest.TestCase):
             warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)
             return
         
-        for fname, base in zip(FILES, self.grids):
+        for fname, base in zip(self.fnames, self.grids):
             # break
             if base.proj:
                 for epsg in codes:

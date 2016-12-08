@@ -19,7 +19,7 @@ from test_utils import createTestFiles, removeTestFiles
 class Test(unittest.TestCase):
     
     def setUp(self):
-        self.grids = createTestFiles()
+        _, self.grids = createTestFiles()
         
     def tearDown(self):        
         removeTestFiles()
