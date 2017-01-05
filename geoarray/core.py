@@ -107,6 +107,30 @@ def _checkMatch(func):
         return func(*args)
     return inner
  
+def _broadcastedMeshgrid(*arrays):
+
+    def _toNd(array, n, pos=-1):
+        """
+        expand given 1D array to n dimensions. The dimensions > 0 can be given by pos
+        """
+        assert array.ndim == 1, "arrays should be 1D"
+        shape = np.ones(n, dtype=int)
+        shape[pos] = len(array)
+        return arr.reshape(shape)
+                   
+    shape = tuple(len(arr) for arr in arrays)
+
+    out = []
+    for i, arr in enumerate(arrays):
+        tmp = np.broadcast_to(
+            _toNd(arr, len(shape), pos=i),
+            shape
+        )
+        # there should be a solution without transposing...
+        out.append(tmp.T)
+    return out
+        
+    
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
         for key in _METHODS:
@@ -642,7 +666,7 @@ class GeoArray(MaskedArray):
         """
 
         def _arange(start, step, count):
-            return tuple(start + step * i for i in xrange(count))
+            return np.array([start + step * i for i in xrange(count)])
 
         cellsize = self.cellsize
         yorigin, xorigin = self.getOrigin()
@@ -660,7 +684,8 @@ class GeoArray(MaskedArray):
         if data.size == 0:
             return data
 
-        x, y = np.meshgrid(*self.coordinates[::-1])
+        x, y = _broadcastedMeshgrid(*self.coordinates[::-1])
+        # x, y = np.meshgrid(*self.coordinates[::-1])
 
         bbox = []
         for arr, idx in zip((y, x), (-2, -1)):
