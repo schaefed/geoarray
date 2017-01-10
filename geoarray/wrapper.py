@@ -57,7 +57,6 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     """
 
     if isinstance(data, GeoArray):
-        data       = data.data
         dtype      = dtype or data.dtype
         yorigin    = yorigin or data.yorigin
         xorigin    = xorigin or data.xorigin
@@ -67,6 +66,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         proj       = proj or data.proj
         mode       = mode or data.mode
         fobj       = fobj
+        data       = data.data
         
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy), 
