@@ -65,7 +65,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
         mode       = mode or data.mode
-        fobj       = fobj
+        fobj       = data.fobj
         data       = data.data
         
     return GeoArray(
@@ -80,6 +80,30 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         fobj       = fobj,
     )
 
+def _likeArgs(arr):
+
+    out = {}
+    if isinstance(arr, GeoArray):
+        out["yorigin"]    = arr.yorigin
+        out["xorigin"]     = arr.xorigin
+        out["origin"]     = arr.origin
+        out["fill_value"] = arr.fill_value
+        out["cellsize"]   = arr.cellsize
+        out["proj"]       = arr.proj
+        out["mode"]       = arr.mode
+
+    return out
+    
+def zeros_like(arr, dtype=None):
+
+    args = _likeArgs(arr)
+    return zeros(shape=arr.shape, dtype=dtype or arr.dtype, **args)
+    
+def ones_like(arr, dtype=None):
+
+    args = _likeArgs(arr)
+    return ones(shape=arr.shape, dtype=dtype or arr.dtype, **args)
+ 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=1, proj=None, mode=None):
     """
