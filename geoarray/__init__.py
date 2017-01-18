@@ -9,6 +9,7 @@ from wrapper import (
     empty,
     zeros_like,
     ones_like,
+    full_like,
 )
 
 from gdalfuncs import (

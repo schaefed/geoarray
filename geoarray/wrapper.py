@@ -95,15 +95,17 @@ def _likeArgs(arr):
     return out
     
 def zeros_like(arr, dtype=None):
-
     args = _likeArgs(arr)
     return zeros(shape=arr.shape, dtype=dtype or arr.dtype, **args)
     
 def ones_like(arr, dtype=None):
-
     args = _likeArgs(arr)
     return ones(shape=arr.shape, dtype=dtype or arr.dtype, **args)
  
+def full_like(arr, value, dtype=None):
+    args = _likeArgs(arr)
+    return full(shape=arr.shape, value=value, dtype=dtype or arr.dtype, **args)
+
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
           fill_value=None, cellsize=1, proj=None, mode=None):
     """
