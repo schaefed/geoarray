@@ -195,6 +195,7 @@ class GeoArray(MaskedArray):
             )
             
         obj = MaskedArray.__new__(cls, data, fill_value=fill_value, mask=mask, *args, **kwargs)
+        obj.unshare_mask()
 
         obj._optinfo["yorigin"]    = yorigin
         obj._optinfo["xorigin"]    = xorigin
@@ -629,8 +630,10 @@ class GeoArray(MaskedArray):
     #     self.yorigin -= dy
 
     def __repr__(self):
-        return super(self.__class__, self).__repr__()
+        return self.__str__()
+    #     # return super(self.__class__, self).__repr__()
 
+    
     def __str__(self):
         out = super(self.__class__, self).__str__()
         name = self.__class__.__name__
