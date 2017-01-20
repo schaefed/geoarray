@@ -502,6 +502,10 @@ class GeoArray(MaskedArray):
         Purpose
         -------
         Shrinks the grid in a way that the given bbox is still within the grid domain.
+        
+        BUG:
+        ------------
+        For bbox with both negative and postive values 
         """
         bbox = {
             "ymin": ymin if ymin is not None else self.bbox["ymin"],
@@ -516,7 +520,7 @@ class GeoArray(MaskedArray):
         bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
         right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
         
-        return self.removeCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
+        return self.removeCells(max(top,0), max(left,0), max(bottom,0), max(right,0))
 
     def addCells(self, top=0, left=0, bottom=0, right=0):
         """
@@ -542,7 +546,7 @@ class GeoArray(MaskedArray):
         shape[-2:] = self.nrows + top  + bottom, self.ncols + left + right
         yorigin, xorigin = self.getOrigin("ul")
         try:
-            data        = np.full(shape, self.fill_value, self.dtype),
+            data = np.full(shape, self.fill_value, self.dtype)
         except TypeError:
             # fill_value is set to none
             raise AttributeError("Valid fill_value needed, actual value is {:}".format(self.fill_value))
