@@ -658,6 +658,15 @@ class GeoArray(MaskedArray):
             mode       = self.mode
         )
         
+    # def flush(self):
+    #     if self._fobj:
+    #         self._fobj.FlushCache()
+    
+    def __del__(self):
+        # the virtual memory mapping needs to be released BEFORE the fobj
+        self._optinfo["data"] = None
+        self._optinfo["_fobj"] = None
+
     # def warp(self, proj, max_error=0.125):
     #     """
     #     Arguments
