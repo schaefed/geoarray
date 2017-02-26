@@ -96,10 +96,13 @@ def _getColorMode(fobj):
         color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
         tmp.append(COLOR_DICT.get(color, "L"))
     return ''.join(sorted(set(tmp), key=tmp.index))
-   
+
+# datasets need to outlive their virtual memory mappings
+_DATASETS = []
+
 def _fromDataset(fobj):
     
-    geotrans   = fobj.GetGeoTransform()
+    _DATASETS.append(fobj)
 
     fill_values = tuple(
         fobj.GetRasterBand(i+1).GetNoDataValue() for i in xrange(fobj.RasterCount)
@@ -110,8 +113,11 @@ def _fromDataset(fobj):
             RuntimeWarning
         )
     
+    geotrans   = fobj.GetGeoTransform()
+
     return ga.array(
-        data       = fobj.ReadAsArray(),
+        # data       = fobj.ReadAsArray(),
+        data       = fobj.GetVirtualMemArray(gdal.GF_Write),
         yorigin    = geotrans[3],
         xorigin    = geotrans[0],
         origin     = "ul",
