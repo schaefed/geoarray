@@ -13,13 +13,14 @@ This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster func
 """
 
 import os
-import warnings
 import copy
 import numpy as np
+import warnings
 from numpy.ma import MaskedArray
 from math import floor, ceil
 from gdalio import _toFile
 from gdaltrans import _Projection
+from utils import _broadcastedMeshgrid, _broadcastTo
 
 
 # Possible positions of the grid origin
@@ -32,69 +33,21 @@ ORIGINS = (
 
 _METHODS = (
     # comparison
-    "__lt__", "__le__", "__gt__", "__ge__", "__eq__", "__ne__", 
-    "__nonzero__",
+    "__lt__", "__le__", "__gt__", "__ge__", "__eq__", "__ne__", "__nonzero__",
 
     # unary
-    "__neg__",
-    "__pos__",
-    "__abs__",
-    "__invert__",
+    "__neg__", "__pos__", "__abs__", "__invert__",
 
     # arithmetic
-    "__add__",
-    "__sub__",
-    "__mul__",
-    "__div__",
-    "__truediv__",
-    "__floordiv__",
-    "__mod__",
-    "__divmod__",
-    "__pow__",
-    "__lshift__",
-    "__rshift__",
-    "__and__",
-    "__or__",
-    "__xor__",
-    # "__matmul__",
+    "__add__", "__sub__", "__mul__", "__div__", "__truediv__",
+    "__floordiv__", "__mod__", "__divmod__", "__pow__", "__lshift__",
+    "__rshift__", "__and__", "__or__", "__xor__", # "__matmul__",
 
     # arithmetic, in-place
-    "__iadd__",
-    "__isub__",
-    "__imul__",
-    "__idiv__",
-    "__itruediv__",
-    "__ifloordiv__",
-    "__imod__",
-    "__ipow__",
-    "__ilshift__",
-    "__irshift__",
-    "__iand__",
-    "__ior__",
-    "__ixor__",
-    # "__imatmul__",
+    "__iadd__", "__isub__", "__imul__", "__idiv__", "__itruediv__",
+    "__ifloordiv__", "__imod__", "__ipow__", "__ilshift__", "__irshift__",
+    "__iand__", "__ior__", "__ixor__", # "__imatmul__",
 )
-
-  
-# def _dtypeInfo(dtype):
-#     try:
-#         tinfo = np.finfo(dtype)
-#     except ValueError:
-#         tinfo = np.iinfo(dtype)
-#     return {"min": tinfo.min, "max": tinfo.max}
-
-def _broadcastTo(array, shape, dims):
-    """
-    array, shape: see numpy.broadcast_to
-    dims: tuple, the dimensions the array dimensions should end up in the output array
-    """
-    assert len(array.shape) == len(dims)
-    assert len(set(dims)) == len(dims) # no duplicates
-    # handle negative indices
-    dims = [d if d >= 0 else d+len(shape) for d in dims]
-    # bring array to the desired dimensionality
-    slc = [slice(None, None, None) if i in dims else None for i in range(len(shape))]
-    return np.broadcast_to(array[slc], shape)
 
 def _checkMatch(func):
     def inner(*args):
@@ -106,31 +59,8 @@ def _checkMatch(func):
             warnings.warn("Incompatible origins", RuntimeWarning)
         return func(*args)
     return inner
- 
-def _broadcastedMeshgrid(*arrays):
+   
 
-    def _toNd(array, n, pos=-1):
-        """
-        expand given 1D array to n dimensions. The dimensions > 0 can be given by pos
-        """
-        assert array.ndim == 1, "arrays should be 1D"
-        shape = np.ones(n, dtype=int)
-        shape[pos] = len(array)
-        return arr.reshape(shape)
-                   
-    shape = tuple(len(arr) for arr in arrays)
-
-    out = []
-    for i, arr in enumerate(arrays):
-        tmp = np.broadcast_to(
-            _toNd(arr, len(shape), pos=i),
-            shape
-        )
-        # there should be a solution without transposing...
-        out.append(tmp.T)
-    return out
-        
-    
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
         for key in _METHODS:
