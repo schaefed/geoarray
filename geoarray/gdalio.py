@@ -148,7 +148,8 @@ def _getDataset(grid, mem=False):
 
     for n in xrange(grid.nbands):
         band = out.GetRasterBand(n+1)
-        band.SetNoDataValue(float(grid.fill_value))
+        if grid.fill_value is not None:
+            band.SetNoDataValue(float(grid.fill_value))
         band.WriteArray(grid[n] if grid.ndim > 2 else grid)
             
     return out
