@@ -563,19 +563,6 @@ class GeoArray(MaskedArray):
     #     self.xorigin -= dx
     #     self.yorigin -= dy
 
-    def __repr__(self):
-        return self.__str__()
-    #     # return super(self.__class__, self).__repr__()
-
-    
-    def __str__(self):
-        out = super(self.__class__, self).__str__()
-        name = self.__class__.__name__
-        pad = " "*(len(name)+1)
-        return "{:}({:})".format(
-            name, os.linesep.join(["{:}{:}".format(pad,l) for l in out.split(os.linesep)]).strip()
-        )
-
     def __getattr__(self, name):
         try:
             return self._optinfo[name]
@@ -622,7 +609,6 @@ class GeoArray(MaskedArray):
             return data
 
         x, y = _broadcastedMeshgrid(*self.coordinates[::-1])
-        # x, y = np.meshgrid(*self.coordinates[::-1])
 
         bbox = []
         for arr, idx in zip((y, x), (-2, -1)):
@@ -635,10 +621,10 @@ class GeoArray(MaskedArray):
             bbox.append((arr[s][0], arr[s][-1]))
 
         try:
-            # scalar
             ystart, ystop = sorted(bbox[0], reverse=data.origin[0]=="u")
             xstart, xstop = sorted(bbox[1], reverse=data.origin[1]=="r")
         except AttributeError:
+            # scalar
             return data
 
         nrows, ncols = ((1, 1) + data.shape)[-2:]
@@ -667,43 +653,5 @@ class GeoArray(MaskedArray):
         self._optinfo["data"] = None
         self._optinfo["_fobj"] = None
 
-    # def warp(self, proj, max_error=0.125):
-    #     """
-    #     Arguments
-    #     ---------
-    #     proj       : dict   -> proj4 parameters of the target coordinate system
-    #     max_error  : float  -> Maximum error (in pixels) allowed in transformation
-    #                            approximation (default: value of gdalwarp)
-
-    #     Return
-    #     ------
-    #     GeoArray
-
-    #     Todo
-    #     ----
-    #     - Make the resampling strategy an optional argument
-    #     """
-
-    #     target = GeoArray(**_warp(self, proj, max_error))
-    #     return self.warpTo(target, max_error)
-
-    # def warpTo(self, target, max_error=0.125):
-    #     """
-    #     Arguments
-    #     ---------
-    #     grid: GeoArray
-        
-    #     Return
-    #     ------
-    #     GeoArray
-        
-    #     Purpose
-    #     -------
-    #     Interpolates self to the target grid, including
-    #     coordinate transformations if necessary.
-    #     """
-
-    #     return GeoArray(**_warpTo(self, target, max_error))
- 
     tofile = _toFile
     
