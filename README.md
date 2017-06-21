@@ -1,18 +1,28 @@
-#geoarray
+# geoarray
 
-#Purpose
+# Purpose
 This python GDAL wrapper module provides a numpy.ma.MaskedArray subclass and a number of initializer 
 functions to facilitate the work with array-like data in a geographically explicit context.
 
-#Requirements
+# Requirements
 - GDAL >= 1.11
 - numpy >= 1.11
 
-#General
+# General
 This module tries to imitate the general numpy functionality as closly as possible.
 As a MaskedArray subclass a GeoArray Instance is (hopefully) usable wherever its parents are.
 
-#Usage
+# Usage
+
+## I/O
+
+Existing files can be read with the ```fromfile``` function.
+
+```python
+# read the dataset
+grid = ga.fromfile("yourfile.tif")
+```
+
 There are a bunch of wrapper functions like ```array, zeros, ones, empty, full``` which do
 what their numpy counterparts do.
 
@@ -33,17 +43,12 @@ grid = ga.zeros((300,250), yorigin=1000, xorigin=850, cellsize=50, origin="ll")
 # If no fill_value is given, the smallest value of the datatype is used
 grid = ga.zeros((300,250), yorigin=1000, xorigin=850, cellsize=50, origin="ll", fill_value=-9999)
 
-# You can add projection information as a pyproj compatable dictionary, a wkt string or epsg code
+# You can add projection information as a pyproj compatible dictionary, a wkt string or epsg code
 grid = ga.zeros((300,250), yorigin=1000, xorigin=850, cellsize=50, origin="ll", fill_value=-9999, proj=3857)
 
 ```
 
-Existing files can be read with the ```fromfile``` function.
-
-```python
-# read the dataset
-grid = ga.fromfile("yourfile.tif")
-```
+## Arithmetic
 
 As a subclass of MaskedArray (and therefore also of ndarray) GeoArray instances can be passed to
 all numpy functions and accept the usual operators
@@ -56,8 +61,14 @@ grid2 = grid + 42
 grid3 = np.exp(grid)
 ```
 
+## Transformations
 
-#Slicing
+Coordinate transformations are as easy as
+```python
+pgrid = ga.project(grid, proj=2062)
+```
+
+# Slicing
 GeoArray overrides the usual slicing behaviour in order to preserve the spatial context. The yorigin 
 and xorigin attributes are updated according to the given origin of the instance.
 
@@ -89,6 +100,6 @@ Note, that the *last* index limits the rectangle, *not* the highest:
 grid[np.array([0,3,21,6])]
 ```
 
-#Restrictions
+# Restrictions
 - GDAL supports many different raster data formats, but only the Geotiff, Arc/Info Ascii Grid, Erdas Imagine and PNG formats are currently supported by geoarray.
 - When converting between data formats, GDAL automatically adjusts the datatypes and truncates values. You might loose information that way.
