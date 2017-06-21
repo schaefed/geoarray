@@ -124,7 +124,7 @@ class GeoArray(MaskedArray):
                 cs if origin[1] == "l" else -cs
             )
             
-        obj = MaskedArray.__new__(cls, data, fill_value=fill_value, mask=mask, *args, **kwargs)
+        obj = MaskedArray.__new__(cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
         obj._optinfo["yorigin"]    = yorigin
@@ -137,6 +137,10 @@ class GeoArray(MaskedArray):
         obj._optinfo["_fobj"]      = fobj
         
         return obj
+
+    # def __repr__(self):
+        # print self._baseclass
+        # return "test"
    
     @property
     def header(self):
@@ -268,6 +272,14 @@ class GeoArray(MaskedArray):
     def fill_value(self):
         return self._optinfo["fill_value"]
         
+    # Work around a bug in np.ma.core present at least until version 1.13.0:
+    # The _optinfo dictionary is not updated when calling __eq__/__ne__
+    # numpy PR: 9279
+    def _comparison(self, other, compare):
+        out = super(GeoArray, self)._comparison(other, compare)
+        out._update_from(self)
+        return out
+
     @fill_value.setter
     def fill_value(self, value):
         # change fill_value and update mask
