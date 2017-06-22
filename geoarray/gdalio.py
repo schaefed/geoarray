@@ -5,8 +5,7 @@ import os
 import warnings
 import numpy as np
 import gdal, osr
-import wrapper as ga
-from gdaltrans import _Projection
+from .gdaltrans import _Projection
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -93,7 +92,7 @@ def fromfile(fname):
 
 def _getColorMode(fobj):
     tmp = []
-    for i in xrange(fobj.RasterCount):
+    for i in range(fobj.RasterCount):
         color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
         tmp.append(COLOR_DICT.get(color, "L"))
     return ''.join(sorted(set(tmp), key=tmp.index))
@@ -101,8 +100,10 @@ def _getColorMode(fobj):
 
 def _fromDataset(fobj):
     
+    from .wrapper import array
+
     fill_values = tuple(
-        fobj.GetRasterBand(i+1).GetNoDataValue() for i in xrange(fobj.RasterCount)
+        fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount)
     )
     if len(set(fill_values)) > 1:
         warnings.warn(
@@ -112,7 +113,7 @@ def _fromDataset(fobj):
     
     geotrans   = fobj.GetGeoTransform()
 
-    return ga.array(
+    return array(
         # data       = fobj.ReadAsArray(),
         # data       = fobj.GetVirtualMemArray(gdal.GF_Write),
         data       = fobj.GetVirtualMemArray(),
@@ -150,7 +151,7 @@ def _getDataset(grid, mem=False):
     if grid.proj:
         out.SetProjection(grid.proj)
 
-    for n in xrange(grid.nbands):
+    for n in range(grid.nbands):
         band = out.GetRasterBand(n+1)
         if grid.fill_value is not None:
             band.SetNoDataValue(float(grid.fill_value))

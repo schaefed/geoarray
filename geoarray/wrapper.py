@@ -12,7 +12,7 @@ This module provides initializer function for core.GeoArray
 """
 
 import numpy as np
-from core import GeoArray
+from .core import GeoArray
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 def array(data,               # type: Union[np.ndarray, GeoArray]       

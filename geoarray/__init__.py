@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from wrapper import (
+from .wrapper import (
     array,
     zeros,
     ones,
@@ -12,12 +12,12 @@ from wrapper import (
     full_like,
 )
 
-from gdalfuncs import (
+from .gdalfuncs import (
     resample,
     project,
 )
 
-from gdalio import (
+from .gdalio import (
     _DRIVER_DICT,
     fromfile,
 )

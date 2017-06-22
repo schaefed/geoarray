@@ -3,9 +3,7 @@
 
 import gdal, osr
 import numpy as np
-import wrapper as ga
-from gdalio import _getDataset, _fromDataset
-from gdaltrans import _Projection, _Transformer
+from .gdaltrans import _Projection, _Transformer
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -23,6 +21,8 @@ _RESAMPLING = {
 }
 
 def _warpTo(source, target, func, max_error=0.125):
+
+    from gdalio import _getDataset, _fromDataset
 
     target = np.atleast_2d(target)
     if target.ndim < source.ndim:

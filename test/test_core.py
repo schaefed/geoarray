@@ -187,9 +187,8 @@ class Test(unittest.TestCase):
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
 
-    def assertArrayEqual(self, a1, a2):
-        print "here"
-        # self.assertEqual(np.sum(np.abs(a1 - a2)), 0)
+    # def assertArrayEqual(self, a1, a2):
+    #     self.assertEqual(np.sum(np.abs(a1 - a2)), 0)
 
     def test_numpyFunctions(self):
         # Ignore over/underflow warnings in function calls
