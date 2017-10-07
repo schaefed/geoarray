@@ -20,6 +20,7 @@ from numpy.ma import MaskedArray
 from math import floor, ceil
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdaltrans import _Projection
+from .gdalio import _getDataset
 
 
 # Possible positions of the grid origin
@@ -284,6 +285,12 @@ class GeoArray(MaskedArray):
         # change fill_value and update mask
         self._optinfo["fill_value"] = value
         self.mask = self == value
+
+    @property
+    def fobj(self):
+        if self._fobj is None:
+            self._fobj = _getDataset(self, mem=True)
+        return self._fobj
 
     def getOrigin(self, origin=None):
         """
