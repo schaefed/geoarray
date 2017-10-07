@@ -60,5 +60,6 @@ class Test(unittest.TestCase):
         grid = ga.empty(shape,fill_value=fill_value)
         self.assertEqual(grid.shape, shape)
               
+
 if __name__== "__main__":
     unittest.main()

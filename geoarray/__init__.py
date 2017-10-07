@@ -10,6 +10,8 @@ from .wrapper import (
     zeros_like,
     ones_like,
     full_like,
+    fromfile,
+    fromdataset,
 )
 
 from .gdalfuncs import (
@@ -19,5 +21,5 @@ from .gdalfuncs import (
 
 from .gdalio import (
     _DRIVER_DICT,
-    fromfile,
+    # fromfile,
 )

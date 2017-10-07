@@ -21,7 +21,7 @@ _DRIVER_DICT = {
 
 # type mapping:
 #     - there is no boolean data type in GDAL
-TYPEMAP = {
+_TYPEMAP = {
     "uint8"      : 1,
     "int8"       : 1,
     "uint16"     : 2,
@@ -45,7 +45,7 @@ TYPEMAP = {
     
 }
 
-COLOR_DICT = {
+_COLOR_DICT = {
     1 : "L",
     2 : "P",
     3 : "R",
@@ -64,11 +64,12 @@ COLOR_DICT = {
     16 : "Cr",
 }
 
-COLOR_MODE_LIST = (
+_COLOR_MODE_LIST = (
     "L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr"
 )
  
-def fromfile(fname):
+
+def _fromFile(fname):
     """
     Parameters
     ----------
@@ -90,11 +91,12 @@ def fromfile(fname):
         return _fromDataset(fobj)
     raise IOError("Could not open file: {:}".format(fname))
 
+
 def _getColorMode(fobj):
     tmp = []
     for i in range(fobj.RasterCount):
         color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
-        tmp.append(COLOR_DICT.get(color, "L"))
+        tmp.append(_COLOR_DICT.get(color, "L"))
     return ''.join(sorted(set(tmp), key=tmp.index))
 
 
@@ -113,19 +115,18 @@ def _fromDataset(fobj):
     
     geotrans   = fobj.GetGeoTransform()
 
-    return array(
-        # data       = fobj.ReadAsArray(),
-        # data       = fobj.GetVirtualMemArray(gdal.GF_Write),
-        data       = fobj.GetVirtualMemArray(),
-        yorigin    = geotrans[3],
-        xorigin    = geotrans[0],
-        origin     = "ul",
-        fill_value = fill_values[0],
-        cellsize   = (geotrans[5], geotrans[1]),
-        proj       = _Projection(fobj.GetProjection()),
-        mode       = _getColorMode(fobj),
-        fobj       = fobj,
-        )
+    return {
+        "data"       : fobj.GetVirtualMemArray(),
+        "yorigin"    : geotrans[3],
+        "xorigin"    : geotrans[0],
+        "origin"     : "ul",
+        "fill_value" : fill_values[0],
+        "cellsize"   : (geotrans[5], geotrans[1]),
+        "proj"       : _Projection(fobj.GetProjection()),
+        "mode"       : _getColorMode(fobj),
+        "fobj"       : fobj,
+    }
+
 
 def _getDataset(grid, mem=False):
     
@@ -138,7 +139,7 @@ def _getDataset(grid, mem=False):
         
     try:
         out = driver.Create(
-            "", grid.ncols, grid.nrows, grid.nbands, TYPEMAP[str(grid.dtype)]
+            "", grid.ncols, grid.nrows, grid.nbands, _TYPEMAP[str(grid.dtype)]
         )
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
@@ -158,6 +159,7 @@ def _getDataset(grid, mem=False):
         band.WriteArray(grid[n] if grid.ndim > 2 else grid)
             
     return out
+
 
 def _toFile(geoarray, fname):
     """
@@ -195,7 +197,7 @@ def _toFile(geoarray, fname):
         types  = tuple(gdal.GetDataTypeByName(t) for t in tnames)
         tdict  = tuple((gdal.GetDataTypeSize(t), t) for t in types)
         otype  = max(tdict, key=lambda x: x[0])[-1]
-        return np.dtype(TYPEMAP[otype])
+        return np.dtype(_TYPEMAP[otype])
         
     dataset = _getDataset(geoarray)
     driver  = _getDriver(_fnameExtension(fname))
