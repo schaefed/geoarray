@@ -20,7 +20,7 @@ from numpy.ma import MaskedArray
 from math import floor, ceil
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdaltrans import _Projection
-from .gdalio import _getDataset
+from .gdalio import _getDataset, _toFile
 
 
 # Possible positions of the grid origin
@@ -672,7 +672,6 @@ class GeoArray(MaskedArray):
         self._optinfo["_fobj"] = None
 
     def tofile(self, fname):
-        from .gdalio import _toFile
         _toFile(self, fname)
         
     
