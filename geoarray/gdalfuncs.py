@@ -3,6 +3,7 @@
 
 import gdal, osr
 import numpy as np
+from .wrapper import full, array
 from .gdaltrans import _Projection, _Transformer
 
 gdal.UseExceptions()
@@ -98,5 +99,14 @@ def resample(source, target, func="nearest", max_error=0.125):
         target    = target,
         func      = func,
         max_error = max_error,
-    )               
-    
+    )
+
+def rescale(source, scaling_factor, interpol_func='average'):
+    scaled_gridsize = (source.shape[-2] / scaling_factor,
+                       source.shape[-1] / scaling_factor)
+    scaled_cellsize = (source.cellsize[-2] * scaling_factor,
+                       source.cellsize[-1] * scaling_factor)
+    scaled_grid = full(scaled_gridsize, source.fill_value,
+                          xorigin=source.xorigin, yorigin=source.yorigin,
+                          cellsize=scaled_cellsize, dtype=source.dtype)
+    return resample(source, scaled_grid, func=interpol_func)
