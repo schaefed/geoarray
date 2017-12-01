@@ -17,6 +17,7 @@ from .wrapper import (
 from .gdalfuncs import (
     resample,
     project,
+    rescale,
 )
 
 from .gdalio import (

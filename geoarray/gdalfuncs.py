@@ -3,6 +3,7 @@
 
 import gdal, osr
 import numpy as np
+from .wrapper import full, array
 from .gdaltrans import _Projection, _Transformer
 
 gdal.UseExceptions()
@@ -10,7 +11,7 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 
 _RESAMPLING = {
     # A documentation would be nice.
-    # There seem to be more functions in GDAL > 2 
+    # There seem to be more functions in GDAL > 2
     "average"     : gdal.GRA_Average,
     "bilinear"    : gdal.GRA_Bilinear,
     "cubic"       : gdal.GRA_Cubic,
@@ -29,7 +30,7 @@ def _warpTo(source, target, func, max_error=0.125):
         target = np.broadcast_to(
             target, source.shape[:-len(target.shape)]+target.shape, subok=True
         )
-       
+
     target = np.ma.array(
         target,
         mask  = target==target.fill_value,
@@ -42,14 +43,14 @@ def _warpTo(source, target, func, max_error=0.125):
     target.fill_value = source.fill_value
 
     out = _getDataset(target, True)
-    
+
     gdal.ReprojectImage(
         _getDataset(source), out,
         None, None,
-        _RESAMPLING[func], 
+        _RESAMPLING[func],
         0.0, max_error
     )
-    
+
     return _fromDataset(out)
 
 def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
@@ -68,12 +69,12 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         # trg_diag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
         trg_diag = np.sqrt((lly - ury)**2 + (llx - urx)**2)
         cellsize = trg_diag/src_diag
-    
+
     # number of cells
     ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/cellsize)))
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/cellsize)))
-    
-    target = ga.array(
+
+    target = array(
         data       = np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
         fill_value = grid.fill_value,
         dtype      = grid.dtype,
@@ -82,7 +83,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         origin     = "ul",
         cellsize   = (-cellsize, cellsize),
         proj       = proj,
-        mode       = grid.mode, 
+        mode       = grid.mode,
     )
 
     return resample(
@@ -90,7 +91,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         target    = target,
         func      = func,
         max_error = max_error,
-    )   
+    )
 
 def resample(source, target, func="nearest", max_error=0.125):
     return _warpTo(
@@ -98,5 +99,14 @@ def resample(source, target, func="nearest", max_error=0.125):
         target    = target,
         func      = func,
         max_error = max_error,
-    )               
-    
+    )
+
+def rescale(source, scaling_factor, interpol_func='average'):
+    scaled_gridsize = (source.shape[-2] / scaling_factor,
+                       source.shape[-1] / scaling_factor)
+    scaled_cellsize = (source.cellsize[-2] * scaling_factor,
+                       source.cellsize[-1] * scaling_factor)
+    scaled_grid = full(scaled_gridsize, source.fill_value,
+                          xorigin=source.xorigin, yorigin=source.yorigin,
+                          cellsize=scaled_cellsize, dtype=source.dtype)
+    return resample(source, scaled_grid, func=interpol_func)
