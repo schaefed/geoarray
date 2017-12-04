@@ -13,17 +13,17 @@ from test_utils import createTestFiles, removeTestFiles
 # all tests, run from main directory:
 # python -m unittest discover test
 
-# this test only, run from parent directory run 
+# this test only, run from parent directory run
 # python -m unittest test.test_methods
 
 class Test(unittest.TestCase):
 
     def setUp(self):
         self.fnames, self.grids = createTestFiles()
-        
-    def tearDown(self):        
+
+    def tearDown(self):
         removeTestFiles()
-       
+
     # def test_basicMatch(self):
     #     for base in self.grids:
     #         grid1, grid2, grid3, grid4 = [base.copy() for _ in xrange(4)]
@@ -34,10 +34,10 @@ class Test(unittest.TestCase):
     #         self.assertFalse(base.basicMatch(grid2))
     #         self.assertFalse(base.basicMatch(grid3))
     #         self.assertTrue(base.basicMatch(grid4))
- 
+
     def test_addCells(self):
         for base in self.grids:
-             
+
             try:
                 padgrid = base.addCells(1, 1, 1, 1)
                 self.assertTrue(np.sum(padgrid[...,1:-1,1:-1] == base))
@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
             bbox = base.bbox
             if base.fill_value is None:
                 base.fill_value = -9999
-            cellsize = map(abs, base.cellsize)
+            cellsize = [abs(cs) for cs in base.cellsize]
             newbbox = {
                 "ymin" : bbox["ymin"] -  .7 * cellsize[0],
                 "xmin" : bbox["xmin"] - 2.5 * cellsize[1],
@@ -74,21 +74,21 @@ class Test(unittest.TestCase):
         grid = ga.array(x, yorigin=100, xorigin=200, origin="ll", cellsize=20, fill_value=-9)
         enlarged = grid.enlarge(xmin=130, xmax=200, ymin=66)
         self.assertDictEqual(
-            enlarged.bbox, 
-            {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}    
+            enlarged.bbox,
+            {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
         )
-        
+
     def test_shrink(self):
         for base in self.grids:
             bbox = base.bbox
-            cellsize = map(abs, base.cellsize)
+            cellsize = [abs(cs) for cs in base.cellsize]
             newbbox = {
                 "ymin" : bbox["ymin"] +  .7 * cellsize[0],
                 "xmin" : bbox["xmin"] + 2.5 * cellsize[1],
                 "ymax" : bbox["ymax"] - 6.1 * cellsize[0],
                 "xmax" : bbox["xmax"] -  .1 * cellsize[1],
             }
-            shrgrid = base.shrink(**newbbox)        
+            shrgrid = base.shrink(**newbbox)
             self.assertEqual(shrgrid.nrows, base.nrows - 0 - 6)
             self.assertEqual(shrgrid.ncols, base.ncols - 2 - 0)
 
@@ -115,12 +115,12 @@ class Test(unittest.TestCase):
     #             (base.yorigin * -1.1, base.xorigin * 1.89),
     #         )
 
-    #         for yoff,xoff in offsets:            
+    #         for yoff,xoff in offsets:
     #             grid = copy.deepcopy(base)
     #             grid.yorigin -= yoff
     #             grid.xorigin -= xoff
     #             yorg, xorg = grid.getOrigin()
-    #             grid.snap(base)            
+    #             grid.snap(base)
 
     #             xdelta = abs(grid.xorigin - xorg)
     #             ydelta = abs(grid.yorigin - yorg)
@@ -158,7 +158,7 @@ class Test(unittest.TestCase):
         for base in self.grids:
             offset = np.abs(base.cellsize)*.8
             bbox = base.bbox
-            
+
             coodinates = (
                 (bbox["ymax"], bbox["xmin"]),
                 (bbox["ymin"]+offset[0], bbox["xmax"]-offset[1]),
@@ -189,7 +189,7 @@ class Test(unittest.TestCase):
         if gdal.VersionInfo().startswith("1"):
             warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)
             return
-        
+
         for fname, base in zip(self.fnames, self.grids):
             # break
             if base.proj:
@@ -214,7 +214,7 @@ class Test(unittest.TestCase):
                         self.assertDictEqual(proj.bbox, compare.bbox)
             else:
                 self.assertRaises(AttributeError)
-                 
-               
+
+
 if __name__== "__main__":
     unittest.main()

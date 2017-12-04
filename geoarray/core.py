@@ -8,7 +8,7 @@ David Schaefer
 
 Purpose
 -------
-This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster functionality 
+This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster functionality
 
 """
 
@@ -59,7 +59,7 @@ def _checkMatch(func):
             warnings.warn("Incompatible origins", RuntimeWarning)
         return func(*args)
     return inner
-   
+
 
 class GeoArrayMeta(object):
     def __new__(cls, name, bases, attrs):
@@ -81,7 +81,7 @@ class GeoArray(MaskedArray):
     fobj         : return object from gdal.Open or None
     proj         : _Projection           # Projection Instance holding projection information
     mode         : string
-    
+
     Purpose
     -------
     This numpy.ndarray subclass adds geographic context to data.
@@ -99,7 +99,7 @@ class GeoArray(MaskedArray):
     """
 
     __metaclass__ = GeoArrayMeta
-    
+
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
             proj=None, fill_value=None, fobj=None, mode=None, # mask=None,
@@ -107,7 +107,7 @@ class GeoArray(MaskedArray):
     ):
         # The mask will always be calculated, even if its already present or not needed at all...
         mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
-        
+
         if origin not in ORIGINS:
             raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
         try:
@@ -123,7 +123,7 @@ class GeoArray(MaskedArray):
                 cs if origin[0] == "l" else -cs,
                 cs if origin[1] == "l" else -cs
             )
-            
+
         obj = MaskedArray.__new__(cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
@@ -135,13 +135,13 @@ class GeoArray(MaskedArray):
         obj._optinfo["fill_value"] = fill_value #if fill_value is not None else _dtypeInfo(obj.dtype)["min"]
         obj._optinfo["mode"]       = mode
         obj._optinfo["_fobj"]      = fobj
-        
+
         return obj
 
     # def __repr__(self):
         # print self._baseclass
         # return "test"
-   
+
     @property
     def header(self):
         """
@@ -185,7 +185,7 @@ class GeoArray(MaskedArray):
         -------
         Return the grid's bounding box.
         """
-        
+
         yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
         xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
 
@@ -267,11 +267,11 @@ class GeoArray(MaskedArray):
     @proj.setter
     def proj(self, value):
         self._proj.set(value)
-        
+
     @property
     def fill_value(self):
         return self._optinfo["fill_value"]
-        
+
     # Work around a bug in np.ma.core present at least until version 1.13.0:
     # The _optinfo dictionary is not updated when calling __eq__/__ne__
     # numpy PR: 9279
@@ -347,7 +347,7 @@ class GeoArray(MaskedArray):
             yorigin - y_idx * abs(self.cellsize[0]),
             xorigin + x_idx * abs(self.cellsize[1]),
         )
-        
+
     def indexOf(self, ycoor, xcoor):
         """
         Arguments
@@ -368,7 +368,7 @@ class GeoArray(MaskedArray):
         cellsize = np.abs(self.cellsize)
         yidx = int(floor((yorigin - ycoor)/float(cellsize[0])))
         xidx = int(floor((xcoor - xorigin )/float(cellsize[1])))
-        
+
         if yidx < 0 or yidx >= self.nrows or xidx < 0 or xidx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")
 
@@ -450,10 +450,10 @@ class GeoArray(MaskedArray):
         Purpose
         -------
         Shrinks the grid in a way that the given bbox is still within the grid domain.
-        
+
         BUG:
         ------------
-        For bbox with both negative and postive values 
+        For bbox with both negative and postive values
         """
         bbox = {
             "ymin": ymin if ymin is not None else self.bbox["ymin"],
@@ -462,12 +462,12 @@ class GeoArray(MaskedArray):
             "xmax": xmax if xmax is not None else self.bbox["xmax"],
             }
 
-        cellsize = map(lambda x : float(abs(x)), self.cellsize)
+        cellsize = [float(abs(cs)) for cs in self.cellsize]
         top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
         left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
         bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
         right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
-        
+
         return self.removeCells(max(top,0), max(left,0), max(bottom,0), max(right,0))
 
     def addCells(self, top=0, left=0, bottom=0, right=0):
@@ -484,7 +484,7 @@ class GeoArray(MaskedArray):
         -------
         Add the number of given cells to the respective margin of the grid.
         """
-        
+
         top    = int(max(top,0))
         left   = int(max(left,0))
         bottom = int(max(bottom,0))
@@ -510,7 +510,7 @@ class GeoArray(MaskedArray):
             proj        = self.proj,
             mode        = self.mode,
         )
-        
+
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
         out[..., top:top+self.nrows, left:left+self.ncols] = self
@@ -540,13 +540,13 @@ class GeoArray(MaskedArray):
             "xmax": xmax if xmax is not None else self.bbox["xmax"],
             }
 
-        cellsize = map(lambda x : float(abs(x)), self.cellsize)
+        cellsize = [float(abs(cs)) for cs in self.cellsize]
 
         top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize[0])
         left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize[1])
         bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize[0])
         right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize[1])
-        
+
         return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
 
     # def snap(self,target):
@@ -608,11 +608,11 @@ class GeoArray(MaskedArray):
         """
 
         def _arange(start, step, count):
-            return np.array([start + step * i for i in xrange(count)])
+            return np.array([start + step * i for i in range(count)])
 
         cellsize = self.cellsize
         yorigin, xorigin = self.getOrigin()
-        
+
         return (
             _arange(yorigin, cellsize[0], self.nrows),
             _arange(xorigin, cellsize[1], self.ncols)
@@ -661,11 +661,11 @@ class GeoArray(MaskedArray):
             fill_value = self.fill_value,
             mode       = self.mode
         )
-        
+
     # def flush(self):
     #     if self._fobj:
     #         self._fobj.FlushCache()
-    
+
     def __del__(self):
         # the virtual memory mapping needs to be released BEFORE the fobj
         self._optinfo["data"] = None
@@ -673,5 +673,3 @@ class GeoArray(MaskedArray):
 
     def tofile(self, fname):
         _toFile(self, fname)
-        
-    
