@@ -17,11 +17,11 @@ from test_utils import createTestFiles, removeTestFiles
 # python -m unittest test.test_core
 
 class Test(unittest.TestCase):
-    
+
     def setUp(self):
         _, self.grids = createTestFiles()
-        
-    def tearDown(self):        
+
+    def tearDown(self):
         removeTestFiles()
 
     def test_setFillValue(self):
@@ -35,8 +35,8 @@ class Test(unittest.TestCase):
         for base in self.grids:
             grid = base.astype(rpctype)
             self.assertEqual(grid.dtype,rpctype)
-          
-    def test_getitem(self):        
+
+    def test_getitem(self):
         for base in self.grids:
             # simplifies the tests...
             base = base[0] if base.ndim > 2 else base
@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
                  np.where(base>6),
                  (slice(None,None,None),slice(0,4,3)),(1,1),Ellipsis
             )
-            
+
             idx = np.arange(12,20)
             self.assertTrue(np.all(grid[idx].data == base[ga.array(idx)].data))
             for i,s in enumerate(slices):
@@ -57,8 +57,8 @@ class Test(unittest.TestCase):
                 try:
                     self.assertTrue(np.all(slc1.mask == slc2.mask))
                 except AttributeError: # __getitem__ returned a scalar
-                    pass 
-        
+                    pass
+
     def test_getitemCellsize(self):
 
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ul")
@@ -81,10 +81,10 @@ class Test(unittest.TestCase):
 
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="lr")
         self.assertTupleEqual(grid[3:4].cellsize, (10, -10))
- 
+
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ur")
         self.assertTupleEqual(grid[3:4].cellsize, (-10, -10))
-        
+
     def test_getitemOrigin(self):
         grids = (
             ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
@@ -109,7 +109,7 @@ class Test(unittest.TestCase):
                 self.assertTupleEqual( exp, grid[slc].getOrigin() )
                 break
             break
-                
+
     def test_setitem(self):
         for base in self.grids:
             # simplifies the tests...
@@ -128,7 +128,7 @@ class Test(unittest.TestCase):
                 grid = copy.deepcopy(base)
                 grid[slc] = value
                 self.assertTrue(np.all(grid[slc] == value))
-                       
+
 
     def test_bbox(self):
         grids = (
@@ -151,7 +151,7 @@ class Test(unittest.TestCase):
     #     for infile in FILES:
     #         outfile = os.path.join(TMPPATH, os.path.split(infile)[1])
     #         base = ga.fromfile(infile)
-            
+
     #         base.tofile(outfile)
     #         checkgrid = ga.fromfile(outfile)
 
@@ -159,10 +159,10 @@ class Test(unittest.TestCase):
     #             base._fobj.GetDriver().GetMetadata_Dict(),
     #             checkgrid._fobj.GetDriver().GetMetadata_Dict()
     #         )
-            
+
     # def test_tofile(self):
     #     outfiles = (os.path.join(TMPPATH, "file{:}".format(ext)) for ext in ga._DRIVER_DICT)
-        
+
     #     for base in self.grids:
     #         for outfile in outfiles:
     #             if outfile.endswith(".png"):
@@ -178,7 +178,7 @@ class Test(unittest.TestCase):
 
     def test_copy(self):
         for base in self.grids[1:]:
-            deep_copy = copy.deepcopy(base)        
+            deep_copy = copy.deepcopy(base)
             self.assertDictEqual(base.header, deep_copy.header)
             self.assertNotEqual(id(base),id(deep_copy))
             self.assertTrue(np.all(base == deep_copy))
@@ -187,8 +187,6 @@ class Test(unittest.TestCase):
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
 
-    # def assertArrayEqual(self, a1, a2):
-    #     self.assertEqual(np.sum(np.abs(a1 - a2)), 0)
 
     def test_numpyFunctions(self):
         # Ignore over/underflow warnings in function calls
@@ -201,20 +199,20 @@ class Test(unittest.TestCase):
                  np.trapz,
                  np.i0, np.sinc,
                  np.arctanh,
-                 np.gradient,                
+                 np.gradient,
         )
-        
+
         for base in self.grids:
             grid = base.copy()
             for f in funcs:
                 r1 = f(base)
                 r2 = f(grid)
-                
+
                 try:
                     np.testing.assert_equal(r1.data,r2.data)
                     np.testing.assert_equal(r1.mask,r2.mask)
                 except AttributeError:
                     np.testing.assert_equal(r1,r2)
-               
+
 if __name__== "__main__":
     unittest.main()

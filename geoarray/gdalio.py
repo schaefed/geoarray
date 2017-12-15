@@ -16,6 +16,7 @@ _DRIVER_DICT = {
     ".tif" : "GTiff",
     ".asc" : "AAIGrid",
     ".img" : "HFA",
+    ".sdat" : "SAGA",
     ".png" : "PNG", # not working properly
 }
 

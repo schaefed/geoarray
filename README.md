@@ -101,5 +101,5 @@ grid[np.array([0,3,21,6])]
 ```
 
 # Restrictions
-- GDAL supports many different raster data formats, but only the Geotiff, Arc/Info Ascii Grid, Erdas Imagine and PNG formats are currently supported by geoarray.
+- GDAL supports many different raster data formats, but only the Geotiff, Arc/Info Ascii Grid, Erdas Imagine, SAGA and PNG formats are currently supported output formats.
 - When converting between data formats, GDAL automatically adjusts the datatypes and truncates values. You might loose information that way.
