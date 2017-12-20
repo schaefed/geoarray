@@ -274,7 +274,7 @@ def fromdataset(ds):
     return array(**_fromDataset(ds))
 
 
-def fromfile(fname):
+def fromfile(fname, mode="r"):
     """
     Arguments
     ---------
@@ -290,5 +290,5 @@ def fromfile(fname):
 
     """
     
-    return array(**_fromFile(fname))
+    return array(**_fromFile(fname, mode))
 

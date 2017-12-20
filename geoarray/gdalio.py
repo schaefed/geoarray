@@ -43,7 +43,7 @@ _TYPEMAP = {
     7            : "float64",
     10           : "complex64",
     11           : "complex128",
-    
+
 }
 
 _COLOR_DICT = {
@@ -68,14 +68,19 @@ _COLOR_DICT = {
 _COLOR_MODE_LIST = (
     "L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr"
 )
- 
 
-def _fromFile(fname):
+
+_FILE_MODE_DICT = {
+    "r" : gdal.GA_ReadOnly,
+    "a" : gdal.GA_Update
+}
+
+def _fromFile(fname, mode="r"):
     """
     Parameters
     ----------
     fname : str  # file name
-    
+
     Returns
     -------
     GeoArray
@@ -85,24 +90,28 @@ def _fromFile(fname):
     Create GeoArray from file
 
     """
-    
-    # fobj = gdal.OpenShared(fname, gdal.GA_Update)
-    fobj = gdal.OpenShared(fname)
+
+    if mode not in _FILE_MODE_DICT:
+        raise TypeError("Supported file modes are: {:}".format(
+            ", ".join(_FILE_MODE_DICT.keys())))
+
+
+    fobj = gdal.OpenShared(fname, _FILE_MODE_DICT[mode])
     if fobj:
-        return _fromDataset(fobj)
+        return _fromDataset(fobj, mode)
     raise IOError("Could not open file: {:}".format(fname))
 
 
 def _getColorMode(fobj):
     tmp = []
     for i in range(fobj.RasterCount):
-        color = fobj.GetRasterBand(i+1).GetColorInterpretation() 
+        color = fobj.GetRasterBand(i+1).GetColorInterpretation()
         tmp.append(_COLOR_DICT.get(color, "L"))
     return ''.join(sorted(set(tmp), key=tmp.index))
 
 
-def _fromDataset(fobj):
-    
+def _fromDataset(fobj, mode="r"):
+
     from .wrapper import array
 
     fill_values = tuple(
@@ -113,11 +122,11 @@ def _fromDataset(fobj):
             "More then on fill value found. Only {:} will be used".format(fill_values[0]),
             RuntimeWarning
         )
-    
-    geotrans   = fobj.GetGeoTransform()
 
+    geotrans   = fobj.GetGeoTransform()
+    
     return {
-        "data"       : fobj.GetVirtualMemArray(),
+        "data"       : fobj.GetVirtualMemArray(_FILE_MODE_DICT[mode]),
         "yorigin"    : geotrans[3],
         "xorigin"    : geotrans[0],
         "origin"     : "ul",
@@ -130,14 +139,14 @@ def _fromDataset(fobj):
 
 
 def _getDataset(grid, mem=False):
-    
+
     # Returns an gdal memory dataset created from the given grid
-    
+
     if grid._fobj and not mem:
         return grid._fobj
-    
+
     driver = gdal.GetDriverByName("MEM")
-        
+
     try:
         out = driver.Create(
             "", grid.ncols, grid.nrows, grid.nbands, _TYPEMAP[str(grid.dtype)]
@@ -158,7 +167,7 @@ def _getDataset(grid, mem=False):
         if grid.fill_value is not None:
             band.SetNoDataValue(float(grid.fill_value))
         band.WriteArray(grid[n] if grid.ndim > 2 else grid)
-            
+
     return out
 
 
@@ -167,17 +176,17 @@ def _toFile(geoarray, fname):
     Arguments
     ---------
     fname : str  # file name
-    
+
     Returns
     -------
     None
-    
+
     Purpose
     -------
     Write GeoArray to file. The output dataset type is derived from
     the file name extension. See _DRIVER_DICT for implemented formats.
     """
- 
+
     def _fnameExtension(fname):
         return os.path.splitext(fname)[-1].lower()
 
@@ -199,8 +208,7 @@ def _toFile(geoarray, fname):
         tdict  = tuple((gdal.GetDataTypeSize(t), t) for t in types)
         otype  = max(tdict, key=lambda x: x[0])[-1]
         return np.dtype(_TYPEMAP[otype])
-        
+
     dataset = _getDataset(geoarray)
     driver  = _getDriver(_fnameExtension(fname))
     driver.CreateCopy(fname, dataset, 0)
-

@@ -666,6 +666,9 @@ class GeoArray(MaskedArray):
     #     if self._fobj:
     #         self._fobj.FlushCache()
 
+    def close(self):
+        self.__del__()
+
     def __del__(self):
         # the virtual memory mapping needs to be released BEFORE the fobj
         self._optinfo["data"] = None

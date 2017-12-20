@@ -28,3 +28,23 @@ class Test(unittest.TestCase):
                 self.assertEqual(check_array.proj, test_array.proj)
                 self.assertEqual(check_array.fill_value, test_array.fill_value)
                 self.assertEqual(check_array.mode, test_array.mode)
+
+    def test_updateio(self):
+        test_array = testArray((340, 270))
+        slices = slice(1, -1, 3)
+        endings = ga._DRIVER_DICT.keys()
+        for ending in endings:
+            if ending != ".tif":
+                continue
+            with tempfile.NamedTemporaryFile(suffix=ending) as tf:
+                print ending
+
+                test_array.tofile(tf.name)
+                check_file = ga.fromfile(tf.name, "a")
+                #print check_file[slices].dtype
+                check_file[0, 0] = 42
+                check_file.close()
+                #test_array = ga.fromfile(tf.name)
+                #print test_array[slices]
+                
+                
