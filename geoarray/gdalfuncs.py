@@ -3,8 +3,9 @@
 
 import gdal, osr
 import numpy as np
-from .wrapper import full, array
-from .gdaltrans import _Projection, _Transformer
+import wrapper as ga
+from gdalio import _getDataset, _fromDataset
+from gdaltrans import _Projection, _Transformer
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -19,11 +20,15 @@ _RESAMPLING = {
     "lanczos"     : gdal.GRA_Lanczos,
     "mode"        : gdal.GRA_Mode,
     "nearest"     : gdal.GRA_NearestNeighbour,
+    # only available in GDAL > 2
+    "max"         : getattr(gdal, "GRA_Max", None),
+    "min"         : getattr(gdal, "GRA_Min", None),
 }
 
 def _warpTo(source, target, func, max_error=0.125):
 
-    from gdalio import _getDataset, _fromDataset
+    if func is None:
+        raise TypeError("Resampling method {} not available in your GDAL version".format(func))
 
     target = np.atleast_2d(target)
     if target.ndim < source.ndim:
@@ -74,7 +79,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
     ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/cellsize)))
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/cellsize)))
 
-    target = array(
+    target = ga.array(
         data       = np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
         fill_value = grid.fill_value,
         dtype      = grid.dtype,
@@ -94,19 +99,19 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
     )
 
 def resample(source, target, func="nearest", max_error=0.125):
-    return array(**_warpTo(
+    return _warpTo(
         source    = source,
         target    = target,
         func      = func,
         max_error = max_error,
-    ))
+    )
 
-def rescale(source, scaling_factor, interpol_func='average'):
+def rescale(source, scaling_factor, func="nearest"):
     scaled_gridsize = (source.shape[-2] / scaling_factor,
                        source.shape[-1] / scaling_factor)
     scaled_cellsize = (source.cellsize[-2] * scaling_factor,
                        source.cellsize[-1] * scaling_factor)
     scaled_grid = full(scaled_gridsize, source.fill_value,
-                          xorigin=source.xorigin, yorigin=source.yorigin,
-                          cellsize=scaled_cellsize, dtype=source.dtype)
-    return resample(source, scaled_grid, func=interpol_func)
+                       xorigin=source.xorigin, yorigin=source.yorigin,
+                       cellsize=scaled_cellsize, dtype=source.dtype)
+    return resample(source, scaled_grid, func=func)
