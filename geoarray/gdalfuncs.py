@@ -3,9 +3,9 @@
 
 import gdal, osr
 import numpy as np
-import wrapper as ga
-from gdalio import _getDataset, _fromDataset
-from gdaltrans import _Projection, _Transformer
+from .wrapper import array
+from .gdalio import _getDataset, _fromDataset
+from .gdaltrans import _Projection, _Transformer
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -79,7 +79,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
     ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/cellsize)))
     nrows = int(abs(round((max(ury, lry) - min(uly, lly))/cellsize)))
 
-    target = ga.array(
+    target = array(
         data       = np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
         fill_value = grid.fill_value,
         dtype      = grid.dtype,
