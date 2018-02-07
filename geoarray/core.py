@@ -374,6 +374,20 @@ class GeoArray(MaskedArray):
 
         return yidx, xidx
 
+    def setMask(self, mask):
+        data = np.array(self, copy=True, subok=False)
+        data[..., mask] = self.fill_value
+        return GeoArray(
+            data       = data,
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            origin     = self.origin,
+            cellsize   = self.cellsize,
+            proj       = self.proj,
+            fill_value = self.fill_value,
+            mode       = self.mode)
+ 
+
     def fill(self, fill_value):
         """
         works similar to MaskedArray.filled(value) but also changes the fill_value
