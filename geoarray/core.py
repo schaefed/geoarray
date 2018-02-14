@@ -56,7 +56,8 @@ def _checkMatch(func):
             warnings.warn("Incompatible map projections!", RuntimeWarning)
         if len({a.cellsize for a in args if isinstance(a, GeoArray)}) != 1:
             warnings.warn("Incompatible cellsizes", RuntimeWarning)
-        if len({a.getOrigin("ul") for a in args if isinstance(a, GeoArray)}) != 1:
+        if len({a.getOrigin("ul") for a in args
+                if isinstance(a, GeoArray)}) != 1:
             warnings.warn("Incompatible origins", RuntimeWarning)
         return func(*args)
     return inner
@@ -80,23 +81,25 @@ class GeoArray(MaskedArray):
     fill_value   : scalar
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
-    proj         : _Projection           # Projection Instance holding projection information
+    proj         : _Projection           # projection information
     mode         : string
 
     Purpose
     -------
     This numpy.ndarray subclass adds geographic context to data.
     A (hopfully growing) number of operations on the data I/O to/from
-    different file formats (see the variable gdalfuncs._DRIVER_DICT) is supported.
+    different file formats (see the variable gdalfuncs._DRIVER_DICT)
+    is supported.
 
     Restrictions
     ------------
-    Adding the geographic information to the data does (at the moment) not imply
-    any additional logic. If the shapes of two grids allow the succesful execution
-    of a certain operator/function your program will continue. It is within the responsability
-    of the user to check whether a given operation makes sense within a geographic context
-    (e.g. grids cover the same spatial domain, share a common projection, etc.) or not.
-    Overriding the operators could fix this.
+    Adding the geographic information to the data does (at the moment)
+    not imply any additional logic. If the shapes of two grids allow
+    the succesful execution of a certain operator/function your program
+    will continue. It is within the responsability of the user to check
+    whether a given operation makes sense within a geographic context
+    (e.g. grids cover the same spatial domain, share a common projection,
+    etc.) or not
     """
 
     __metaclass__ = GeoArrayMeta
@@ -104,13 +107,16 @@ class GeoArray(MaskedArray):
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
             proj=None, fill_value=None, fobj=None, mode=None,  # mask=None,
-            *args, **kwargs
-    ):
-        # The mask will always be calculated, even if its already present or not needed at all...
-        mask = np.zeros_like(data, np.bool) if fill_value is None else data == fill_value
+            *args, **kwargs):
+        
+        # NOTE: The mask will always be calculated, even if its
+        #       already present or not needed at all...
+        mask = (np.zeros_like(data, np.bool)
+                if fill_value is None else data == fill_value)
 
         if origin not in ORIGINS:
-            raise TypeError("Argument 'origin' must be one of '{:}'".format(ORIGINS))
+            raise TypeError(
+                "Argument 'origin' must be one of '{:}'".format(ORIGINS))
         try:
             # Does this work for grids crossing the equator??
             origin = "".join(
@@ -125,17 +131,18 @@ class GeoArray(MaskedArray):
                 cs if origin[1] == "l" else -cs
             )
 
-        obj = MaskedArray.__new__(cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
+        obj = MaskedArray.__new__(
+            cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
-        obj._optinfo["yorigin"]    = yorigin
-        obj._optinfo["xorigin"]    = xorigin
-        obj._optinfo["origin"]     = origin
-        obj._optinfo["cellsize"]   = tuple(cellsize)
-        obj._optinfo["_proj"]      = _Projection(proj)
-        obj._optinfo["fill_value"] = fill_value #if fill_value is not None else _dtypeInfo(obj.dtype)["min"]
-        obj._optinfo["mode"]       = mode
-        obj._optinfo["_fobj"]      = fobj
+        obj._optinfo["yorigin"] = yorigin
+        obj._optinfo["xorigin"] = xorigin
+        obj._optinfo["origin"] = origin
+        obj._optinfo["cellsize"] = tuple(cellsize)
+        obj._optinfo["_proj"] = _Projection(proj)
+        obj._optinfo["fill_value"] = fill_value
+        obj._optinfo["mode"] = mode
+        obj._optinfo["_fobj"] = fobj
 
         return obj
 
@@ -158,14 +165,13 @@ class GeoArray(MaskedArray):
         """
 
         return {
-            "yorigin"     : self.yorigin,
-            "xorigin"     : self.xorigin,
-            "origin"      : self.origin,
-            "fill_value"  : self.fill_value,
-            "cellsize"    : self.cellsize,
-            "proj"        : self.proj,
-            "mode"        : self.mode,
-        }
+            "yorigin": self.yorigin,
+            "xorigin": self.xorigin,
+            "origin": self.origin,
+            "fill_value": self.fill_value,
+            "cellsize": self.cellsize,
+            "proj": self.proj,
+            "mode": self.mode}
 
     @property
     def bbox(self):
@@ -188,8 +194,7 @@ class GeoArray(MaskedArray):
 
         return {
             "ymin": min(yvals), "ymax": max(yvals),
-            "xmin": min(xvals), "xmax": max(xvals),
-        }
+            "xmin": min(xvals), "xmax": max(xvals)}
 
     @property
     def nbands(self):
@@ -327,8 +332,9 @@ class GeoArray(MaskedArray):
 
         Purpose
         -------
-        Return the coordinates of the grid cell definied by the given row and column
-        index values. The cell corner to which the returned values belong is definied
+        Return the coordinates of the grid cell definied by the given
+        row and column index values. The cell corner to which the returned
+        values belong is definied
         by the attribute origin:
             "ll": lower-left corner
             "lr": lower-right corner
@@ -336,14 +342,15 @@ class GeoArray(MaskedArray):
             "ur": upper-right corner
         """
 
-        if (y_idx < 0 or x_idx < 0) or (y_idx >= self.nrows or x_idx >= self.ncols):
+        if ((y_idx < 0 or x_idx < 0)
+            or (y_idx >= self.nrows
+                or x_idx >= self.ncols)):
             raise ValueError("Index out of bounds !")
 
         yorigin, xorigin = self.getOrigin("ul")
         return (
             yorigin - y_idx * abs(self.cellsize[0]),
-            xorigin + x_idx * abs(self.cellsize[1]),
-        )
+            xorigin + x_idx * abs(self.cellsize[1]))
 
     def indexOf(self, ycoor, xcoor):
         """
@@ -363,8 +370,8 @@ class GeoArray(MaskedArray):
 
         yorigin, xorigin = self.getOrigin("ul")
         cellsize = np.abs(self.cellsize)
-        yidx = int(floor((yorigin - ycoor)/float(cellsize[0])))
-        xidx = int(floor((xcoor - xorigin )/float(cellsize[1])))
+        yidx = int(floor((yorigin - ycoor) / float(cellsize[0])))
+        xidx = int(floor((xcoor - xorigin) / float(cellsize[1])))
 
         if yidx < 0 or yidx >= self.nrows or xidx < 0 or xidx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")
@@ -377,15 +384,14 @@ class GeoArray(MaskedArray):
         the fill_value and returns an GeoArray instance
         """
         return GeoArray(
-            data       = self.filled(fill_value),
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            origin     = self.origin,
-            cellsize   = self.cellsize,
-            proj       = self.proj,
+            data = self.filled(fill_value),
+            yorigin = self.yorigin,
+            xorigin = self.xorigin,
+            origin = self.origin,
+            cellsize = self.cellsize,
+            proj = self.proj,
             fill_value = fill_value,
-            mode       = self.mode
-        )
+            mode = self.mode)
 
     def trim(self):
         """
@@ -406,9 +412,8 @@ class GeoArray(MaskedArray):
         try:
             y_idx, x_idx = np.where(self.data != self.fill_value)
             return self.removeCells(
-                top  = min(y_idx), bottom = self.nrows-max(y_idx)-1,
-                left = min(x_idx), right  = self.ncols-max(x_idx)-1
-            )
+                top=min(y_idx), bottom=self.nrows - max(y_idx) - 1,
+                left=min(x_idx), right=self.ncols - max(x_idx) - 1)
         except ValueError:
             return self
 
@@ -424,15 +429,16 @@ class GeoArray(MaskedArray):
 
         Purpose
         -------
-        Remove the number of given cells from the respective margin of the grid.
+        Remove the number of given cells from the respective
+        margin of the grid.
         """
 
-        top    = int(max(top,0))
-        left   = int(max(left,0))
-        bottom = self.nrows - int(max(bottom,0))
-        right  = self.ncols - int(max(right,0))
+        top = int(max(top, 0))
+        left = int(max(left, 0))
+        bottom = self.nrows - int(max(bottom, 0))
+        right = self.ncols - int(max(right, 0))
 
-        return self[...,top:bottom,left:right]
+        return self[..., top:bottom, left:right]
 
     def shrink(self, ymin=None, ymax=None, xmin=None, xmax=None):
         """
@@ -446,7 +452,8 @@ class GeoArray(MaskedArray):
 
         Purpose
         -------
-        Shrinks the grid in a way that the given bbox is still within the grid domain.
+        Shrinks the grid in a way that the given bbox is still
+        within the grid domain.
 
         BUG:
         ------------
@@ -460,12 +467,13 @@ class GeoArray(MaskedArray):
             }
 
         cellsize = [float(abs(cs)) for cs in self.cellsize]
-        top    = floor((self.bbox["ymax"] - bbox["ymax"])/cellsize[0])
-        left   = floor((bbox["xmin"] - self.bbox["xmin"])/cellsize[1])
-        bottom = floor((bbox["ymin"] - self.bbox["ymin"])/cellsize[0])
-        right  = floor((self.bbox["xmax"] - bbox["xmax"])/cellsize[1])
+        top = floor((self.bbox["ymax"] - bbox["ymax"]) / cellsize[0])
+        left = floor((bbox["xmin"] - self.bbox["xmin"]) / cellsize[1])
+        bottom = floor((bbox["ymin"] - self.bbox["ymin"]) / cellsize[0])
+        right = floor((self.bbox["xmax"] - bbox["xmax"]) / cellsize[1])
 
-        return self.removeCells(max(top,0), max(left,0), max(bottom,0), max(right,0))
+        return self.removeCells(
+            max(top, 0), max(left, 0), max(bottom, 0), max(right, 0))
 
     def addCells(self, top=0, left=0, bottom=0, right=0):
         """
@@ -482,31 +490,32 @@ class GeoArray(MaskedArray):
         Add the number of given cells to the respective margin of the grid.
         """
 
-        top    = int(max(top,0))
-        left   = int(max(left,0))
-        bottom = int(max(bottom,0))
-        right  = int(max(right,0))
+        top = int(max(top, 0))
+        left = int(max(left, 0))
+        bottom = int(max(bottom, 0))
+        right = int(max(right, 0))
 
         shape = list(self.shape)
-        shape[-2:] = self.nrows + top  + bottom, self.ncols + left + right
+        shape[-2:] = self.nrows + top + bottom, self.ncols + left + right
         yorigin, xorigin = self.getOrigin("ul")
         try:
             data = np.full(shape, self.fill_value, self.dtype)
         except TypeError:
             # fill_value is set to none
-            raise AttributeError("Valid fill_value needed, actual value is {:}".format(self.fill_value))
+            raise AttributeError(
+                "Valid fill_value needed, actual value is {:}"
+                .format(self.fill_value))
 
         out = GeoArray(
-            data        = data,
-            dtype       = self.dtype,
-            yorigin     = yorigin + top*abs(self.cellsize[0]),
-            xorigin     = xorigin - left*abs(self.cellsize[1]),
-            origin      = "ul",
-            fill_value  = self.fill_value,
-            cellsize    = (abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
-            proj        = self.proj,
-            mode        = self.mode,
-        )
+            data=data,
+            dtype=self.dtype,
+            yorigin=yorigin + top*abs(self.cellsize[0]),
+            xorigin=xorigin - left*abs(self.cellsize[1]),
+            origin="ul",
+            fill_value=self.fill_value,
+            cellsize=(abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
+            proj=self.proj,
+            mode=self.mode)
 
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
@@ -539,12 +548,13 @@ class GeoArray(MaskedArray):
 
         cellsize = [float(abs(cs)) for cs in self.cellsize]
 
-        top    = ceil((bbox["ymax"] - self.bbox["ymax"])/cellsize[0])
-        left   = ceil((self.bbox["xmin"] - bbox["xmin"])/cellsize[1])
-        bottom = ceil((self.bbox["ymin"] - bbox["ymin"])/cellsize[0])
-        right  = ceil((bbox["xmax"] - self.bbox["xmax"])/cellsize[1])
+        top = ceil((bbox["ymax"] - self.bbox["ymax"]) / cellsize[0])
+        left = ceil((self.bbox["xmin"] - bbox["xmin"]) / cellsize[1])
+        bottom = ceil((self.bbox["ymin"] - bbox["ymin"]) / cellsize[0])
+        right = ceil((bbox["xmax"] - self.bbox["xmax"]) / cellsize[1])
 
-        return self.addCells(max(top,0),max(left,0),max(bottom,0),max(right,0))
+        return self.addCells(
+            max(top, 0), max(left, 0), max(bottom, 0), max(right, 0))
 
     # def snap(self,target):
     #     """
@@ -583,20 +593,19 @@ class GeoArray(MaskedArray):
             return self._optinfo[name]
         except KeyError:
             raise AttributeError(
-                "'{:}' object has no attribute {:}".format (self.__class__.__name__, name)
-            )
+                "'{:}' object has no attribute {:}"
+                .format(self.__class__.__name__, name))
 
     def __deepcopy__(self, memo):
         return GeoArray(
-            data       = self.data.copy(),
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            origin     = self.origin,
-            cellsize   = self.cellsize,
-            proj       = copy.deepcopy(self.proj),
-            fill_value = self.fill_value,
-            mode       = self.mode,
-        )
+            data=self.data.copy(),
+            yorigin=self.yorigin,
+            xorigin=self.xorigin,
+            origin=self.origin,
+            cellsize=self.cellsize,
+            proj=copy.deepcopy(self.proj),
+            fill_value=self.fill_value,
+            mode=self.mode)
 
     @property
     def coordinates(self):
@@ -636,8 +645,8 @@ class GeoArray(MaskedArray):
             bbox.append((arr[s][0], arr[s][-1]))
 
         try:
-            ystart, ystop = sorted(bbox[0], reverse=data.origin[0]=="u")
-            xstart, xstop = sorted(bbox[1], reverse=data.origin[1]=="r")
+            ystart, ystop = sorted(bbox[0], reverse=data.origin[0] == "u")
+            xstart, xstop = sorted(bbox[1], reverse=data.origin[1] == "r")
         except AttributeError:
             # scalar
             return data
@@ -649,15 +658,14 @@ class GeoArray(MaskedArray):
         )
 
         return GeoArray(
-            data       = data.data,
-            yorigin    = ystart,
-            xorigin    = xstart,
-            origin     = self.origin,
-            cellsize   = cellsize,
-            proj       = self.proj,
-            fill_value = self.fill_value,
-            mode       = self.mode
-        )
+            data=data.data,
+            yorigin=ystart,
+            xorigin=xstart,
+            origin=self.origin,
+            cellsize=cellsize,
+            proj=self.proj,
+            fill_value=self.fill_value,
+            mode=self.mode)
 
     # def flush(self):
     #     if self._fobj:
