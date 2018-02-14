@@ -8,10 +8,10 @@ David Schaefer
 
 Purpose
 -------
-This module provides a numpy.ma.MaskedArray as a wrapper around gdal raster functionality
+This module provides a numpy.ma.MaskedArray as a
+wrapper around gdal raster functionality
 
 """
-
 import os
 import copy
 import numpy as np
@@ -25,10 +25,10 @@ from .gdalio import _getDataset, _toFile
 
 # Possible positions of the grid origin
 ORIGINS = (
-    "ul",    #     "ul" -> upper left
-    "ur",    #     "ur" -> upper right
-    "ll",    #     "ll" -> lower left
-    "lr",    #     "lr" -> lower right
+    "ul",  # "ul" -> upper left
+    "ur",  # "ur" -> upper right
+    "ll",  # "ll" -> lower left
+    "lr",  # "lr" -> lower right
 )
 
 _METHODS = (
@@ -41,13 +41,14 @@ _METHODS = (
     # arithmetic
     "__add__", "__sub__", "__mul__", "__div__", "__truediv__",
     "__floordiv__", "__mod__", "__divmod__", "__pow__", "__lshift__",
-    "__rshift__", "__and__", "__or__", "__xor__", # "__matmul__",
+    "__rshift__", "__and__", "__or__", "__xor__",  # "__matmul__",
 
     # arithmetic, in-place
     "__iadd__", "__isub__", "__imul__", "__idiv__", "__itruediv__",
     "__ifloordiv__", "__imod__", "__ipow__", "__ilshift__", "__irshift__",
-    "__iand__", "__ior__", "__ixor__", # "__imatmul__",
+    "__iand__", "__ior__", "__ixor__",  # "__imatmul__",
 )
+
 
 def _checkMatch(func):
     def inner(*args):
@@ -102,7 +103,7 @@ class GeoArray(MaskedArray):
 
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
-            proj=None, fill_value=None, fobj=None, mode=None, # mask=None,
+            proj=None, fill_value=None, fobj=None, mode=None,  # mask=None,
             *args, **kwargs
     ):
         # The mask will always be calculated, even if its already present or not needed at all...
@@ -137,10 +138,6 @@ class GeoArray(MaskedArray):
         obj._optinfo["_fobj"]      = fobj
 
         return obj
-
-    # def __repr__(self):
-        # print self._baseclass
-        # return "test"
 
     @property
     def header(self):
@@ -374,24 +371,10 @@ class GeoArray(MaskedArray):
 
         return yidx, xidx
 
-    def setMask(self, mask):
-        data = np.array(self, copy=True, subok=False)
-        data[..., mask] = self.fill_value
-        return GeoArray(
-            data       = data,
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            origin     = self.origin,
-            cellsize   = self.cellsize,
-            proj       = self.proj,
-            fill_value = self.fill_value,
-            mode       = self.mode)
- 
-
     def fill(self, fill_value):
         """
-        works similar to MaskedArray.filled(value) but also changes the fill_value
-        and returns an GeoArray instance
+        works similar to MaskedArray.filled(value) but also changes
+        the fill_value and returns an GeoArray instance
         """
         return GeoArray(
             data       = self.filled(fill_value),
