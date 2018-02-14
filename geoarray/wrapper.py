@@ -228,8 +228,7 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         fill_value = fill_value,
         cellsize   = cellsize,
         proj       = proj,
-        mode       = mode,
-    )
+        mode       = mode)
 
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",

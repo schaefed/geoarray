@@ -3,7 +3,7 @@
 
 import gdal, osr
 import numpy as np
-from .wrapper import array
+from .wrapper import array, full
 from .gdalio import _getDataset, _fromDataset
 from .gdaltrans import _Projection, _Transformer
 
@@ -53,10 +53,10 @@ def _warpTo(source, target, func, max_error=0.125):
         _getDataset(source), out,
         None, None,
         _RESAMPLING[func],
-        0.0, max_error
-    )
+        0.0, max_error)
 
     return _fromDataset(out)
+
 
 def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
 
@@ -95,23 +95,23 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         source    = grid,
         target    = target,
         func      = func,
-        max_error = max_error,
-    )
+        max_error = max_error)
+
 
 def resample(source, target, func="nearest", max_error=0.125):
-    return _warpTo(
-        source    = source,
-        target    = target,
-        func      = func,
-        max_error = max_error,
-    )
+    return array(
+        **_warpTo(
+            source    = source,
+            target    = target,
+            func      = func,
+            max_error = max_error))
+
 
 def rescale(source, scaling_factor, func="nearest"):
-    scaled_gridsize = (source.shape[-2] / scaling_factor,
-                       source.shape[-1] / scaling_factor)
-    scaled_cellsize = (source.cellsize[-2] * scaling_factor,
-                       source.cellsize[-1] * scaling_factor)
-    scaled_grid = full(scaled_gridsize, source.fill_value,
+    shape = (list(source.shape[:-2]) +
+             [int(s / scaling_factor) for s in source.shape[-2:]])
+    cellsize = [c * scaling_factor for c in source.cellsize]
+    scaled_grid = full(shape, source.fill_value,
                        xorigin=source.xorigin, yorigin=source.yorigin,
-                       cellsize=scaled_cellsize, dtype=source.dtype)
+                       cellsize=cellsize, dtype=source.dtype)
     return resample(source, scaled_grid, func=func)
