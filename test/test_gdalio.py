@@ -43,5 +43,3 @@ class Test(unittest.TestCase):
                 check_file.close()
                 check_file = ga.fromfile(tf.name, "r")
                 self.assertTrue((check_file[slices] == 42).all())
-                
-                

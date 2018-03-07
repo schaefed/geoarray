@@ -27,13 +27,13 @@ def createDirectory(path):
         os.mkdir(path)
     except OSError:
         pass
-  
+
 def removeTestFiles():
     try:
         shutil.rmtree(TMPPATH)
     except:
         pass
- 
+
 def createTestFiles():
     createDirectory(TMPPATH)
     arrays = (
@@ -58,4 +58,3 @@ def dtypeInfo(dtype):
     except ValueError:
         tinfo = np.iinfo(dtype)
     return {"min": tinfo.min, "max": tinfo.max}
-

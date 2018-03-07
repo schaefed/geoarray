@@ -196,10 +196,10 @@ class Test(unittest.TestCase):
                  np.around, np.rint, np.fix,
                  np.prod, np.sum,
                  np.trapz,
-                 np.i0, np.sinc,
+                 np.i0,
+                 np.sinc,
                  np.arctanh,
-                 np.gradient,
-        )
+                 np.gradient)
 
         for base in self.grids:
             grid = base.copy()

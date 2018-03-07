@@ -106,7 +106,7 @@ class GeoArray(MaskedArray):
     __metaclass__ = GeoArrayMeta
 
     def __new__(
-            cls, data, yorigin, xorigin, origin, cellsize,
+            cls, data, geotrans, #yorigin, xorigin, cellsize, origin="ul",
             proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
             mode="r", *args, **kwargs):
 
@@ -115,30 +115,33 @@ class GeoArray(MaskedArray):
         mask = (np.zeros_like(data, np.bool)
                 if fill_value is None else data == fill_value)
 
-        if origin not in ORIGINS:
-            raise TypeError(
-                "Argument 'origin' must be one of '{:}'".format(ORIGINS))
-        try:
-            # Does this work for grids crossing the equator??
-            origin = "".join(
-                ("l" if cellsize[0] > 0 else "u",
-                 "l" if cellsize[1] > 0 else "r")
-            )
-        # iterable of len < 2, numeric value
-        except (IndexError, TypeError):
-            cs = abs(cellsize)
-            cellsize = (
-                cs if origin[0] == "l" else -cs,
-                cs if origin[1] == "l" else -cs)
+#        if origin not in ORIGINS:
+#            raise TypeError(
+#                "Argument 'origin' must be one of '{:}'".format(ORIGINS))
+#        try:
+#            # Does this work for grids crossing the equator??
+#            origin = "".join(
+#                ("l" if cellsize[0] > 0 else "u",
+#                 "l" if cellsize[1] > 0 else "r")
+#            )
+#        # iterable of len < 2, numeric value
+#        except (IndexError, TypeError):
+#            cs = abs(cellsize)
+#            cellsize = (
+#                cs if origin[0] == "l" else -cs,
+#                cs if origin[1] == "l" else -cs)
 
         obj = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
-        obj._optinfo["yorigin"] = yorigin
-        obj._optinfo["xorigin"] = xorigin
-        obj._optinfo["origin"] = origin
-        obj._optinfo["cellsize"] = tuple(cellsize)
+
+        #obj._optinfo["geotrans"] = {
+        #    "yorigin": yorigin, "xorigin": xorigin,
+        #    "ycellsize": cellsize[0], "xcellsize": cellsize[1],
+        #    "yparam": 0, "xparam": 0}
+        obj._optinfo["geotrans"] = geotrans
+        #obj._optinfo["origin"] = origin
         obj._optinfo["_proj"] = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value
         obj._optinfo["color_mode"] = color_mode
@@ -146,6 +149,24 @@ class GeoArray(MaskedArray):
         obj._optinfo["_fobj"] = fobj
 
         return obj
+
+    @property
+    def xorigin(self):
+        return self.geotrans["xorigin"]
+
+    @property
+    def yorigin(self):
+        return self.geotrans["yorigin"]
+
+    @property
+    def cellsize(self):
+        return (self.geotrans["ycellsize"], self.geotrans["xcellsize"])
+
+    @property
+    def origin(self):
+        return "".join(
+            ("l" if self.cellsize[0] > 0 else "u",
+             "l" if self.cellsize[1] > 0 else "r"))
 
     @property
     def header(self):
@@ -190,12 +211,21 @@ class GeoArray(MaskedArray):
         Return the grid's bounding box.
         """
 
-        yvals = (self.yorigin, self.yorigin + self.nrows*self.cellsize[0])
-        xvals = (self.xorigin, self.xorigin + self.ncols*self.cellsize[1])
+        yvals, xvals = self.coordinates
 
-        return {
-            "ymin": min(yvals), "ymax": max(yvals),
-            "xmin": min(xvals), "xmax": max(xvals)}
+        ymin, ymax = min(yvals), max(yvals)
+        if self.origin[0] == "u":
+            ymin += self.geotrans["ycellsize"]
+        else:
+            ymax += self.geotrans["ycellsize"]
+
+        xmin, xmax = min(xvals), max(xvals)
+        if self.origin[1] == "r":
+            xmin += self.geotrans["xcellsize"]
+        else:
+            xmax += self.geotrans["xcellsize"]
+
+        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
 
     @property
     def nbands(self):
@@ -237,9 +267,9 @@ class GeoArray(MaskedArray):
         """
 
         try:
-            return self.shape[-2]
+            return self.shape[-2] or 1
         except IndexError:
-            return 0
+            return 1
 
     @property
     def ncols(self):
@@ -259,9 +289,9 @@ class GeoArray(MaskedArray):
         """
 
         try:
-            return self.shape[-1]
+            return self.shape[-1] or 1
         except IndexError:
-            return 0
+            return 1
 
     @property
     def proj(self):
@@ -318,8 +348,7 @@ class GeoArray(MaskedArray):
         bbox = self.bbox
         return (
             bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
-            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],
-        )
+            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],)
 
     def coordinatesOf(self, y_idx, x_idx):
         """
@@ -385,15 +414,12 @@ class GeoArray(MaskedArray):
         the fill_value and returns an GeoArray instance
         """
         return GeoArray(
-            data = self.filled(fill_value),
-            yorigin = self.yorigin,
-            xorigin = self.xorigin,
-            origin = self.origin,
-            cellsize = self.cellsize,
-            proj = self.proj,
-            fill_value = fill_value,
+            data=self.filled(fill_value),
+            geotrans=geotrans,
+            proj=self.proj,
+            fill_value=fill_value,
             mode = self.mode,
-            color_mode = self.color_mode)
+            color_mode=self.color_mode)
 
     def trim(self):
         """
@@ -497,9 +523,14 @@ class GeoArray(MaskedArray):
         bottom = int(max(bottom, 0))
         right = int(max(right, 0))
 
+        if self.origin[0] == "l":
+            top, bottom = bottom, top
+        if self.origin[1] == "r":
+            left, right = right, left
+
         shape = list(self.shape)
         shape[-2:] = self.nrows + top + bottom, self.ncols + left + right
-        yorigin, xorigin = self.getOrigin("ul")
+
         try:
             data = np.full(shape, self.fill_value, self.dtype)
         except TypeError:
@@ -508,15 +539,17 @@ class GeoArray(MaskedArray):
                 "Valid fill_value needed, actual value is {:}"
                 .format(self.fill_value))
 
+        geotrans = self.geotrans.copy()
+        geotrans["yorigin"] += top*geotrans["ycellsize"]*-1
+        geotrans["xorigin"] += left*geotrans["xcellsize"]*-1
+
         out = GeoArray(
             data=data,
             dtype=self.dtype,
-            yorigin=yorigin + top*abs(self.cellsize[0]),
-            xorigin=xorigin - left*abs(self.cellsize[1]),
-            origin="ul",
+            geotrans=geotrans,
             fill_value=self.fill_value,
-            cellsize=(abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
             mode="r",
+            fobj=None,
             proj=self.proj,
             color_mode=self.color_mode)
 
@@ -546,8 +579,7 @@ class GeoArray(MaskedArray):
             "ymin": ymin if ymin is not None else self.bbox["ymin"],
             "ymax": ymax if ymax is not None else self.bbox["ymax"],
             "xmin": xmin if xmin is not None else self.bbox["xmin"],
-            "xmax": xmax if xmax is not None else self.bbox["xmax"],
-            }
+            "xmax": xmax if xmax is not None else self.bbox["xmax"],}
 
         cellsize = [float(abs(cs)) for cs in self.cellsize]
 
@@ -602,10 +634,7 @@ class GeoArray(MaskedArray):
     def __deepcopy__(self, memo):
         return GeoArray(
             data=self.data.copy(),
-            yorigin=self.yorigin,
-            xorigin=self.xorigin,
-            origin=self.origin,
-            cellsize=self.cellsize,
+            geotrans=copy.deepcopy(self.geotrans),
             proj=copy.deepcopy(self.proj),
             fill_value=self.fill_value,
             mode="r",
@@ -613,23 +642,23 @@ class GeoArray(MaskedArray):
 
     @property
     def coordinates(self):
-        """
-        Returns the coordinates of the instance
-        """
+        ydata = np.arange(self.nrows, dtype=float)
+        xdata = np.arange(self.ncols, dtype=float)
 
-        def _arange(start, step, count):
-            return np.array([start + step * i for i in range(count)])
+        # only blow up, if there is a reason to
+        if self.geotrans["yparam"] != 0 or self.geotrans["xparam"] != 0:
+            xdata, ydata = np.meshgrid(xdata, ydata)
+            ydata = (self.geotrans["yorigin"]
+                     + xdata*self.geotrans["ycellsize"]
+                     + ydata*self.geotrans["yparam"])
+            xdata = (self.geotrans["xorigin"]
+                     + xdata*self.geotrans["xcellsize"]
+                     + ydata*self.geotrans["xparam"])
+        else:
+            ydata = self.geotrans["yorigin"] + ydata*self.geotrans["ycellsize"]
+            xdata = self.geotrans["xorigin"] + xdata*self.geotrans["xcellsize"]
 
-        cellsize = self.cellsize
-        yorigin, xorigin = self.getOrigin()
-
-        return (
-            _arange(yorigin, cellsize[0], self.nrows),
-            _arange(xorigin, cellsize[1], self.ncols))
-
-#    def __setitem__(self, slc, values):
-#        self.data[slc] = values
-#        self.flush()
+        return ydata, xdata
 
     def __getitem__(self, slc):
 
@@ -663,13 +692,16 @@ class GeoArray(MaskedArray):
             float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
             float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
         )
+        geotrans = self.geotrans.copy()
+        geotrans["yorigin"] = ystart
+        geotrans["xorigin"] = xstart
+        geotrans["ycellsize"] = cellsize[0]
+        geotrans["xcellsize"] = cellsize[1]
 
         return GeoArray(
             data=data.data,
-            yorigin=ystart,
-            xorigin=xstart,
+            geotrans=geotrans,
             origin=self.origin,
-            cellsize=cellsize,
             proj=self.proj,
             fill_value=self.fill_value,
             mode=self.mode,

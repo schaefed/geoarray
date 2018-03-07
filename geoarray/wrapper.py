@@ -19,11 +19,15 @@ from .gdalio import _fromFile, _fromDataset
 
 def array(data,               # type: Union[np.ndarray, GeoArray]
           dtype      = None,  # type: Optional[Union[AnyStr, np.dtype]]
-          yorigin    = 0,     # type: Optional[float]
+          yorigin    = 0,     # type: Optional[Union[int, float]]
           xorigin    = 0,     # type: Optional[float]
-          origin     = "ul",  # type: Optional[AnyStr]
-          fill_value = None,  # type: Optional[float]
-          cellsize   = 1,     # type: Optional[Union[float, Tuple[float, float]]]
+          origin     = "ul",  # type: Optional[floatAnyStr]
+          fill_value = None,  # type: Optional[Union[int, float]]
+          cellsize   = 1,     # type: Optional[Union[int, float]]]
+          ycellsize  = None,  # Optional[Union[int, float]]
+          xcellsize  = None,  # Optional[Union[int, float]]
+          yparam     = 0,     # Optional[Union[int, float]]
+          xparam     = 0,     # Optional[Union[int, float]]
           proj       = None,  # type: Mapping[AnyStr, Union[AnyStr, float]]
           mode       = "r",   # type: AnyStr
           color_mode = "L",   # type: AnyStr
@@ -58,32 +62,129 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     -------
     Create a GeoArray from data.
     """
+    if ycellsize is None:
+        ycellsize = cellsize
+        if origin[0] == "u":
+            ycellsize *= -1
+
+    if xcellsize is None:
+        xcellsize = cellsize
+        if origin[1] == "r":
+            xcellsize *= -1
+
+    geotrans = {
+        "yorigin": yorigin, "xorigin": xorigin,
+        "ycellsize": ycellsize, "xcellsize": xcellsize,
+        "yparam": yparam, "xparam": xparam}
 
     if isinstance(data, GeoArray):
-        dtype      = dtype or data.dtype
-        yorigin    = yorigin or data.yorigin
-        xorigin    = xorigin or data.xorigin
-        origin     = origin or data.origin
-        fill_value = fill_value or data.fill_value
-        cellsize   = cellsize or data.cellsize
-        proj       = proj or data.proj
-        mode       = mode or data.mode
-        color_mode = color_mode or data.color_mode
-        fobj       = data.fobj
-        data       = data.data
+        return GeoArray(
+            dtype=dtype or data.dtype,
+            geotrans=data.geotrans,
+            fill_value=fill_value or data.fill_value,
+            proj=proj or data.proj,
+            mode=mode or data.mode,
+            color_mode=color_mode or data.color_mode,
+            fobj=data.fobj,
+            data=data.data)
 
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        origin     = origin,
+        geotrans   = geotrans,
         fill_value = fill_value,
-        cellsize   = cellsize,
         proj       = proj,
         mode       = mode,
         color_mode = color_mode,
-        fobj       = fobj,
-    )
+        fobj       = fobj,)
+
+
+def zeros(shape, dtype=np.float64, *args, **kwargs):
+    """
+    Arguments
+    ---------
+    shape        : tuple          # shape of the returned grid
+
+    Optional Arguments
+    ------------------
+    see array
+
+    Returns
+    -------
+    GeoArray
+
+    Purpose
+    -------
+    Return a new GeoArray of given shape and type, filled with zeros.
+    """
+
+    return array(data=np.zeros(shape, dtype), *args, **kwargs)
+
+
+def ones(shape, dtype=np.float64, *args, **kwargs):
+    """
+    Arguments
+    ---------
+    shape        : tuple          # shape of the returned grid
+
+    Optional Arguments
+    ------------------
+    see array
+
+    Returns
+    -------
+    GeoArray
+
+    Purpose
+    -------
+    Return a new GeoArray of given shape and type, filled with ones.
+    """
+
+    return array(data=np.ones(shape, dtype), *args, **kwargs)
+
+
+def full(shape, value, dtype=np.float64, *args, **kwargs):
+    """
+    Arguments
+    ---------
+    shape        : tuple          # shape of the returned grid
+    fill_value   : scalar         # fille value
+
+    Optional Arguments
+    ------------------
+    see array
+
+    Returns
+    -------
+    GeoArray
+
+    Purpose
+    -------
+    Return a new GeoArray of given shape and type, filled with fill_value.
+    """
+
+    return array(data=np.full(shape, value, dtype), *args, **kwargs)
+
+
+def empty(shape, dtype=np.float64, *args, **kwargs):
+    """
+    Arguments
+    ----------
+    shape        : tuple          # shape of the returned grid
+
+    Optional Arguments
+    ------------------
+    see array
+
+    Returns
+    -------
+    GeoArray
+
+    Purpose
+    -------
+    Return a new empty GeoArray of given shape and type
+    """
+
+    return array(data=np.empty(shape, dtype), *args, **kwargs)
 
 
 def _likeArgs(arr):
@@ -115,165 +216,6 @@ def ones_like(arr, dtype=None):
 def full_like(arr, value, dtype=None):
     args = _likeArgs(arr)
     return full(shape=arr.shape, value=value, dtype=dtype or arr.dtype, **args)
-
-
-def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None, color_mode=None):
-    """
-    Arguments
-    ---------
-    shape        : tuple          # shape of the returned grid
-
-    Optional Arguments
-    ------------------
-    dtype        : str/np.dtype                  # type of the returned grid
-    yorigin      : int/float                     # y-value of the grid's origin
-    xorigin      : int/float                     # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-                                                 #     "ul" : upper left corner
-                                                 #     "ur" : upper right corner
-                                                 #     "ll" : lower left corner
-                                                 #     "lr" : lower right corner
-    fill_value   : inf/float                     # fill or fill value
-    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj         : dict/None                     # proj4 projection parameters
-
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a new GeoArray of given shape and type, filled with zeros.
-    """
-
-    return GeoArray(
-        data       = np.zeros(shape, dtype),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        origin     = origin,
-        fill_value = fill_value,
-        cellsize   = cellsize,
-        proj       = proj,
-        mode       = "r",
-        color_mode = color_mode,
-    )
-
-
-def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None, color_mode=None):
-    """
-    Arguments
-    ---------
-    shape        : tuple          # shape of the returned grid
-
-    Optional Arguments
-    ------------------
-    dtype        : str/np.dtype                  # type of the returned grid
-    yorigin      : int/float                     # y-value of the grid's origin
-    xorigin      : int/float                     # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-    fill_value   : inf/float                     # fill or fill value
-    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj         : dict/None                     # proj4 projection parameters
-
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a new GeoArray of given shape and type, filled with ones.
-    """
-
-    return GeoArray(
-        data       = np.ones(shape, dtype),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        origin     = origin,
-        fill_value = fill_value,
-        cellsize   = cellsize,
-        proj       = proj,
-        mode       = "r",
-        color_mode = color_mode,
-    )
-
-
-def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None, color_mode=None):
-    """
-    Arguments
-    ---------
-    shape        : tuple          # shape of the returned grid
-    fill_value   : scalar         # fille value
-
-    Optional Arguments
-    ------------------
-    dtype        : str/np.dtype                  # type of the returned grid
-    yorigin      : int/float                     # y-value of the grid's origin
-    xorigin      : int/float                     # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-    fill_value   : inf/float                     # fill or fill value
-    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj         : dict/None                     # proj4 projection parameters
-
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a new GeoArray of given shape and type, filled with fill_value.
-    """
-
-    return GeoArray(
-        data       = np.full(shape, value, dtype),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        origin     = origin,
-        fill_value = fill_value,
-        cellsize   = cellsize,
-        proj       = proj,
-        mode       = "r",
-        color_mode = color_mode)
-
-
-def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None, color_mode=None):
-    """
-    Arguments
-    ----------
-    shape        : tuple          # shape of the returned grid
-
-    Optional Arguments
-    ------------------
-    dtype        : str/np.dtype                  # type of the returned grid
-    yorigin      : int/float                     # y-value of the grid's origin
-    xorigin      : int/float                     # x-value of the grid's origin
-    origin       : {"ul","ur","ll","lr"}         # position of the origin. One of:
-    fill_value   : inf/float                     # fill or fill value
-    cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
-    proj         : dict/None                     # proj4 projection parameters
-
-    Returns
-    -------
-    GeoArray
-
-    Purpose
-    -------
-    Return a new empty GeoArray of given shape and type
-    """
-
-    return GeoArray(
-        data       = np.empty(shape, dtype),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        origin     = origin,
-        fill_value = fill_value,
-        cellsize   = cellsize,
-        proj       = proj,
-        color_mode = color_mode,
-    )
 
 
 def fromdataset(ds):

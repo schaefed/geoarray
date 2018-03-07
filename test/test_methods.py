@@ -55,7 +55,7 @@ class Test(unittest.TestCase):
             self.assertTrue(np.all(padgrid == base))
 
     def test_enlarge(self):
-        for base in self.grids[1:]:
+        for i, base in enumerate(self.grids[6:]):
             bbox = base.bbox
             if base.fill_value is None:
                 base.fill_value = -9999
@@ -67,16 +67,18 @@ class Test(unittest.TestCase):
                 "xmax" : bbox["xmax"] +  .1 * cellsize[1]
             }
             enlrgrid = base.enlarge(**newbbox)
+
             self.assertEqual(enlrgrid.nrows, base.nrows + 1 + 7)
             self.assertEqual(enlrgrid.ncols, base.ncols + 3 + 1)
 
         x = np.arange(20).reshape((4,5))
-        grid = ga.array(x, yorigin=100, xorigin=200, origin="ll", cellsize=20, fill_value=-9)
+        grid = ga.array(
+            x, yorigin=100, xorigin=200,
+            origin="ll", cellsize=20, fill_value=-9)
         enlarged = grid.enlarge(xmin=130, xmax=200, ymin=66)
         self.assertDictEqual(
             enlarged.bbox,
-            {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300}
-        )
+            {'xmin': 120, 'ymin': 60, 'ymax': 180, 'xmax': 300})
 
     def test_shrink(self):
         for base in self.grids:

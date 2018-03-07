@@ -12,7 +12,7 @@ import tempfile
 # all tests, run from main directory:
 # python -m unittest discover test
 
-# this test only, run from parent directory run 
+# this test only, run from parent directory run
 # python -m unittest test.test_wrapper
 
 class Test(unittest.TestCase):
@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
         grid = ga.array(
             data=data, fill_value=fill_value,
             yorigin=yorigin, xorigin=xorigin,
-            cellsize=cellsize
+            ycellsize=cellsize[0], xcellsize=cellsize[1]
         )
         self.assertEqual(grid.shape, data.shape)
         self.assertEqual(grid.fill_value, fill_value)
@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
         self.assertEqual(grid.xorigin, xorigin)
         self.assertEqual(grid.cellsize, cellsize)
         self.assertTrue(np.all(grid == data))
-        
+
     def test_zeros(self):
         shape = (2,4,6)
         grid = ga.zeros(shape)
@@ -53,13 +53,13 @@ class Test(unittest.TestCase):
         grid = ga.full(shape,fill_value)
         self.assertEqual(grid.shape, shape)
         self.assertTrue(np.all(grid == fill_value))
-        
+
     def test_empty(self):
         shape = (2,4,6)
         fill_value = 42
         grid = ga.empty(shape,fill_value=fill_value)
         self.assertEqual(grid.shape, shape)
-              
+
 
 if __name__== "__main__":
     unittest.main()

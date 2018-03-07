@@ -15,8 +15,8 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 _DRIVER_DICT = {
     ".tif" : "GTiff",
     ".asc" : "AAIGrid",
-    ".img" : "HFA",
-    ".sdat" : "SAGA",
+    # ".img" : "HFA",
+    #".sdat" : "SAGA",
     ".png" : "PNG", # not working properly
 }
 
@@ -114,20 +114,20 @@ def _fromDataset(fobj, mode="r"):
 
     from .wrapper import array
 
-    def _calcCoordinates(geotrans, ydim, xdim):
-        xdata = np.arange(xdim, dtype=float)
-        ydata = np.arange(ydim, dtype=float)
+    #def _calcCoordinates(geotrans, ydim, xdim):
+    #    xdata = np.arange(xdim, dtype=float)
+    #    ydata = np.arange(ydim, dtype=float)
 
-        # only blow up, if there is a reason to
-        if geotrans[2] != 0 or geotrans[4] != 0:
-            xdata, ydata = np.meshgrid(xdata, ydata)
-            xdata = geotrans[0] + xdata*geotrans[1] + ydata*geotrans[2]
-            ydata = geotrans[3] + xdata*geotrans[4] + ydata*geotrans[5]
-        else:
-            xdata = geotrans[0] + xdata*geotrans[1]
-            ydata = geotrans[3] + xdata*geotrans[4]
+    #    # only blow up, if there is a reason to
+    #    if geotrans[2] != 0 or geotrans[4] != 0:
+    #        xdata, ydata = np.meshgrid(xdata, ydata)
+    #        xdata = geotrans[0] + xdata*geotrans[1] + ydata*geotrans[2]
+    #        ydata = geotrans[3] + xdata*geotrans[4] + ydata*geotrans[5]
+    #    else:
+    #        xdata = geotrans[0] + xdata*geotrans[1]
+    #        ydata = geotrans[3] + xdata*geotrans[4]
 
-        return ydata, xdata
+    #    return ydata, xdata
 
 
     fill_values = tuple(
@@ -141,21 +141,19 @@ def _fromDataset(fobj, mode="r"):
 
     geotrans = fobj.GetGeoTransform()
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
-    ydata, xdata = _calcCoordinates(geotrans, *data.shape[-2:])
 
     return {
-        "data"       : data,
-        # "yorigin"    : geotrans[3],
-        # "xorigin"    : geotrans[0],
-        "yorigin"    : ydata[0],
-        "xorigin"    : xdata[0],
-        "origin"     : "ul",
-        "fill_value" : fill_values[0],
-        "cellsize"   : (geotrans[5], geotrans[1]),
-        "proj"       : _Projection(fobj.GetProjection()),
-        "mode"       : mode, #_getColorMode(fobj),
-        "fobj"       : fobj,
-    }
+        "data": data,
+        "fill_value": fill_values[0],
+        "proj": _Projection(fobj.GetProjection()),
+        "mode": mode, #_getColorMode(fobj),
+        "fobj": fobj,
+        "yorigin": geotrans[3],
+        "xorigin": geotrans[0],
+        "ycellsize": geotrans[4] or geotrans[1] * -1 or -1,
+        "xcellsize": geotrans[1] or geotrans[4] or 1,
+        "yparam": abs(geotrans[5]),
+        "xparam": abs(geotrans[2])}
 
 
 def _getDataset(grid, mem=False):
@@ -169,16 +167,16 @@ def _getDataset(grid, mem=False):
 
     try:
         out = driver.Create(
-            "", grid.ncols, grid.nrows, grid.nbands, _TYPEMAP[str(grid.dtype)]
-        )
+            "", grid.ncols, grid.nrows, grid.nbands, _TYPEMAP[str(grid.dtype)])
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
-    out.SetGeoTransform(
-        (
-            grid.bbox["xmin"], abs(grid.cellsize[1]), 0,
-            grid.bbox["ymax"], 0, abs(grid.cellsize[0])*-1)
-    )
+    geotrans = (
+        grid.geotrans["xorigin"], grid.geotrans["xcellsize"], grid.geotrans["xparam"],
+        grid.geotrans["yorigin"], grid.geotrans["ycellsize"], grid.geotrans["yparam"])
+
+    out.SetGeoTransform(geotrans)
+
     if grid.proj:
         out.SetProjection(grid.proj)
 
@@ -186,7 +184,8 @@ def _getDataset(grid, mem=False):
         band = out.GetRasterBand(n+1)
         if grid.fill_value is not None:
             band.SetNoDataValue(float(grid.fill_value))
-        band.WriteArray(grid[n] if grid.ndim > 2 else grid)
+        data = grid[n] if grid.ndim > 2 else grid
+        band.WriteArray(data)
 
     return out
 
