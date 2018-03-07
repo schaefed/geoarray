@@ -69,7 +69,6 @@ _COLOR_MODE_LIST = (
     "L", "P", "RGB", "RGBA", "CMYK", "HSV", "YCbCr"
 )
 
-
 _FILE_MODE_DICT = {
     "r" : gdal.GA_ReadOnly,
     "a" : gdal.GA_Update
@@ -114,21 +113,42 @@ def _fromDataset(fobj, mode="r"):
 
     from .wrapper import array
 
+    def _calcCoordinates(geotrans, ydim, xdim):
+        xdata = np.arange(xdim, dtype=float)
+        ydata = np.arange(ydim, dtype=float)
+
+        # only blow up, if there is a reason to
+        if geotrans[2] != 0 or geotrans[4] != 0:
+            xdata, ydata = np.meshgrid(xdata, ydata)
+            xdata = geotrans[0] + xdata*geotrans[1] + ydata*geotrans[2]
+            ydata = geotrans[3] + xdata*geotrans[4] + ydata*geotrans[5]
+        else:
+            xdata = geotrans[0] + xdata*geotrans[1]
+            ydata = geotrans[3] + xdata*geotrans[4]
+
+        return ydata, xdata
+
+
     fill_values = tuple(
-        fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount)
-    )
+        fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount))
+
     if len(set(fill_values)) > 1:
         warnings.warn(
             "More then on fill value found. Only {:} will be used".format(fill_values[0]),
             RuntimeWarning
         )
 
-    geotrans   = fobj.GetGeoTransform()
+    geotrans = fobj.GetGeoTransform()
+    data = fobj.GetVirtualMemArray()
+    ydata, xdata = _calcCoordinates(geotrans, *data.shape[-2:])
+
     
     return {
-        "data"       : fobj.GetVirtualMemArray(_FILE_MODE_DICT[mode]),
-        "yorigin"    : geotrans[3],
-        "xorigin"    : geotrans[0],
+        "data"       : data,
+        # "yorigin"    : geotrans[3],
+        # "xorigin"    : geotrans[0],
+        "yorigin"    : ydata[0],
+        "xorigin"    : xdata[0],
         "origin"     : "ul",
         "fill_value" : fill_values[0],
         "cellsize"   : (geotrans[5], geotrans[1]),
