@@ -31,7 +31,7 @@ def _broadcastedMeshgrid(*arrays):
         shape = np.ones(n, dtype=int)
         shape[pos] = len(array)
         return arr.reshape(shape)
-                   
+
     shape = tuple(len(arr) for arr in arrays)
 
     out = []
@@ -43,5 +43,3 @@ def _broadcastedMeshgrid(*arrays):
         # there should be a solution without transposing...
         out.append(tmp.T)
     return out
-        
- 

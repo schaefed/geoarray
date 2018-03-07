@@ -87,26 +87,25 @@ class Test(unittest.TestCase):
 
     def test_getitemOrigin(self):
         grids = (
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
-        )
+            ga.ones((100, 100), yorigin=1000, xorigin=1200, origin="ul"),
+            ga.ones((100, 100), yorigin=1000, xorigin=1200, origin="ll"),
+            ga.ones((100, 100), yorigin=1000, xorigin=1200, origin="ur"),
+            ga.ones((100, 100), yorigin=1000, xorigin=1200, origin="lr"))
         slices = (
-            ( slice(3,4) ),
-            ( slice(3,4),slice(55,77,None) ),
-            ( slice(None,None,7),slice(55,77,None) ),
-            ( -1, ),
-        )
+            (slice(3, 4)),
+            (slice(3, 4), slice(55, 77, None)),
+            (slice(None, None, 7), slice(55, 77, None)),
+            (-1, ),)
+
         expected = (
-            ( (997,  1200), (997,  1255), (1000, 1255), (901,  1200) ),
-            ( (1096, 1200), (1096, 1255), (1001, 1255), (1000, 1200) ),
-            ( (997,  1200), (997,  1177), (1000, 1177), (901,  1200) ),
-            ( (1096, 1200), (1096, 1177), (1001, 1177), (1000, 1200) )
-        )
-        for i,grid in enumerate(grids):
-            for slc,exp in zip(slices,expected[i]):
-                self.assertTupleEqual( exp, grid[slc].getOrigin() )
+            ((997,   1200),  (997,   1255),  (1000,  1255),  (901,   1200)),
+            ((1096,  1200),  (1096,  1255),  (1001,  1255),  (1000,  1200)),
+            ((997,   1200),  (997,   1177),  (1000,  1177),  (901,   1200)),
+            ((1096,  1200),  (1096,  1177),  (1001,  1177),  (1000,  1200)))
+
+        for i, grid in enumerate(grids):
+            for slc, exp in zip(slices, expected[i]):
+                self.assertTupleEqual( exp,  grid[slc].getOrigin() )
                 break
             break
 

@@ -19,7 +19,7 @@ class _Projection(object):
         """
         self._srs = osr.SpatialReference()
         self._import(arg)
-        
+
     def _import(self, value):
         if isinstance(value, _Projection):
             self._srs = value._srs
@@ -39,21 +39,22 @@ class _Projection(object):
     def __nonzero__(self):
         # is a an projection set?
         return self.get() is not None
-    
+
     def get(self):
         out = self._srs.ExportToPrettyWkt()
         return out or None
 
     def set(self, val):
         self._import(val)
-   
+
+
 class _Transformer(object):
     def __init__(self, sproj, tproj):
         """
         Arguments
         ---------
         sproj, tproj : Projection
-        
+
         Purpose
         -------
         Encapsulates the osr Cordinate Transformation functionality
@@ -68,4 +69,3 @@ class _Transformer(object):
         except NotImplementedError:
             raise AttributeError("Projections not correct or given!")
         return yt, xt
-

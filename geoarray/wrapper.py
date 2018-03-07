@@ -17,7 +17,7 @@ from .gdalio import _fromFile, _fromDataset
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
-def array(data,               # type: Union[np.ndarray, GeoArray]       
+def array(data,               # type: Union[np.ndarray, GeoArray]
           dtype      = None,  # type: Optional[Union[AnyStr, np.dtype]]
           yorigin    = None,  # type: Optional[float]
           xorigin    = None,  # type: Optional[float]
@@ -48,7 +48,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     cellsize     : int/float or 2-tuple of those # cellsize, cellsizes in y and x direction
     proj         : dict/None                     # proj4 projection parameters
     copy         : bool                          # create a copy of the given data
-    
+
     Returns
     -------
     GeoArray
@@ -69,14 +69,14 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         mode       = mode or data.mode
         fobj       = data.fobj
         data       = data.data
-        
+
     return GeoArray(
-        data       = np.array(data, dtype=dtype, copy=copy), 
+        data       = np.array(data, dtype=dtype, copy=copy),
         yorigin    = yorigin or 0,
         xorigin    = xorigin or 0,
         origin     = origin or "ul",
         fill_value = fill_value,
-        cellsize   = cellsize or (1,1),
+        cellsize   = cellsize or (1, 1),
         proj       = proj,
         mode       = mode,
         fobj       = fobj,
@@ -96,17 +96,17 @@ def _likeArgs(arr):
         out["mode"]       = arr.mode
 
     return out
-    
+
 
 def zeros_like(arr, dtype=None):
     args = _likeArgs(arr)
     return zeros(shape=arr.shape, dtype=dtype or arr.dtype, **args)
-    
+
 
 def ones_like(arr, dtype=None):
     args = _likeArgs(arr)
     return ones(shape=arr.shape, dtype=dtype or arr.dtype, **args)
- 
+
 
 def full_like(arr, value, dtype=None):
     args = _likeArgs(arr)
@@ -278,7 +278,7 @@ def fromfile(fname, mode="r"):
     Arguments
     ---------
     fname : str  # file name
-    
+
     Returns
     -------
     GeoArray
@@ -288,6 +288,4 @@ def fromfile(fname, mode="r"):
     Create GeoArray from file
 
     """
-    
     return array(**_fromFile(fname, mode))
-
