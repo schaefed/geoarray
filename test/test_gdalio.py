@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
                 self.assertEqual(check_array.cellsize, test_array.cellsize)
                 self.assertEqual(check_array.proj, test_array.proj)
                 self.assertEqual(check_array.fill_value, test_array.fill_value)
-                self.assertEqual(check_array.mode, test_array.mode)
+                self.assertEqual(check_array.color_mode, test_array.color_mode)
 
     def test_updateio(self):
         test_array = testArray((340, 270))
@@ -37,8 +37,6 @@ class Test(unittest.TestCase):
             if ending != ".tif":
                 continue
             with tempfile.NamedTemporaryFile(suffix=ending) as tf:
-                print ending
-
                 test_array.tofile(tf.name)
                 check_file = ga.fromfile(tf.name, "a")
                 #print check_file[slices].dtype

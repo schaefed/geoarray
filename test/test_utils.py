@@ -20,8 +20,7 @@ def testArray(shape):
         xorigin = 3820288,
         cellsize = 1000,
         fill_value = -9999,
-        mode = "L",
-    )
+        color_mode = "L")
 
 def createDirectory(path):
     try:

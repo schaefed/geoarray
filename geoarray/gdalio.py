@@ -71,6 +71,7 @@ _COLOR_MODE_LIST = (
 
 _FILE_MODE_DICT = {
     "r" : gdal.GA_ReadOnly,
+    "v" : gdal.GA_ReadOnly,
     "a" : gdal.GA_Update
 }
 
@@ -139,10 +140,9 @@ def _fromDataset(fobj, mode="r"):
         )
 
     geotrans = fobj.GetGeoTransform()
-    data = fobj.GetVirtualMemArray()
+    data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
     ydata, xdata = _calcCoordinates(geotrans, *data.shape[-2:])
 
-    
     return {
         "data"       : data,
         # "yorigin"    : geotrans[3],
@@ -153,7 +153,7 @@ def _fromDataset(fobj, mode="r"):
         "fill_value" : fill_values[0],
         "cellsize"   : (geotrans[5], geotrans[1]),
         "proj"       : _Projection(fobj.GetProjection()),
-        "mode"       : _getColorMode(fobj),
+        "mode"       : mode, #_getColorMode(fobj),
         "fobj"       : fobj,
     }
 
@@ -232,3 +232,13 @@ def _toFile(geoarray, fname):
     dataset = _getDataset(geoarray)
     driver  = _getDriver(_fnameExtension(fname))
     driver.CreateCopy(fname, dataset, 0)
+
+def _writeData(grid):
+
+    fobj = grid.fobj
+    data = grid.data
+    if data.ndim == 2:
+        data = data[None, ...]
+
+    for n in range(fobj.RasterCount) :
+        fobj.GetRasterBand(n + 1).WriteArray(data[n])

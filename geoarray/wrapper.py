@@ -19,13 +19,14 @@ from .gdalio import _fromFile, _fromDataset
 
 def array(data,               # type: Union[np.ndarray, GeoArray]
           dtype      = None,  # type: Optional[Union[AnyStr, np.dtype]]
-          yorigin    = None,  # type: Optional[float]
-          xorigin    = None,  # type: Optional[float]
-          origin     = None,  # type: Optional[AnyStr]
+          yorigin    = 0,     # type: Optional[float]
+          xorigin    = 0,     # type: Optional[float]
+          origin     = "ul",  # type: Optional[AnyStr]
           fill_value = None,  # type: Optional[float]
-          cellsize   = None,  # type: Optional[Union[float, Tuple[float, float]]]
+          cellsize   = 1,     # type: Optional[Union[float, Tuple[float, float]]]
           proj       = None,  # type: Mapping[AnyStr, Union[AnyStr, float]]
-          mode       = None,  # type: AnyStr
+          mode       = "r",   # type: AnyStr
+          color_mode = "L",   # type: AnyStr
           copy       = False, # type: bool
           fobj       = None,  # type: Optional[osgeo.gdal.Dataset]
 ):                            # type: (...) -> GeoArray
@@ -67,18 +68,20 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         cellsize   = cellsize or data.cellsize
         proj       = proj or data.proj
         mode       = mode or data.mode
+        color_mode = color_mode or data.color_mode
         fobj       = data.fobj
         data       = data.data
 
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy),
-        yorigin    = yorigin or 0,
-        xorigin    = xorigin or 0,
-        origin     = origin or "ul",
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        origin     = origin,
         fill_value = fill_value,
-        cellsize   = cellsize or (1, 1),
+        cellsize   = cellsize,
         proj       = proj,
         mode       = mode,
+        color_mode = color_mode,
         fobj       = fobj,
     )
 
@@ -88,12 +91,13 @@ def _likeArgs(arr):
     out = {}
     if isinstance(arr, GeoArray):
         out["yorigin"]    = arr.yorigin
-        out["xorigin"]     = arr.xorigin
+        out["xorigin"]    = arr.xorigin
         out["origin"]     = arr.origin
         out["fill_value"] = arr.fill_value
         out["cellsize"]   = arr.cellsize
         out["proj"]       = arr.proj
-        out["mode"]       = arr.mode
+        out["mode"]       = "r"
+        out["color_mode"] = arr.color_mode
 
     return out
 
@@ -114,7 +118,7 @@ def full_like(arr, value, dtype=None):
 
 
 def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None, mode=None):
+          fill_value=None, cellsize=1, proj=None, color_mode=None):
     """
     Arguments
     ---------
@@ -151,12 +155,13 @@ def zeros(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         fill_value = fill_value,
         cellsize   = cellsize,
         proj       = proj,
-        mode       = mode,
+        mode       = "r",
+        color_mode = color_mode,
     )
 
 
 def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None, mode=None):
+         fill_value=None, cellsize=1, proj=None, color_mode=None):
     """
     Arguments
     ---------
@@ -189,12 +194,13 @@ def ones(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         fill_value = fill_value,
         cellsize   = cellsize,
         proj       = proj,
-        mode       = mode,
+        mode       = "r",
+        color_mode = color_mode,
     )
 
 
 def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-         fill_value=None, cellsize=1, proj=None, mode=None):
+         fill_value=None, cellsize=1, proj=None, color_mode=None):
     """
     Arguments
     ---------
@@ -228,11 +234,12 @@ def full(shape, value, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         fill_value = fill_value,
         cellsize   = cellsize,
         proj       = proj,
-        mode       = mode)
+        mode       = "r",
+        color_mode = color_mode)
 
 
 def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
-          fill_value=None, cellsize=1, proj=None, mode=None):
+          fill_value=None, cellsize=1, proj=None, color_mode=None):
     """
     Arguments
     ----------
@@ -265,7 +272,7 @@ def empty(shape, dtype=np.float64, yorigin=0, xorigin=0, origin="ul",
         fill_value = fill_value,
         cellsize   = cellsize,
         proj       = proj,
-        mode       = mode,
+        color_mode = color_mode,
     )
 
 

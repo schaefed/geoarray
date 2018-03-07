@@ -20,7 +20,7 @@ from numpy.ma import MaskedArray
 from math import floor, ceil
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdaltrans import _Projection
-from .gdalio import _getDataset, _toFile
+from .gdalio import _getDataset, _toFile, _writeData
 
 
 # Possible positions of the grid origin
@@ -82,7 +82,8 @@ class GeoArray(MaskedArray):
     cellsize     : (scalar, scalar)
     fobj         : return object from gdal.Open or None
     proj         : _Projection           # projection information
-    mode         : string
+    color_mode   : string
+    mode         : AnyStr
 
     Purpose
     -------
@@ -106,9 +107,9 @@ class GeoArray(MaskedArray):
 
     def __new__(
             cls, data, yorigin, xorigin, origin, cellsize,
-            proj=None, fill_value=None, fobj=None, mode=None,  # mask=None,
-            *args, **kwargs):
-        
+            proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
+            mode="r", *args, **kwargs):
+
         # NOTE: The mask will always be calculated, even if its
         #       already present or not needed at all...
         mask = (np.zeros_like(data, np.bool)
@@ -128,8 +129,7 @@ class GeoArray(MaskedArray):
             cs = abs(cellsize)
             cellsize = (
                 cs if origin[0] == "l" else -cs,
-                cs if origin[1] == "l" else -cs
-            )
+                cs if origin[1] == "l" else -cs)
 
         obj = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
@@ -141,6 +141,7 @@ class GeoArray(MaskedArray):
         obj._optinfo["cellsize"] = tuple(cellsize)
         obj._optinfo["_proj"] = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value
+        obj._optinfo["color_mode"] = color_mode
         obj._optinfo["mode"] = mode
         obj._optinfo["_fobj"] = fobj
 
@@ -171,7 +172,7 @@ class GeoArray(MaskedArray):
             "fill_value": self.fill_value,
             "cellsize": self.cellsize,
             "proj": self.proj,
-            "mode": self.mode}
+            "color_mode": self.color_mode}
 
     @property
     def bbox(self):
@@ -391,7 +392,8 @@ class GeoArray(MaskedArray):
             cellsize = self.cellsize,
             proj = self.proj,
             fill_value = fill_value,
-            mode = self.mode)
+            mode = self.mode,
+            color_mode = self.color_mode)
 
     def trim(self):
         """
@@ -514,8 +516,9 @@ class GeoArray(MaskedArray):
             origin="ul",
             fill_value=self.fill_value,
             cellsize=(abs(self.cellsize[0])*-1, abs(self.cellsize[1])),
+            mode="r",
             proj=self.proj,
-            mode=self.mode)
+            color_mode=self.color_mode)
 
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
@@ -605,7 +608,8 @@ class GeoArray(MaskedArray):
             cellsize=self.cellsize,
             proj=copy.deepcopy(self.proj),
             fill_value=self.fill_value,
-            mode=self.mode)
+            mode="r",
+            color_mode=self.color_mode)
 
     @property
     def coordinates(self):
@@ -621,8 +625,11 @@ class GeoArray(MaskedArray):
 
         return (
             _arange(yorigin, cellsize[0], self.nrows),
-            _arange(xorigin, cellsize[1], self.ncols)
-        )
+            _arange(xorigin, cellsize[1], self.ncols))
+
+#    def __setitem__(self, slc, values):
+#        self.data[slc] = values
+#        self.flush()
 
     def __getitem__(self, slc):
 
@@ -665,17 +672,21 @@ class GeoArray(MaskedArray):
             cellsize=cellsize,
             proj=self.proj,
             fill_value=self.fill_value,
-            mode=self.mode)
+            mode=self.mode,
+            color_mode=self.color_mode)
 
-    # def flush(self):
-    #     if self._fobj:
-    #         self._fobj.FlushCache()
+    def flush(self):
+        if self._fobj:
+            self._fobj.FlushCache()
+            if self.mode == "a":
+                _writeData(self)
 
     def close(self):
         self.__del__()
 
     def __del__(self):
         # the virtual memory mapping needs to be released BEFORE the fobj
+        # self.flush()
         self._optinfo["data"] = None
         self._optinfo["_fobj"] = None
 
