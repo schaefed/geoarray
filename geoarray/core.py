@@ -676,8 +676,9 @@ class GeoArray(MaskedArray):
             color_mode=self.color_mode)
 
     def flush(self):
-        if self._fobj:
-            self._fobj.FlushCache()
+        fobj = self._optinfo.get("_fobj")
+        if fobj is not None:
+            fobj.FlushCache()
             if self.mode == "a":
                 _writeData(self)
 
@@ -686,7 +687,7 @@ class GeoArray(MaskedArray):
 
     def __del__(self):
         # the virtual memory mapping needs to be released BEFORE the fobj
-        # self.flush()
+        self.flush()
         self._optinfo["data"] = None
         self._optinfo["_fobj"] = None
 
