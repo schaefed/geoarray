@@ -52,7 +52,7 @@ _METHODS = (
 
 def _checkMatch(func):
     def inner(*args):
-        if len({a._proj.get() for a in args if isinstance(a, GeoArray)}) > 1:
+        if len({a.proj for a in args if isinstance(a, GeoArray)}) > 1:
             warnings.warn("Incompatible map projections!", RuntimeWarning)
         if len({a.cellsize for a in args if isinstance(a, GeoArray)}) != 1:
             warnings.warn("Incompatible cellsizes", RuntimeWarning)
@@ -115,34 +115,12 @@ class GeoArray(MaskedArray):
         mask = (np.zeros_like(data, np.bool)
                 if fill_value is None else data == fill_value)
 
-#        if origin not in ORIGINS:
-#            raise TypeError(
-#                "Argument 'origin' must be one of '{:}'".format(ORIGINS))
-#        try:
-#            # Does this work for grids crossing the equator??
-#            origin = "".join(
-#                ("l" if cellsize[0] > 0 else "u",
-#                 "l" if cellsize[1] > 0 else "r")
-#            )
-#        # iterable of len < 2, numeric value
-#        except (IndexError, TypeError):
-#            cs = abs(cellsize)
-#            cellsize = (
-#                cs if origin[0] == "l" else -cs,
-#                cs if origin[1] == "l" else -cs)
-
         obj = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
-
-        #obj._optinfo["geotrans"] = {
-        #    "yorigin": yorigin, "xorigin": xorigin,
-        #    "ycellsize": cellsize[0], "xcellsize": cellsize[1],
-        #    "yparam": 0, "xparam": 0}
         obj._optinfo["geotrans"] = geotrans
-        #obj._optinfo["origin"] = origin
-        obj._optinfo["_proj"] = _Projection(proj)
+        obj._optinfo["proj"] = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value
         obj._optinfo["color_mode"] = color_mode
         obj._optinfo["mode"] = mode
@@ -293,13 +271,13 @@ class GeoArray(MaskedArray):
         except IndexError:
             return 1
 
-    @property
-    def proj(self):
-        return self._proj.get()
-
-    @proj.setter
-    def proj(self, value):
-        self._proj.set(value)
+#     @property
+#     def proj(self):
+#         return self._proj.get()
+# 
+#     @proj.setter
+#     def proj(self, value):
+#         self._proj.set(value)
 
     @property
     def fill_value(self):
@@ -309,7 +287,7 @@ class GeoArray(MaskedArray):
     # The _optinfo dictionary is not updated when calling __eq__/__ne__
     # numpy PR: 9279
     def _comparison(self, other, compare):
-        out = super(GeoArray, self)._comparison(other, compare)
+        out = super(self.__class__, self)._comparison(other, compare)
         out._update_from(self)
         return out
 
@@ -623,13 +601,35 @@ class GeoArray(MaskedArray):
     #     self.xorigin -= dx
     #     self.yorigin -= dy
 
-    def __getattr__(self, name):
+    def __getattr__(self, key):
         try:
-            return self._optinfo[name]
+            value = self._optinfo[key]
+            # make descriptors work
+            if hasattr(value, "__get__"):
+                value = value.__get__(None, self)
+            return value
         except KeyError:
-            raise AttributeError(
-                "'{:}' object has no attribute {:}"
-                .format(self.__class__.__name__, name))
+            raise AttributeError("'{:}' object has no attribute {:}"
+                                 .format(self.__class__.__name__, key))
+
+    def __setattr__(self, key, value):
+        try:
+            attr = getattr(self, key)
+            if hasattr(attr, "__set__"):
+                attr.__set__(None, value)
+            else:
+                super(self.__class__, self).__setattr__(key, value)
+        except AttributeError:
+            self._optinfo[key] = value
+
+    def __copy__(self):
+        return GeoArray(
+            data=self.data,
+            geotrans=copy.deepcopy(self.geotrans),
+            proj=copy.deepcopy(self.proj),
+            fill_value=self.fill_value,
+            mode=self.mode,
+            color_mode=self.color_mode)
 
     def __deepcopy__(self, memo):
         return GeoArray(
@@ -662,7 +662,7 @@ class GeoArray(MaskedArray):
 
     def __getitem__(self, slc):
 
-        data = super(GeoArray, self).__getitem__(slc)
+        data = super(self.__class__, self).__getitem__(slc)
 
         # empty array
         if data.size == 0:

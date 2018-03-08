@@ -27,8 +27,7 @@ class _Projection(object):
             self._srs.ImportFromProj4("+init=epsg:{:}".format(value))
         elif isinstance(value, dict):
             params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in value.items()])
-            )
+                ["=".join(map(str, pp)) for pp in value.items()]))
             self._srs.ImportFromProj4(params)
         elif isinstance(value, str):
             self._srs.ImportFromWkt(value)
@@ -36,15 +35,18 @@ class _Projection(object):
         if value and self is None:
             warnings.warn("Projection not understood", RuntimeWarning)
 
-    def __nonzero__(self):
-        # is a an projection set?
-        return self.get() is not None
-
-    def get(self):
+    def _export(self):
         out = self._srs.ExportToPrettyWkt()
         return out or None
 
-    def set(self, val):
+    def __nonzero__(self):
+        # is a an projection set?
+        return self._export() is not None
+
+    def __get__(self, obj, objtype):
+        return self._export()
+
+    def __set__(self, obj, val):
         self._import(val)
 
 

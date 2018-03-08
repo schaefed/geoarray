@@ -182,6 +182,7 @@ class Test(unittest.TestCase):
             self.assertNotEqual(id(base),id(deep_copy))
             self.assertTrue(np.all(base == deep_copy))
             shallow_copy = copy.copy(base)
+            # import ipdb; ipdb.set_trace()
             self.assertDictEqual(base.header, shallow_copy.header)
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
