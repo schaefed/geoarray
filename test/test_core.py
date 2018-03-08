@@ -105,7 +105,7 @@ class Test(unittest.TestCase):
 
         for i, grid in enumerate(grids):
             for slc, exp in zip(slices, expected[i]):
-                self.assertTupleEqual( exp,  grid[slc].getOrigin() )
+                self.assertTupleEqual( exp,  grid[slc].getCorner() )
                 break
             break
 

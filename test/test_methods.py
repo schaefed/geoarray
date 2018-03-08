@@ -121,7 +121,7 @@ class Test(unittest.TestCase):
     #             grid = copy.deepcopy(base)
     #             grid.yorigin -= yoff
     #             grid.xorigin -= xoff
-    #             yorg, xorg = grid.getOrigin()
+    #             yorg, xorg = grid.getCorner()
     #             grid.snap(base)
 
     #             xdelta = abs(grid.xorigin - xorg)

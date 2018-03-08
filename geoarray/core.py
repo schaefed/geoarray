@@ -46,7 +46,7 @@ _METHODS = (
     # arithmetic, in-place
     "__iadd__", "__isub__", "__imul__", "__idiv__", "__itruediv__",
     "__ifloordiv__", "__imod__", "__ipow__", "__ilshift__", "__irshift__",
-    "__iand__", "__ior__", "__ixor__",  # "__imatmul__",
+    "__iand__", "__ior__", "__ixor__",  # "__imatmul__"
 )
 
 
@@ -56,7 +56,7 @@ def _checkMatch(func):
             warnings.warn("Incompatible map projections!", RuntimeWarning)
         if len({a.cellsize for a in args if isinstance(a, GeoArray)}) != 1:
             warnings.warn("Incompatible cellsizes", RuntimeWarning)
-        if len({a.getOrigin("ul") for a in args
+        if len({a.getCorner("ul") for a in args
                 if isinstance(a, GeoArray)}) != 1:
             warnings.warn("Incompatible origins", RuntimeWarning)
         return func(*args)
@@ -69,8 +69,93 @@ class GeoArrayMeta(object):
             attrs[key] = _checkMatch(getattr(MaskedArray, key))
         return type(name, bases, attrs)
 
+class GeotransMixin(object):
 
-class GeoArray(MaskedArray):
+    @property
+    def yorigin(self):
+        return self.geotrans.yorigin
+
+    @property
+    def xorigin(self):
+        return self.geotrans.xorigin
+
+    @property
+    def cellsize(self):
+        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
+
+    @property
+    def ycellsize(self):
+        return self.geotrans.ycellsize
+
+    @property
+    def xcellsize(self):
+        return self.geotrans.xcellsize
+
+    @property
+    def origin(self):
+        return "".join(
+            ["l" if self.ycellsize > 0 else "u",
+             "l" if self.xcellsize > 0 else "r"])
+
+    @property
+    def bbox(self):
+
+        corners = np.array(self.getCorners())
+        ymin, xmin = np.min(corners, axis=0)
+        ymax, xmax = np.max(corners, axis=0)
+
+        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
+
+
+    def _calcCoordinate(self, row, col):
+        yval = (self.geotrans.yorigin
+                + col * self.geotrans.yparam
+                + row * self.geotrans.ycellsize)
+        xval = (self.geotrans.xorigin
+                + col * self.geotrans.xcellsize
+                + row * self.geotrans.xparam)
+        return yval, xval
+
+    @property
+    def coordinates(self):
+        # NOTE: rather costly, should be cached
+        xdata, ydata = np.meshgrid(
+            np.arange(self.ncols, dtype=float),
+            np.arange(self.nrows, dtype=float))
+        return self._calcCoordinate(ydata, xdata)
+
+    def getCorners(self):
+        corners = [(0, 0), (self.nrows, 0),
+                   (0, self.ncols), (self.nrows, self.ncols)]
+        return [self._calcCoordinate(*idx) for idx in corners]
+
+    def getCorner(self, corner=None):
+        """
+        Arguments
+        ---------
+        corner : str/None
+
+        Returns
+        -------
+        (scalar, scalar)
+
+        Purpose
+        -------
+        Return the grid's corner coordinates. Defaults to the origin
+        corner. Any other corner may be specifed with the 'origin' argument,
+        which should be one of: 'ul','ur','ll','lr'.
+        """
+
+        if not corner:
+            corner = self.origin
+
+        bbox = self.bbox
+        return (
+            bbox["ymax"] if corner[0] == "u" else bbox["ymin"],
+            bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
+
+
+class GeoArray(GeotransMixin, MaskedArray):
     """
     Arguments
     ----------
@@ -106,7 +191,7 @@ class GeoArray(MaskedArray):
     __metaclass__ = GeoArrayMeta
 
     def __new__(
-            cls, data, geotrans, #yorigin, xorigin, cellsize, origin="ul",
+            cls, data, geotrans,
             proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
             mode="r", *args, **kwargs):
 
@@ -127,24 +212,6 @@ class GeoArray(MaskedArray):
         obj._optinfo["_fobj"] = fobj
 
         return obj
-
-    @property
-    def xorigin(self):
-        return self.geotrans.xorigin
-
-    @property
-    def yorigin(self):
-        return self.geotrans.yorigin
-
-    @property
-    def cellsize(self):
-        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
-
-    @property
-    def origin(self):
-        return "".join(
-            ("l" if self.cellsize[0] > 0 else "u",
-             "l" if self.cellsize[1] > 0 else "r"))
 
     @property
     def header(self):
@@ -172,38 +239,6 @@ class GeoArray(MaskedArray):
             "cellsize": self.cellsize,
             "proj": self.proj,
             "color_mode": self.color_mode}
-
-    @property
-    def bbox(self):
-        """
-        Arguments
-        ---------
-        None
-
-        Returns
-        -------
-        dict
-
-        Purpose
-        -------
-        Return the grid's bounding box.
-        """
-
-        yvals, xvals = self.coordinates
-
-        ymin, ymax = min(yvals), max(yvals)
-        if self.origin[0] == "u":
-            ymin += self.geotrans.ycellsize
-        else:
-            ymax += self.geotrans.ycellsize
-
-        xmin, xmax = min(xvals), max(xvals)
-        if self.origin[1] == "r":
-            xmin += self.geotrans.xcellsize
-        else:
-            xmax += self.geotrans.xcellsize
-
-        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
 
     @property
     def nbands(self):
@@ -271,14 +306,6 @@ class GeoArray(MaskedArray):
         except IndexError:
             return 1
 
-#     @property
-#     def proj(self):
-#         return self._proj.get()
-# 
-#     @proj.setter
-#     def proj(self, value):
-#         self._proj.set(value)
-
     @property
     def fill_value(self):
         return self._optinfo["fill_value"]
@@ -302,31 +329,6 @@ class GeoArray(MaskedArray):
         if self._fobj is None:
             self._fobj = _getDataset(self, mem=True)
         return self._fobj
-
-    def getOrigin(self, origin=None):
-        """
-        Arguments
-        ---------
-        origin : str/None
-
-        Returns
-        -------
-        (scalar, scalar)
-
-        Purpose
-        -------
-        Return the grid's corner coordinates. Defaults to the origin
-        corner. Any other corner may be specifed with the 'origin' argument,
-        which should be one of: 'ul','ur','ll','lr'.
-        """
-
-        if not origin:
-            origin = self.origin
-
-        bbox = self.bbox
-        return (
-            bbox["ymax"] if origin[0] == "u" else bbox["ymin"],
-            bbox["xmax"] if origin[1] == "r" else bbox["xmin"],)
 
     def coordinatesOf(self, y_idx, x_idx):
         """
@@ -355,7 +357,7 @@ class GeoArray(MaskedArray):
                 or x_idx >= self.ncols)):
             raise ValueError("Index out of bounds !")
 
-        yorigin, xorigin = self.getOrigin("ul")
+        yorigin, xorigin = self.getCorner("ul")
         return (
             yorigin - y_idx * abs(self.cellsize[0]),
             xorigin + x_idx * abs(self.cellsize[1]))
@@ -376,7 +378,7 @@ class GeoArray(MaskedArray):
         fall and return its row/column index values.
         """
 
-        yorigin, xorigin = self.getOrigin("ul")
+        yorigin, xorigin = self.getCorner("ul")
         cellsize = np.abs(self.cellsize)
         yidx = int(floor((yorigin - ycoor) / float(cellsize[0])))
         xidx = int(floor((xcoor - xorigin) / float(cellsize[1])))
@@ -589,7 +591,7 @@ class GeoArray(MaskedArray):
     #     data will be done. In case of large shifts the physical integrety
     #     of the data might be disturbed!
 
-    #     diff = np.array(self.getOrigin()) - np.array(target.getOrigin(self.origin))
+    #     diff = np.array(self.getCorner()) - np.array(target.getCorner(self.origin))
     #     dy, dx = abs(diff)%target.cellsize * np.sign(diff)
 
     #     if abs(dy) > self.cellsize[0]/2.:
@@ -640,26 +642,6 @@ class GeoArray(MaskedArray):
             mode="r",
             color_mode=self.color_mode)
 
-    @property
-    def coordinates(self):
-        ydata = np.arange(self.nrows, dtype=float)
-        xdata = np.arange(self.ncols, dtype=float)
-
-        # only blow up, if there is a reason to
-        if self.geotrans.yparam != 0 or self.geotrans.xparam != 0:
-            xdata, ydata = np.meshgrid(xdata, ydata)
-            ydata = (self.geotrans.yorigin
-                     + xdata*self.geotrans.ycellsize
-                     + ydata*self.geotrans.yparam)
-            xdata = (self.geotrans.xorigin
-                     + xdata*self.geotrans.xcellsize
-                     + ydata*self.geotrans.xparam)
-        else:
-            ydata = self.geotrans.yorigin + ydata*self.geotrans.ycellsize
-            xdata = self.geotrans.xorigin + xdata*self.geotrans.xcellsize
-
-        return ydata, xdata
-
     def __getitem__(self, slc):
 
         data = super(self.__class__, self).__getitem__(slc)
@@ -668,7 +650,8 @@ class GeoArray(MaskedArray):
         if data.size == 0:
             return data
 
-        x, y = _broadcastedMeshgrid(*self.coordinates[::-1])
+        y, x = self.coordinates
+        # x, y = _broadcastedMeshgrid(*self.coordinates[::-1])
 
         bbox = []
         for arr, idx in zip((y, x), (-2, -1)):
@@ -696,13 +679,13 @@ class GeoArray(MaskedArray):
             yorigin=ystart, xorigin=xstart, ycellsize=cellsize[0], xcellsize=cellsize[1])
 
         return GeoArray(
-            data=data.data,
-            geotrans=geotrans,
-            origin=self.origin,
-            proj=self.proj,
-            fill_value=self.fill_value,
-            mode=self.mode,
-            color_mode=self.color_mode)
+            data       = data.data,
+            geotrans   = geotrans,
+            origin     = self.origin,
+            proj       = self.proj,
+            fill_value = self.fill_value,
+            mode       = self.mode,
+            color_mode = self.color_mode)
 
     def flush(self):
         fobj = self._optinfo.get("_fobj")
