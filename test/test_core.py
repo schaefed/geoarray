@@ -175,6 +175,13 @@ class Test(unittest.TestCase):
     #             self.assertTrue(np.all(checkgrid == base))
     #             self.assertDictEqual(checkgrid.bbox, base.bbox)
 
+    def test_setattr(self):
+        grid = self.grids[0]
+        grid.test_attribute_1 = 42
+        setattr(grid, "test_attribute_2", 42)
+        self.assertIn("test_attribute_1", grid._optinfo)
+        self.assertIn("test_attribute_2", grid._optinfo)
+
     def test_copy(self):
         for base in self.grids[1:]:
             deep_copy = copy.deepcopy(base)
@@ -182,7 +189,6 @@ class Test(unittest.TestCase):
             self.assertNotEqual(id(base),id(deep_copy))
             self.assertTrue(np.all(base == deep_copy))
             shallow_copy = copy.copy(base)
-            # import ipdb; ipdb.set_trace()
             self.assertDictEqual(base.header, shallow_copy.header)
             self.assertNotEqual(id(base),id(shallow_copy))
             self.assertTrue(np.all(base == shallow_copy))
