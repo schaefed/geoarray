@@ -7,6 +7,51 @@ import warnings
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
+class _Geotrans(object):
+    def __init__(self, yorigin, xorigin, ycellsize, xcellsize, yparam, xparam):
+        self.yorigin = yorigin
+        self.xorigin = xorigin
+        self.ycellsize = ycellsize
+        self.xcellsize = xcellsize
+        self.yparam = yparam or 0
+        self.xparam = xparam or 0
+
+    def keys(self):
+        return ("yorigin", "xorigin", "ycellsize", "xcellsize", "yparam", "xparam")
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def copy(self, **kwargs):
+        args = dict(self)
+        args.update(kwargs)
+        return _Geotrans(**args)
+
+    def __str__(self):
+        return str({
+            "yorigin": self.yorigin,
+            "xorigin": self.xorigin,
+            "ycellsize": self.ycellsize,
+            "xcellsize": self.xcellsize,
+            "yparam": self.yparam,
+            "xparam": self.xparam})
+
+    def toGdal(self):
+        return (
+            self.xorigin, self.xcellsize, self.xparam,
+            self.yorigin, self.yparam, self.ycellsize)
+
+    @classmethod
+    def fromGdal(cls, geotrans):
+        return _Geotrans(
+            yorigin = geotrans[3],
+            xorigin = geotrans[0],
+            ycellsize = geotrans[5],
+            xcellsize = geotrans[1],
+            yparam = geotrans[4],
+            xparam = geotrans[2])
+
+
 class _Projection(object):
     def __init__(self, arg):
         """

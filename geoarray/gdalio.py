@@ -5,7 +5,7 @@ import os
 import warnings
 import numpy as np
 import gdal, osr
-from .gdaltrans import _Projection
+from .gdaltrans import _Projection, _Geotrans
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -15,8 +15,8 @@ gdal.PushErrorHandler('CPLQuietErrorHandler')
 _DRIVER_DICT = {
     ".tif" : "GTiff",
     ".asc" : "AAIGrid",
-    # ".img" : "HFA",
-    #".sdat" : "SAGA",
+    ".img" : "HFA",
+    ".sdat" : "SAGA",
     ".png" : "PNG", # not working properly
 }
 
@@ -112,23 +112,7 @@ def _getColorMode(fobj):
 
 def _fromDataset(fobj, mode="r"):
 
-    from .wrapper import array
-
-    #def _calcCoordinates(geotrans, ydim, xdim):
-    #    xdata = np.arange(xdim, dtype=float)
-    #    ydata = np.arange(ydim, dtype=float)
-
-    #    # only blow up, if there is a reason to
-    #    if geotrans[2] != 0 or geotrans[4] != 0:
-    #        xdata, ydata = np.meshgrid(xdata, ydata)
-    #        xdata = geotrans[0] + xdata*geotrans[1] + ydata*geotrans[2]
-    #        ydata = geotrans[3] + xdata*geotrans[4] + ydata*geotrans[5]
-    #    else:
-    #        xdata = geotrans[0] + xdata*geotrans[1]
-    #        ydata = geotrans[3] + xdata*geotrans[4]
-
-    #    return ydata, xdata
-
+    from .core import GeoArray
 
     fill_values = tuple(
         fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount))
@@ -139,21 +123,33 @@ def _fromDataset(fobj, mode="r"):
             RuntimeWarning
         )
 
-    geotrans = fobj.GetGeoTransform()
+    geotrans = _Geotrans.fromGdal(fobj.GetGeoTransform())
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
 
-    return {
-        "data": data,
-        "fill_value": fill_values[0],
-        "proj": _Projection(fobj.GetProjection()),
-        "mode": mode, #_getColorMode(fobj),
-        "fobj": fobj,
-        "yorigin": geotrans[3],
-        "xorigin": geotrans[0],
-        "ycellsize": geotrans[4] or geotrans[1] * -1 or -1,
-        "xcellsize": geotrans[1] or geotrans[4] or 1,
-        "yparam": abs(geotrans[5]),
-        "xparam": abs(geotrans[2])}
+    return GeoArray(
+        data       = data,
+        fill_value = fill_values[0],
+        proj       = _Projection(fobj.GetProjection()),
+        mode       = mode,
+        color_mode = _getColorMode(fobj),
+        fobj       = fobj,
+        geotrans   = geotrans)
+
+#    return {
+#        "data": data,
+#        "fill_value": fill_values[0],
+#        "proj": _Projection(fobj.GetProjection()),
+#        "mode": mode,
+#        "color_mode" : _getColorMode(fobj),
+#        "fobj": fobj,
+#        "geotrans": geotrans}
+
+        # "yorigin": geotrans[3],
+        # "xorigin": geotrans[0],
+        # "ycellsize": geotrans[5], # or geotrans[1] * -1 or -1,
+        # "xcellsize": geotrans[1], # or geotrans[4] or 1,
+        # "yparam": geotrans[4],
+        # "xparam": geotrans[2]}
 
 
 def _getDataset(grid, mem=False):
@@ -171,11 +167,7 @@ def _getDataset(grid, mem=False):
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
-    geotrans = (
-        grid.geotrans["xorigin"], grid.geotrans["xcellsize"], grid.geotrans["xparam"],
-        grid.geotrans["yorigin"], grid.geotrans["ycellsize"], grid.geotrans["yparam"])
-
-    out.SetGeoTransform(geotrans)
+    out.SetGeoTransform(grid.geotrans.toGdal())
 
     if grid.proj:
         out.SetProjection(grid.proj)

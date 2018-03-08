@@ -14,6 +14,7 @@ This module provides initializer function for core.GeoArray
 import numpy as np
 from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
+from .gdaltrans import _Projection, _Geotrans
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
@@ -72,21 +73,23 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         if origin[1] == "r":
             xcellsize *= -1
 
-    geotrans = {
+    geotrans = _Geotrans(**{
         "yorigin": yorigin, "xorigin": xorigin,
         "ycellsize": ycellsize, "xcellsize": xcellsize,
-        "yparam": yparam, "xparam": xparam}
+        "yparam": yparam, "xparam": xparam})
+
+    proj = _Projection(proj)
 
     if isinstance(data, GeoArray):
         return GeoArray(
-            dtype=dtype or data.dtype,
-            geotrans=data.geotrans,
-            fill_value=fill_value or data.fill_value,
-            proj=proj or data.proj,
-            mode=mode or data.mode,
-            color_mode=color_mode or data.color_mode,
-            fobj=data.fobj,
-            data=data.data)
+            dtype      = dtype or data.dtype,
+            geotrans   = data.geotrans,
+            fill_value = fill_value or data.fill_value,
+            proj       = proj or data.proj,
+            mode       = mode or data.mode,
+            color_mode = color_mode or data.color_mode,
+            fobj       = data.fobj,
+            data       = data.data)
 
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy),
@@ -237,4 +240,4 @@ def fromfile(fname, mode="r"):
     Create GeoArray from file
 
     """
-    return array(**_fromFile(fname, mode))
+    return _fromFile(fname, mode)

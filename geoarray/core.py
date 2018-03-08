@@ -19,7 +19,7 @@ import warnings
 from numpy.ma import MaskedArray
 from math import floor, ceil
 from .utils import _broadcastedMeshgrid, _broadcastTo
-from .gdaltrans import _Projection
+from .gdaltrans import _Projection, _Geotrans
 from .gdalio import _getDataset, _toFile, _writeData
 
 
@@ -119,7 +119,7 @@ class GeoArray(MaskedArray):
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
-        obj._optinfo["geotrans"] = geotrans
+        obj._optinfo["geotrans"] = _Geotrans(**geotrans)
         obj._optinfo["proj"] = _Projection(proj)
         obj._optinfo["fill_value"] = fill_value
         obj._optinfo["color_mode"] = color_mode
@@ -130,15 +130,15 @@ class GeoArray(MaskedArray):
 
     @property
     def xorigin(self):
-        return self.geotrans["xorigin"]
+        return self.geotrans.xorigin
 
     @property
     def yorigin(self):
-        return self.geotrans["yorigin"]
+        return self.geotrans.yorigin
 
     @property
     def cellsize(self):
-        return (self.geotrans["ycellsize"], self.geotrans["xcellsize"])
+        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
 
     @property
     def origin(self):
@@ -193,15 +193,15 @@ class GeoArray(MaskedArray):
 
         ymin, ymax = min(yvals), max(yvals)
         if self.origin[0] == "u":
-            ymin += self.geotrans["ycellsize"]
+            ymin += self.geotrans.ycellsize
         else:
-            ymax += self.geotrans["ycellsize"]
+            ymax += self.geotrans.ycellsize
 
         xmin, xmax = min(xvals), max(xvals)
         if self.origin[1] == "r":
-            xmin += self.geotrans["xcellsize"]
+            xmin += self.geotrans.xcellsize
         else:
-            xmax += self.geotrans["xcellsize"]
+            xmax += self.geotrans.xcellsize
 
         return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
 
@@ -517,9 +517,9 @@ class GeoArray(MaskedArray):
                 "Valid fill_value needed, actual value is {:}"
                 .format(self.fill_value))
 
-        geotrans = self.geotrans.copy()
-        geotrans["yorigin"] += top*geotrans["ycellsize"]*-1
-        geotrans["xorigin"] += left*geotrans["xcellsize"]*-1
+        geotrans = self.geotrans.copy(
+            yorigin=self.geotrans.yorigin + top*self.geotrans.ycellsize * -1,
+            xorigin=self.geotrans.xorigin + left*self.geotrans.xcellsize * -1)
 
         out = GeoArray(
             data=data,
@@ -646,17 +646,17 @@ class GeoArray(MaskedArray):
         xdata = np.arange(self.ncols, dtype=float)
 
         # only blow up, if there is a reason to
-        if self.geotrans["yparam"] != 0 or self.geotrans["xparam"] != 0:
+        if self.geotrans.yparam != 0 or self.geotrans.xparam != 0:
             xdata, ydata = np.meshgrid(xdata, ydata)
-            ydata = (self.geotrans["yorigin"]
-                     + xdata*self.geotrans["ycellsize"]
-                     + ydata*self.geotrans["yparam"])
-            xdata = (self.geotrans["xorigin"]
-                     + xdata*self.geotrans["xcellsize"]
-                     + ydata*self.geotrans["xparam"])
+            ydata = (self.geotrans.yorigin
+                     + xdata*self.geotrans.ycellsize
+                     + ydata*self.geotrans.yparam)
+            xdata = (self.geotrans.xorigin
+                     + xdata*self.geotrans.xcellsize
+                     + ydata*self.geotrans.xparam)
         else:
-            ydata = self.geotrans["yorigin"] + ydata*self.geotrans["ycellsize"]
-            xdata = self.geotrans["xorigin"] + xdata*self.geotrans["xcellsize"]
+            ydata = self.geotrans.yorigin + ydata*self.geotrans.ycellsize
+            xdata = self.geotrans.xorigin + xdata*self.geotrans.xcellsize
 
         return ydata, xdata
 
@@ -692,11 +692,8 @@ class GeoArray(MaskedArray):
             float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
             float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
         )
-        geotrans = self.geotrans.copy()
-        geotrans["yorigin"] = ystart
-        geotrans["xorigin"] = xstart
-        geotrans["ycellsize"] = cellsize[0]
-        geotrans["xcellsize"] = cellsize[1]
+        geotrans = self.geotrans.copy(
+            yorigin=ystart, xorigin=xstart, ycellsize=cellsize[0], xcellsize=cellsize[1])
 
         return GeoArray(
             data=data.data,
