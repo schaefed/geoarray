@@ -131,15 +131,15 @@ class Test(unittest.TestCase):
 
     def test_bbox(self):
         grids = (
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ul"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ll"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="ur"),
-            ga.ones((100,100),yorigin=1000,xorigin=1200,origin="lr"),
+            ga.ones((100,100), yorigin=1000, xorigin=1200, origin="ul"),
+            ga.ones((100,100), yorigin=1000, xorigin=1200, origin="ll"),
+            ga.ones((100,100), yorigin=1000, xorigin=1200, origin="ur"),
+            ga.ones((100,100), yorigin=1000, xorigin=1200, origin="lr"),
         )
         expected = (
-            {'xmin': 1200, 'ymin': 900, 'ymax': 1000, 'xmax': 1300},
+            {'xmin': 1200, 'ymin': 900,  'ymax': 1000, 'xmax': 1300},
             {'xmin': 1200, 'ymin': 1000, 'ymax': 1100, 'xmax': 1300},
-            {'xmin': 1100, 'ymin': 900, 'ymax': 1000, 'xmax': 1200},
+            {'xmin': 1100, 'ymin': 900,  'ymax': 1000, 'xmax': 1200},
             {'xmin': 1100, 'ymin': 1000, 'ymax': 1100, 'xmax': 1200},
         )
 

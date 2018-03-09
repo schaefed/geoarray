@@ -73,17 +73,17 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         if origin[1] == "r":
             xcellsize *= -1
 
-    geotrans = _Geotrans(**{
-        "yorigin": yorigin, "xorigin": xorigin,
-        "ycellsize": ycellsize, "xcellsize": xcellsize,
-        "yparam": yparam, "xparam": xparam})
-
     proj = _Projection(proj)
 
     if isinstance(data, GeoArray):
         return GeoArray(
             dtype      = dtype or data.dtype,
-            geotrans   = data.geotrans,
+            yorigin    = data.yorigin,
+            xorigin    = data.xorigin,
+            ycellsize  = data.ycellsize,
+            xcellsize  = data.xcellsize,
+            yparam     = data.yparam,
+            xparam     = data.xparam,
             fill_value = fill_value or data.fill_value,
             proj       = proj or data.proj,
             mode       = mode or data.mode,
@@ -93,7 +93,12 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
 
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy),
-        geotrans   = geotrans,
+        yorigin    = yorigin,
+        xorigin    = xorigin,
+        ycellsize  = ycellsize,
+        xcellsize  = xcellsize,
+        yparam     = yparam,
+        xparam     = xparam,
         fill_value = fill_value,
         proj       = proj,
         mode       = mode,

@@ -5,7 +5,7 @@ import os
 import warnings
 import numpy as np
 import gdal, osr
-from .gdaltrans import _Projection, _Geotrans
+from .gdaltrans import _Projection
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -114,6 +114,15 @@ def _fromDataset(fobj, mode="r"):
 
     from .core import GeoArray
 
+    def _parseGeotrans(geotrans):
+        return {
+            "yorigin": geotrans[3],
+            "xorigin": geotrans[0],
+            "ycellsize": geotrans[5],
+            "xcellsize": geotrans[1],
+            "yparam": geotrans[4],
+            "xparam": geotrans[2]}
+
     fill_values = tuple(
         fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount))
 
@@ -123,7 +132,7 @@ def _fromDataset(fobj, mode="r"):
             RuntimeWarning
         )
 
-    geotrans = _Geotrans.fromGdal(fobj.GetGeoTransform())
+    geotrans = _parseGeotrans(fobj.GetGeoTransform())
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
 
     return GeoArray(
@@ -133,23 +142,7 @@ def _fromDataset(fobj, mode="r"):
         mode       = mode,
         color_mode = _getColorMode(fobj),
         fobj       = fobj,
-        geotrans   = geotrans)
-
-#    return {
-#        "data": data,
-#        "fill_value": fill_values[0],
-#        "proj": _Projection(fobj.GetProjection()),
-#        "mode": mode,
-#        "color_mode" : _getColorMode(fobj),
-#        "fobj": fobj,
-#        "geotrans": geotrans}
-
-        # "yorigin": geotrans[3],
-        # "xorigin": geotrans[0],
-        # "ycellsize": geotrans[5], # or geotrans[1] * -1 or -1,
-        # "xcellsize": geotrans[1], # or geotrans[4] or 1,
-        # "yparam": geotrans[4],
-        # "xparam": geotrans[2]}
+        **geotrans)
 
 
 def _getDataset(grid, mem=False):
@@ -167,7 +160,7 @@ def _getDataset(grid, mem=False):
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
-    out.SetGeoTransform(grid.geotrans.toGdal())
+    out.SetGeoTransform(grid.toGdal())
 
     if grid.proj:
         out.SetProjection(grid.proj)
