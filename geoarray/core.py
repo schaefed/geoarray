@@ -204,8 +204,8 @@ class GeoArray(GeotransMixin, MaskedArray):
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         obj.unshare_mask()
 
-        obj._optinfo["geotrans"] = _Geotrans(**geotrans)
-        obj._optinfo["proj"] = _Projection(proj)
+        obj._optinfo["geotrans"] = geotrans
+        obj._optinfo["proj"] = proj
         obj._optinfo["fill_value"] = fill_value
         obj._optinfo["color_mode"] = color_mode
         obj._optinfo["mode"] = mode
@@ -519,7 +519,7 @@ class GeoArray(GeotransMixin, MaskedArray):
                 "Valid fill_value needed, actual value is {:}"
                 .format(self.fill_value))
 
-        geotrans = self.geotrans.copy(
+        geotrans = self.geotrans._replace(
             yorigin=self.geotrans.yorigin + top*self.geotrans.ycellsize * -1,
             xorigin=self.geotrans.xorigin + left*self.geotrans.xcellsize * -1)
 
@@ -675,7 +675,7 @@ class GeoArray(GeotransMixin, MaskedArray):
             float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
             float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
         )
-        geotrans = self.geotrans.copy(
+        geotrans = self.geotrans._replace(
             yorigin=ystart, xorigin=xstart, ycellsize=cellsize[0], xcellsize=cellsize[1])
 
         return GeoArray(

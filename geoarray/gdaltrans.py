@@ -1,40 +1,17 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from collections import namedtuple
 import gdal, osr
 import warnings
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-class _Geotrans(object):
-    def __init__(self, yorigin, xorigin, ycellsize, xcellsize, yparam, xparam):
-        self.yorigin = yorigin
-        self.xorigin = xorigin
-        self.ycellsize = ycellsize
-        self.xcellsize = xcellsize
-        self.yparam = yparam or 0
-        self.xparam = xparam or 0
-
-    def keys(self):
-        return ("yorigin", "xorigin", "ycellsize", "xcellsize", "yparam", "xparam")
-
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-    def copy(self, **kwargs):
-        args = dict(self)
-        args.update(kwargs)
-        return _Geotrans(**args)
-
-    def __str__(self):
-        return str({
-            "yorigin": self.yorigin,
-            "xorigin": self.xorigin,
-            "ycellsize": self.ycellsize,
-            "xcellsize": self.xcellsize,
-            "yparam": self.yparam,
-            "xparam": self.xparam})
+class _Geotrans(
+        namedtuple(
+            "_Geotrans",
+            ["yorigin", "xorigin", "ycellsize", "xcellsize", "yparam", "xparam"])):
 
     def toGdal(self):
         return (
