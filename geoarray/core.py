@@ -69,106 +69,12 @@ class GeoArrayMeta(object):
             attrs[key] = _checkMatch(getattr(MaskedArray, key))
         return type(name, bases, attrs)
 
-class GeotransMixin(object):
 
-    @property
-    def yorigin(self):
-        return self.geotrans.yorigin
-
-    @property
-    def xorigin(self):
-        return self.geotrans.xorigin
-
-    @property
-    def cellsize(self):
-        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
-
-    @property
-    def ycellsize(self):
-        return self.geotrans.ycellsize
-
-    @property
-    def xcellsize(self):
-        return self.geotrans.xcellsize
-
-    @property
-    def origin(self):
-        return "".join(
-            ["l" if self.ycellsize > 0 else "u",
-             "l" if self.xcellsize > 0 else "r"])
-
-    @property
-    def bbox(self):
-
-        corners = np.array(self.getCorners())
-        ymin, xmin = np.min(corners, axis=0)
-        ymax, xmax = np.max(corners, axis=0)
-
-        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
-
-
-    def _calcCoordinate(self, row, col):
-        yval = (self.geotrans.yorigin
-                + col * self.geotrans.yparam
-                + row * self.geotrans.ycellsize)
-        xval = (self.geotrans.xorigin
-                + col * self.geotrans.xcellsize
-                + row * self.geotrans.xparam)
-        return yval, xval
-
-    @property
-    def coordinates(self):
-        # NOTE: rather costly, should be cached
-        xdata, ydata = np.meshgrid(
-            np.arange(self.ncols, dtype=float),
-            np.arange(self.nrows, dtype=float))
-        return self._calcCoordinate(ydata, xdata)
-
-    def getCorners(self):
-        corners = [(0, 0), (self.nrows, 0),
-                   (0, self.ncols), (self.nrows, self.ncols)]
-        return [self._calcCoordinate(*idx) for idx in corners]
-
-    def getCorner(self, corner=None):
-        """
-        Arguments
-        ---------
-        corner : str/None
-
-        Returns
-        -------
-        (scalar, scalar)
-
-        Purpose
-        -------
-        Return the grid's corner coordinates. Defaults to the origin
-        corner. Any other corner may be specifed with the 'origin' argument,
-        which should be one of: 'ul','ur','ll','lr'.
-        """
-
-        if not corner:
-            corner = self.origin
-
-        bbox = self.bbox
-        return (
-            bbox["ymax"] if corner[0] == "u" else bbox["ymin"],
-            bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
-
-
-class GeoArray(GeotransMixin, MaskedArray):
+class GeoArray(_Geotrans, MaskedArray):
     """
     Arguments
     ----------
-    data         : np.ndarray/list/tuple
-    yorigin      : scalar                # y-coordinate of origin
-    xorigin      : scalar                # x-coordinate of origin
-    origin       : {"ul","ur","ll","lr"} # position of the grid origin
-    fill_value   : scalar
-    cellsize     : (scalar, scalar)
-    fobj         : return object from gdal.Open or None
-    proj         : _Projection           # projection information
-    color_mode   : string
-    mode         : AnyStr
+    TODO
 
     Purpose
     -------
@@ -191,7 +97,7 @@ class GeoArray(GeotransMixin, MaskedArray):
     __metaclass__ = GeoArrayMeta
 
     def __new__(
-            cls, data, geotrans,
+            cls, data, yorigin=0, xorigin=0, ycellsize=-1, xcellsize=1, yparam=0, xparam=0,
             proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
             mode="r", *args, **kwargs):
 
@@ -200,18 +106,18 @@ class GeoArray(GeotransMixin, MaskedArray):
         mask = (np.zeros_like(data, np.bool)
                 if fill_value is None else data == fill_value)
 
-        obj = MaskedArray.__new__(
+
+        self = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
-        obj.unshare_mask()
+        self.unshare_mask()
 
-        obj._optinfo["geotrans"] = geotrans
-        obj._optinfo["proj"] = proj
-        obj._optinfo["fill_value"] = fill_value
-        obj._optinfo["color_mode"] = color_mode
-        obj._optinfo["mode"] = mode
-        obj._optinfo["_fobj"] = fobj
+        self._optinfo["proj"] = _Projection(proj)
+        self._optinfo["fill_value"] = fill_value
+        self._optinfo["color_mode"] = color_mode
+        self._optinfo["mode"] = mode
+        self._optinfo["_fobj"] = fobj
 
-        return obj
+        return self
 
     @property
     def header(self):
@@ -394,12 +300,17 @@ class GeoArray(GeotransMixin, MaskedArray):
         the fill_value and returns an GeoArray instance
         """
         return GeoArray(
-            data=self.filled(fill_value),
-            geotrans=geotrans,
-            proj=self.proj,
-            fill_value=fill_value,
-            mode = self.mode,
-            color_mode=self.color_mode)
+            data       = self.filled(fill_value),
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            ycellsize  = self.ycellsize,
+            xcellsize  = self.xcellsize,
+            yparam     = self.yparam,
+            xparam     = self.xparam,
+            proj       = self.proj,
+            fill_value = fill_value,
+            mode       = self.mode,
+            color_mode = self.color_mode)
 
     def trim(self):
         """
@@ -519,19 +430,23 @@ class GeoArray(GeotransMixin, MaskedArray):
                 "Valid fill_value needed, actual value is {:}"
                 .format(self.fill_value))
 
-        geotrans = self.geotrans._replace(
-            yorigin=self.geotrans.yorigin + top*self.geotrans.ycellsize * -1,
-            xorigin=self.geotrans.xorigin + left*self.geotrans.xcellsize * -1)
+        yorigin = self.yorigin + top*self.ycellsize * -1
+        xorigin = self.xorigin + left*self.xcellsize * -1
 
         out = GeoArray(
-            data=data,
-            dtype=self.dtype,
-            geotrans=geotrans,
-            fill_value=self.fill_value,
-            mode="r",
-            fobj=None,
-            proj=self.proj,
-            color_mode=self.color_mode)
+            data       = data,
+            dtype      = self.dtype,
+            fill_value = self.fill_value,
+            yorigin    = yorigin,
+            xorigin    = xorigin,
+            ycellsize  = self.ycellsize,
+            xcellsize  = self.xcellsize,
+            yparam     = self.yparam,
+            xparam     = self.xparam,
+            mode       = "r",
+            fobj       = None,
+            proj       = self.proj,
+            color_mode = self.color_mode)
 
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
@@ -626,21 +541,31 @@ class GeoArray(GeotransMixin, MaskedArray):
 
     def __copy__(self):
         return GeoArray(
-            data=self.data,
-            geotrans=copy.deepcopy(self.geotrans),
-            proj=copy.deepcopy(self.proj),
-            fill_value=self.fill_value,
-            mode=self.mode,
-            color_mode=self.color_mode)
+            data       = self.data,
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            ycellsize  = self.ycellsize,
+            xcellsize  = self.xcellsize,
+            yparam     = self.yparam,
+            xparam     = self.xparam,
+            proj       = copy.deepcopy(self.proj),
+            fill_value = self.fill_value,
+            mode       = self.mode,
+            color_mode = self.color_mode)
 
     def __deepcopy__(self, memo):
         return GeoArray(
-            data=self.data.copy(),
-            geotrans=copy.deepcopy(self.geotrans),
-            proj=copy.deepcopy(self.proj),
-            fill_value=self.fill_value,
-            mode="r",
-            color_mode=self.color_mode)
+            data       = self.data.copy(),
+            yorigin    = self.yorigin,
+            xorigin    = self.xorigin,
+            ycellsize  = self.ycellsize,
+            xcellsize  = self.xcellsize,
+            yparam     = self.yparam,
+            xparam     = self.xparam,
+            proj       = copy.deepcopy(self.proj),
+            fill_value = self.fill_value,
+            mode       = "r",
+            color_mode = self.color_mode)
 
     def __getitem__(self, slc):
 
@@ -675,12 +600,15 @@ class GeoArray(GeotransMixin, MaskedArray):
             float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
             float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
         )
-        geotrans = self.geotrans._replace(
-            yorigin=ystart, xorigin=xstart, ycellsize=cellsize[0], xcellsize=cellsize[1])
 
         return GeoArray(
             data       = data.data,
-            geotrans   = geotrans,
+            yorigin    = ystart,
+            xorigin    = xstart,
+            ycellsize  = cellsize[0],
+            xcellsize  = cellsize[1],
+            yparam     = self.yparam,
+            xparam     = self.xparam,
             origin     = self.origin,
             proj       = self.proj,
             fill_value = self.fill_value,

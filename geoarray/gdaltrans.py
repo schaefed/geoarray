@@ -1,32 +1,78 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from collections import namedtuple
-import gdal, osr
 import warnings
+import numpy as np
+import gdal, osr
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
 
-class _Geotrans(
-        namedtuple(
-            "_Geotrans",
-            ["yorigin", "xorigin", "ycellsize", "xcellsize", "yparam", "xparam"])):
+
+class _Geotrans(object):
+    def __init__(
+            self, yorigin, xorigin, ycellsize, xcellsize, yparam, xparam, *args, **kwargs):
+        self.yorigin = yorigin
+        self.xorigin = xorigin
+        self.ycellsize = ycellsize
+        self.xcellsize = xcellsize
+        self.yparam = yparam
+        self.xparam = xparam
+
+    @property
+    def origin(self):
+        return "".join(
+            ["l" if self.ycellsize > 0 else "u",
+             "l" if self.xcellsize > 0 else "r"])
+
+    @property
+    def bbox(self):
+
+        corners = np.array(self.getCorners())
+        ymin, xmin = np.min(corners, axis=0)
+        ymax, xmax = np.max(corners, axis=0)
+
+        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
+
+
+    def _calcCoordinate(self, row, col):
+        yval = (self.yorigin
+                + col * self.yparam
+                + row * self.ycellsize)
+        xval = (self.xorigin
+                + col * self.xcellsize
+                + row * self.xparam)
+        return yval, xval
 
     def toGdal(self):
-        return (
-            self.xorigin, self.xcellsize, self.xparam,
-            self.yorigin, self.yparam, self.ycellsize)
+        return (self.xorigin, self.xcellsize, self.xparam,
+                self.yorigin, self.yparam, self.ycellsize)
 
-    @classmethod
-    def fromGdal(cls, geotrans):
-        return _Geotrans(
-            yorigin = geotrans[3],
-            xorigin = geotrans[0],
-            ycellsize = geotrans[5],
-            xcellsize = geotrans[1],
-            yparam = geotrans[4],
-            xparam = geotrans[2])
+    @property
+    def cellsize(self):
+        return (self.ycellsize, self.xcellsize)
+
+    @property
+    def coordinates(self):
+        # NOTE: rather costly, should be cached
+        xdata, ydata = np.meshgrid(
+            np.arange(self.ncols, dtype=float),
+            np.arange(self.nrows, dtype=float))
+        return self._calcCoordinate(ydata, xdata)
+
+    def getCorners(self):
+        corners = [(0, 0), (self.nrows, 0),
+                   (0, self.ncols), (self.nrows, self.ncols)]
+        return [self._calcCoordinate(*idx) for idx in corners]
+
+    def getCorner(self, corner=None):
+        if not corner:
+            corner = self.origin
+
+        bbox = self.bbox
+        return (
+            bbox["ymax"] if corner[0] == "u" else bbox["ymin"],
+            bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
 
 
 class _Projection(object):
