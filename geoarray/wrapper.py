@@ -14,7 +14,7 @@ This module provides initializer function for core.GeoArray
 import numpy as np
 from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
-from .gdaltrans import _Projection, _Geotrans
+from .gdalspatial import _Projection
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 

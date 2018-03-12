@@ -5,7 +5,7 @@ import os
 import warnings
 import numpy as np
 import gdal, osr
-from .gdaltrans import _Projection
+from .gdalspatial import _Projection
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')

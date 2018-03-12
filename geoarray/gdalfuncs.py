@@ -5,7 +5,7 @@ import gdal, osr
 import numpy as np
 from .wrapper import array, full
 from .gdalio import _getDataset, _fromDataset
-from .gdaltrans import _Projection, _Transformer
+from .gdalspatial import _Projection, _Transformer
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
