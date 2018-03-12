@@ -22,6 +22,7 @@ class GeotransMixin(object):
 
 
     def _calcCoordinate(self, row, col):
+
         yval = (self.yorigin
                 + col * self.yparam
                 + row * self.ycellsize)
