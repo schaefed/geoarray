@@ -28,7 +28,7 @@ class Test(unittest.TestCase):
         rpcvalue = -2222
         for base in self.grids:
             base.fill_value = rpcvalue
-            self.assertEqual(base.fill_value, rpcvalue)
+            self.assertEqual(base.fill_value, base.dtype.type(rpcvalue))
 
     def test_setDataType(self):
         rpctype = np.int32

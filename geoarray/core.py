@@ -114,17 +114,17 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
         self._optinfo["yorigin"] = yorigin
         self._optinfo["xorigin"] = xorigin
-        
+
         self._optinfo["ycellsize"] = ycellsize
         self._optinfo["xcellsize"] = xcellsize
 
         self._optinfo["yparam"] = yparam
         self._optinfo["xparam"] = xparam
 
-        self._optinfo["proj"] = _Projection(proj)
-        self._optinfo["fill_value"] = fill_value
-        self._optinfo["color_mode"] = color_mode
         self._optinfo["mode"] = mode
+        self._optinfo["color_mode"] = color_mode
+
+        self._optinfo["proj"] = _Projection(proj)
         self._optinfo["_fobj"] = fobj
 
         return self
@@ -148,14 +148,18 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         can be passed to any of the factory functions.
         """
 
-        return {
-            "yorigin": self.yorigin,
-            "xorigin": self.xorigin,
-            "origin": self.origin,
-            "fill_value": self.fill_value,
-            "cellsize": self.cellsize,
-            "proj": self.proj,
-            "color_mode": self.color_mode}
+        out = self._getArgs()
+        del out["data"]
+        return out
+        #return {
+        #    "yorigin": self.yorigin,
+        #    "xorigin": self.xorigin,
+        #    "origin": self.origin,
+        #    "fill_value": self.fill_value,
+        #    "cellsize": self.cellsize,
+        #    "proj": self.proj,
+        #    "mode": self.mode}
+        #    "color_mode": self.color_mode}
 
     @property
     def nbands(self):
@@ -224,8 +228,24 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
             return 1
 
     @property
-    def fill_value(self):
-        return self._optinfo["fill_value"]
+    def fobj(self):
+        if self._fobj is None:
+            self._fobj = _getDataset(self, mem=True)
+        return self._fobj
+
+    def getFillValue(self):
+        return super(GeoArray, self).get_fill_value()
+
+    def setFillValue(self, value):
+        # change fill_value and update mask
+        super(GeoArray, self).set_fill_value(value)
+        self.mask = self == value
+        if value != self.fill_value:
+            warnings.warn("Data types not compatible. New fill_value is: {:}"
+                          .format(self.fill_value))
+
+    # decorating the methods did not work out...
+    fill_value = property(fget=getFillValue, fset=setFillValue)
 
     # Work around a bug in np.ma.core present at least until version 1.13.0:
     # The _optinfo dictionary is not updated when calling __eq__/__ne__
@@ -234,18 +254,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         out = super(self.__class__, self)._comparison(other, compare)
         out._update_from(self)
         return out
-
-    @fill_value.setter
-    def fill_value(self, value):
-        # change fill_value and update mask
-        self._optinfo["fill_value"] = value
-        self.mask = self == value
-
-    @property
-    def fobj(self):
-        if self._fobj is None:
-            self._fobj = _getDataset(self, mem=True)
-        return self._fobj
 
     def _getArgs(self, data=None, fill_value=None,
                  yorigin=None, xorigin=None,
@@ -268,7 +276,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
             "color_mode" : color_mode if color_mode is not None else self.color_mode,
             "fobj"       : fobj if fobj is not None else self._fobj
         }
-        
+
 
     def fill(self, fill_value):
         """
