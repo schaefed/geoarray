@@ -294,23 +294,36 @@ class GeoArray(_Geotrans, MaskedArray):
 
         return yidx, xidx
 
+    def _getArgs(self, data=None, fill_value=None,
+                 yorigin=None, xorigin=None,
+                 ycellsize=None, xcellsize=None,
+                 yparam=None, xparam=None,
+                 mode=None, color_mode=None,
+                 proj=None, fobj=None):
+
+        return {
+            "data"       : data if data is not None else self.data,
+            "yorigin"    : yorigin if yorigin is not None else self.yorigin,
+            "xorigin"    : xorigin if xorigin is not None else self.xorigin,
+            "ycellsize"  : ycellsize if ycellsize is not None else self.ycellsize,
+            "xcellsize"  : xcellsize if xcellsize is not None else self.xcellsize,
+            "yparam"     : yparam if yparam is not None else self.yparam,
+            "xparam"     : xparam if xparam is not None else self.xparam,
+            "proj"       : proj if proj is not None else self.proj,
+            "fill_value" : fill_value if fill_value is not None else self.fill_value,
+            "mode"       : mode if mode is not None else self.mode,
+            "color_mode" : color_mode if color_mode is not None else self.color_mode,
+            "fobj"       : fobj if fobj is not None else self._fobj
+        }
+        
+
     def fill(self, fill_value):
         """
         works similar to MaskedArray.filled(value) but also changes
         the fill_value and returns an GeoArray instance
         """
         return GeoArray(
-            data       = self.filled(fill_value),
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            ycellsize  = self.ycellsize,
-            xcellsize  = self.xcellsize,
-            yparam     = self.yparam,
-            xparam     = self.xparam,
-            proj       = self.proj,
-            fill_value = fill_value,
-            mode       = self.mode,
-            color_mode = self.color_mode)
+            self._getArgs(data=self.filled(fill_value), fill_value=fill_value))
 
     def trim(self):
         """
@@ -434,19 +447,8 @@ class GeoArray(_Geotrans, MaskedArray):
         xorigin = self.xorigin + left*self.xcellsize * -1
 
         out = GeoArray(
-            data       = data,
-            dtype      = self.dtype,
-            fill_value = self.fill_value,
-            yorigin    = yorigin,
-            xorigin    = xorigin,
-            ycellsize  = self.ycellsize,
-            xcellsize  = self.xcellsize,
-            yparam     = self.yparam,
-            xparam     = self.xparam,
-            mode       = "r",
-            fobj       = None,
-            proj       = self.proj,
-            color_mode = self.color_mode)
+            **self._getArgs(
+                data=data, yorigin=yorigin, xorigin=xorigin, mode="r", fobj=None))
 
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
@@ -540,32 +542,10 @@ class GeoArray(_Geotrans, MaskedArray):
             self._optinfo[key] = value
 
     def __copy__(self):
-        return GeoArray(
-            data       = self.data,
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            ycellsize  = self.ycellsize,
-            xcellsize  = self.xcellsize,
-            yparam     = self.yparam,
-            xparam     = self.xparam,
-            proj       = copy.deepcopy(self.proj),
-            fill_value = self.fill_value,
-            mode       = self.mode,
-            color_mode = self.color_mode)
+        return GeoArray(**self._getArgs())
 
     def __deepcopy__(self, memo):
-        return GeoArray(
-            data       = self.data.copy(),
-            yorigin    = self.yorigin,
-            xorigin    = self.xorigin,
-            ycellsize  = self.ycellsize,
-            xcellsize  = self.xcellsize,
-            yparam     = self.yparam,
-            xparam     = self.xparam,
-            proj       = copy.deepcopy(self.proj),
-            fill_value = self.fill_value,
-            mode       = "r",
-            color_mode = self.color_mode)
+        return GeoArray(**self._getArgs(data=self.data.copy()))
 
     def __getitem__(self, slc):
 
@@ -602,18 +582,8 @@ class GeoArray(_Geotrans, MaskedArray):
         )
 
         return GeoArray(
-            data       = data.data,
-            yorigin    = ystart,
-            xorigin    = xstart,
-            ycellsize  = cellsize[0],
-            xcellsize  = cellsize[1],
-            yparam     = self.yparam,
-            xparam     = self.xparam,
-            origin     = self.origin,
-            proj       = self.proj,
-            fill_value = self.fill_value,
-            mode       = self.mode,
-            color_mode = self.color_mode)
+            **self._getArgs(data=data.data, yorigin=ystart, xorigin=xstart,
+                       ycellsize=cellsize[0], xcellsize=cellsize[1]))
 
     def flush(self):
         fobj = self._optinfo.get("_fobj")
