@@ -10,7 +10,7 @@ class Test(unittest.TestCase):
         
     def test_correctValue(self):
         g = ga.ones((200,300), proj=3857) # WGS 84 / Pseudo-Mercator aka Web-Mercator
-        self.assertTrue(len(g.proj) > 0)
+        self.assertTrue(g.proj)
 
     def test_incorrectValue(self):
         with warnings.catch_warnings(record=True) as w:

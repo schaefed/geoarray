@@ -220,10 +220,11 @@ class SpatialMixin(object):
         fall and return its row/column index values.
         """
 
+
         yorigin, xorigin = self.getCorner("ul")
-        cellsize = np.abs(self.cellsize)
-        yidx = int(floor((yorigin - ycoor) / float(cellsize[0])))
-        xidx = int(floor((xcoor - xorigin) / float(cellsize[1])))
+
+        yidx = int(floor((yorigin - ycoor) / float(abs(self.ycellsize))))
+        xidx = int(floor((xcoor - xorigin) / float(abs(self.xcellsize))))
 
         if yidx < 0 or yidx >= self.nrows or xidx < 0 or xidx >= self.ncols:
             raise ValueError("Given Coordinates not within the grid domain!")

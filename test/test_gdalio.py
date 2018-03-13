@@ -17,19 +17,12 @@ class Test(unittest.TestCase):
                 # write and read again
                 test_array.tofile(tf.name)
                 check_array = ga.fromfile(tf.name)
-                print "1:", check_array.yorigin,check_array.ycellsize,check_array.yparam
 
                 # gdal truncates values smaller/larger than the datatype, numpy wraps around.
                 # clip array to make things comparable.
                 dinfo = dtypeInfo(check_array.dtype)
-                print "2: ", check_array.yorigin,check_array.ycellsize,check_array.yparam
                 grid = test_array.clip(dinfo["min"], dinfo["max"])
                 fill_value = check_array.dtype.type(test_array.fill_value)
-
-                print "3: ", grid.yorigin, grid.ycellsize, check_array.yparam
-                print "-----------------"
-                break
-                
 
                 np.testing.assert_almost_equal(check_array, grid)
                 self.assertDictEqual(check_array.bbox, test_array.bbox)

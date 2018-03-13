@@ -108,37 +108,36 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
                 if fill_value is None else data == fill_value)
 
 
-        print "__new__"
         self = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         self.unshare_mask()
 
         self.yorigin = yorigin
         self.xorigin = xorigin
+
         self.ycellsize = ycellsize
         self.xcellsize = xcellsize
+
         self.yparam = yparam
         self.xparam = xparam
+
         self.proj = _Projection(proj)
-        self.fill_value = fill_value
+
         self.color_mode = color_mode
         self.mode = mode
+
         self._fobj = fobj
 
         return self
 
-    def __array_prepare__(self, *args, **kwargs):
-        print "__array_prepare__"
-        return super(GeoArray, self).__array_prepare__(*args, **kwargs)
-
-    def __array_wrap__(self, *args, **kwargs):
-        print "__array_wrap__"
-        return super(GeoArray, self).__array_wrap__(*args, **kwargs)
-
     def __array_finalize__(self, obj):
-        print "__array_finalize__"
         if obj is None:
             return
+        super(GeoArray, self).__array_finalize__(obj)
+        self._update_from(obj)
+
+    def _update_from(self, obj):
+        super(GeoArray, self)._update_from(obj)
         self.yorigin = getattr(obj, "yorigin", None)
         self.xorigin = getattr(obj, "xorigin", None)
         self.ycellsize = getattr(obj, "ycellsize", None)
@@ -146,49 +145,10 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self.yparam = getattr(obj, "yparam", None)
         self.xparam = getattr(obj, "xparam", None)
         self.proj = getattr(obj, "proj", None)
-        self._fill_value = getattr(obj, "_fill_value", None)
         self.color_mode = getattr(obj, "color_mode", None)
         self.mode = getattr(obj, "mode", None)
         self._fobj = getattr(obj, "_fobj", None)
-        super(GeoArray, self).__array_finalize__(obj)
-        #print "self", type(self), self.yorigin
-        #print self
-        #print "obj", type(obj), obj.yorigin
-        #print obj
-
-    #def _update_from(self, obj):
-    #    print "_update_from"
-    #    super(GeoArray, self)._update_from(obj)
-    #    if isinstance(obj, GeoArray):
-    #        print "here:", obj.yorigin
-    #        self.__dict__["yorigin"] = "xxxxxxx"
-    #        print "there:", self.__dict__["yorigin"]
-        
-    # def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-    #     print "__array_ufunc__"
-    #     return  super(GeoArray, self).__array_ufunc__(ufunc, method, *inputs, **kwargs)
-        #print "before:", arr.yorigin, self.yorigin
-        #out = super(GeoArray, self).__array_wrap__(arr, context)
-        ## print type(out)
-        #out.yorigin = self.yorigin
-        #print "after:", out.yorigin, self.yorigin
-        #return out
-        # return GeoArray(data)
-        #print "__array_wrap__:", context
-        #out.yorigin = self.yorigin
-        #out.xorigin = self.xorigin
-        #out.ycellsize = self.ycellsize
-        #out.xcellsize = self.xcellsize
-        #out.yparam = self.yparam
-        #out.xparam = self.xparam
-        #out.proj = self.proj
-        #out._fill_value
-        #self.color_mode
-        #self.mode
-        #self._fobj
-        
-
-
+ 
     @property
     def header(self):
         """
@@ -210,15 +170,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         out = self._getArgs()
         del out["data"]
         return out
-        #return {
-        #    "yorigin": self.yorigin,
-        #    "xorigin": self.xorigin,
-        #    "origin": self.origin,
-        #    "fill_value": self.fill_value,
-        #    "cellsize": self.cellsize,
-        #    "proj": self.proj,
-        #    "mode": self.mode}
-        #    "color_mode": self.color_mode}
 
     @property
     def nbands(self):
@@ -297,6 +248,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
     def setFillValue(self, value):
         # change fill_value and update mask
+        # print "------------------------"
         super(GeoArray, self).set_fill_value(value)
         self.mask = self == value
         if value != self.fill_value:
@@ -306,19 +258,19 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     # decorating the methods did not work out...
     fill_value = property(fget=getFillValue, fset=setFillValue)
 
-    # Work around a bug in np.ma.core present at least until version 1.13.0:
-    # The _optinfo dictionary is not updated when calling __eq__/__ne__
-    # numpy PR: 9279
-    #def _comparison(self, other, compare):
-    #    out = super(self.__class__, self)._comparison(other, compare)
-    #    out._update_from(self)
-    #    return out
+    def __getattribute__(self, key):
+        "Make descriptors work"
+        v = object.__getattribute__(self, key)
+        if hasattr(v, '__get__'):
+            return v.__get__(None, self)
+        return v
 
-    @fill_value.setter
-    def fill_value(self, value):
-        # change fill_value and update mask
-        self._fill_value = value
-        self.mask = self == value
+    def __setattr__(self, key, value):
+        "Make descriptors work"
+        try:
+            object.__getattribute__(self, key).__set__(self, key, value)
+        except AttributeError:
+            object.__setattr__(self, key, value) 
 
     @property
     def fobj(self):
@@ -356,27 +308,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         """
         return GeoArray(
             self._getArgs(data=self.filled(fill_value), fill_value=fill_value))
-
-    #def __getattr__(self, key):
-    #    try:
-    #        value = self._optinfo[key]
-    #        # make descriptors work
-    #        if hasattr(value, "__get__"):
-    #            value = value.__get__(None, self)
-    #        return value
-    #    except KeyError:
-    #        raise AttributeError("'{:}' object has no attribute {:}"
-    #                             .format(self.__class__.__name__, key))
-
-    #def __setattr__(self, key, value):
-    #    try:
-    #        attr = getattr(self, key)
-    #        if hasattr(attr, "__set__"):
-    #            attr.__set__(None, value)
-    #        else:
-    #            super(self.__class__, self).__setattr__(key, value)
-    #    except AttributeError:
-    #        self._optinfo[key] = value
 
     def __copy__(self):
         return GeoArray(**self._getArgs())
@@ -420,7 +351,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
         return GeoArray(
             **self._getArgs(data=data.data, yorigin=ystart, xorigin=xstart,
-                       ycellsize=cellsize[0], xcellsize=cellsize[1]))
+                            ycellsize=cellsize[0], xcellsize=cellsize[1]))
 
     def flush(self):
         fobj = self._fobj
@@ -435,8 +366,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     def __del__(self):
         # the virtual memory mapping needs to be released BEFORE the fobj
         self.flush()
-        #self._optinfo["data"] = None
-        #self._optinfo["_fobj"] = None
+        self._fobj = None
 
     def tofile(self, fname):
         _toFile(self, fname)

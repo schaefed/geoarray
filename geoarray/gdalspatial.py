@@ -45,7 +45,7 @@ class _Projection(object):
         # is a an projection set?
         return self._export() is not None
 
-    def __get__(self, obj, objtype):
+    def __get__(self, *args, **kwargs):
         return self._export()
 
     def __set__(self, obj, val):
