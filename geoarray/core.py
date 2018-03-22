@@ -129,6 +129,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self._fobj = fobj
         self._yvalues = yvalues
         self._xvalues = xvalues
+        self._geolocation = None
 
         return self
 
@@ -158,6 +159,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self._fobj = getattr(obj, "_fobj", None)
         self._yvalues = getattr(obj, "_yvalues", None)
         self._xvalues = getattr(obj, "_xvalues", None)
+        self._geolocation = getattr(obj, "_geolocation", None)
 
     @property
     def header(self):

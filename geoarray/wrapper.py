@@ -198,17 +198,8 @@ def empty(shape, dtype=np.float64, *args, **kwargs):
 
 def _likeArgs(arr):
 
-    out = {}
     if isinstance(arr, GeoArray):
-        out["yorigin"]    = arr.yorigin
-        out["xorigin"]    = arr.xorigin
-        out["origin"]     = arr.origin
-        out["fill_value"] = arr.fill_value
-        out["cellsize"]   = arr.cellsize
-        out["proj"]       = arr.proj
-        out["mode"]       = "r"
-        out["color_mode"] = arr.color_mode
-
+        return arr.header
     return out
 
 
