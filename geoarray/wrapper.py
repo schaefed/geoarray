@@ -15,6 +15,7 @@ import numpy as np
 from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
 from .gdalspatial import _Projection
+from .trans import _Geotrans
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
@@ -29,6 +30,9 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
           xcellsize  = None,  # Optional[Union[int, float]]
           yparam     = 0,     # Optional[Union[int, float]]
           xparam     = 0,     # Optional[Union[int, float]]
+          geotrans   = None,  # Optional[_Geotrans]
+          yvalues    = None,  # Optional[np.ndarray]
+          xvalues    = None,  # Optional[np.ndarray]
           proj       = None,  # type: Mapping[AnyStr, Union[AnyStr, float]]
           mode       = "r",   # type: AnyStr
           color_mode = "L",   # type: AnyStr
@@ -64,6 +68,10 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     Create a GeoArray from data.
     """
 
+    if yvalues is not None or xvalues is not None:
+        pass
+
+
     if ycellsize is None:
         ycellsize = cellsize
         if origin[0] == "u":
@@ -74,17 +82,14 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         if origin[1] == "r":
             xcellsize *= -1
 
+    if geotrans is None:
+        geotrans = _Geotrans(yorigin, xorigin, ycellsize, xcellsize, yparam, xparam)
     proj = _Projection(proj)
 
     if isinstance(data, GeoArray):
         return GeoArray(
             dtype      = dtype or data.dtype,
-            yorigin    = data.yorigin,
-            xorigin    = data.xorigin,
-            ycellsize  = data.ycellsize,
-            xcellsize  = data.xcellsize,
-            yparam     = data.yparam,
-            xparam     = data.xparam,
+            geotrans   = data.geotrans,
             fill_value = fill_value or data.fill_value,
             proj       = proj or data.proj,
             mode       = mode or data.mode,
@@ -94,12 +99,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
 
     return GeoArray(
         data       = np.array(data, dtype=dtype, copy=copy),
-        yorigin    = yorigin,
-        xorigin    = xorigin,
-        ycellsize  = ycellsize,
-        xcellsize  = xcellsize,
-        yparam     = yparam,
-        xparam     = xparam,
+        geotrans   = geotrans,
         fill_value = fill_value,
         proj       = proj,
         mode       = mode,
@@ -197,7 +197,6 @@ def empty(shape, dtype=np.float64, *args, **kwargs):
 
 
 def _likeArgs(arr):
-
     if isinstance(arr, GeoArray):
         return arr.header
     return out

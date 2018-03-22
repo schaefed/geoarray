@@ -98,7 +98,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     __metaclass__ = GeoArrayMeta
 
     def __new__(
-            cls, data, yorigin=0, xorigin=0, ycellsize=-1, xcellsize=1, yparam=0, xparam=0,
+            cls, data, geotrans=None,
             proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
             yvalues=None, xvalues=None, mode="r", *args, **kwargs):
 
@@ -112,15 +112,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         self.unshare_mask()
 
-        self.yorigin = yorigin
-        self.xorigin = xorigin
-
-        self.ycellsize = ycellsize
-        self.xcellsize = xcellsize
-
-        self.yparam = yparam
-        self.xparam = xparam
-
+        self.geotrans = geotrans
         self.proj = _Projection(proj)
 
         self.color_mode = color_mode
@@ -129,7 +121,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self._fobj = fobj
         self._yvalues = yvalues
         self._xvalues = xvalues
-        self._geolocation = None
 
         return self
 
@@ -144,12 +135,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         super(GeoArray, self)._update_from(obj)
 
         # TODO: move into a datastructure
-        self.yorigin = getattr(obj, "yorigin", None)
-        self.xorigin = getattr(obj, "xorigin", None)
-        self.ycellsize = getattr(obj, "ycellsize", None)
-        self.xcellsize = getattr(obj, "xcellsize", None)
-        self.yparam = getattr(obj, "yparam", None)
-        self.xparam = getattr(obj, "xparam", None)
+        self.geotrans = getattr(obj, "geotrans", None)
 
         self.proj = getattr(obj, "proj", None)
 
@@ -222,6 +208,13 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         except AttributeError:
             object.__setattr__(self, key, value) 
 
+    def __getattr__(self, key):
+        try:
+            return getattr(self.geotrans, key)
+        except AttributeError:
+            raise AttributeError(
+                "'GeoArray' object has no attribute '{:}'".format(key))
+
     @property
     def fobj(self):
         if self._fobj is None:
@@ -229,26 +222,17 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         return self._fobj
 
     def _getArgs(self, data=None, fill_value=None,
-                 yorigin=None, xorigin=None,
-                 ycellsize=None, xcellsize=None,
-                 yparam=None, xparam=None,
-                 mode=None, color_mode=None,
+                 geotrans=None, mode=None, color_mode=None,
                  proj=None, fobj=None):
 
         return {
             "data"       : data if data is not None else self.data,
-            "yorigin"    : yorigin if yorigin is not None else self.yorigin,
-            "xorigin"    : xorigin if xorigin is not None else self.xorigin,
-            "ycellsize"  : ycellsize if ycellsize is not None else self.ycellsize,
-            "xcellsize"  : xcellsize if xcellsize is not None else self.xcellsize,
-            "yparam"     : yparam if yparam is not None else self.yparam,
-            "xparam"     : xparam if xparam is not None else self.xparam,
+            "geotrans"   : geotrans if geotrans is not None else self.geotrans,
             "proj"       : proj if proj is not None else self.proj,
             "fill_value" : fill_value if fill_value is not None else self.fill_value,
             "mode"       : mode if mode is not None else self.mode,
             "color_mode" : color_mode if color_mode is not None else self.color_mode,
-            "fobj"       : fobj if fobj is not None else self._fobj
-        }
+            "fobj"       : fobj if fobj is not None else self._fobj}
 
 
     def fill(self, fill_value):
@@ -294,14 +278,14 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
             return data
 
         nrows, ncols = ((1, 1) + data.shape)[-2:]
-        cellsize = (
-            float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2],
-            float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1],
-        )
+        ycellsize = float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2]
+        xcellsize = float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1]
 
         return GeoArray(
-            **self._getArgs(data=data.data, yorigin=ystart, xorigin=xstart,
-                            ycellsize=cellsize[0], xcellsize=cellsize[1]))
+            **self._getArgs(
+                data=data.data, geotrans=self.geotrans._replace(
+                    yorigin=ystart, xorigin=xstart,
+                    ycellsize=ycellsize, xcellsize=xcellsize)))
 
     def flush(self):
         fobj = self._fobj

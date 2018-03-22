@@ -2,14 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from collections import namedtuple
+
+_Geotrans = namedtuple("_Geotrans",
+                      ("yorigin", "xorigin", "ycellsize", "xcellsize",
+                       "yparam", "xparam"))
 
 
 class GeotransMixin(object):
     @property
     def origin(self):
         return "".join(
-            ["l" if self.ycellsize > 0 else "u",
-             "l" if self.xcellsize > 0 else "r"])
+            ["l" if self.geotrans.ycellsize > 0 else "u",
+             "l" if self.geotrans.xcellsize > 0 else "r"])
 
     @property
     def bbox(self):
@@ -23,21 +28,21 @@ class GeotransMixin(object):
 
     def _calcCoordinate(self, row, col):
 
-        yval = (self.yorigin
-                + col * self.yparam
-                + row * self.ycellsize)
-        xval = (self.xorigin
-                + col * self.xcellsize
-                + row * self.xparam)
+        yval = (self.geotrans.yorigin
+                + col * self.geotrans.yparam
+                + row * self.geotrans.ycellsize)
+        xval = (self.geotrans.xorigin
+                + col * self.geotrans.xcellsize
+                + row * self.geotrans.xparam)
         return yval, xval
 
     def toGdal(self):
-        return (self.xorigin, self.xcellsize, self.xparam,
-                self.yorigin, self.yparam, self.ycellsize)
+        return (self.geotrans.xorigin, self.geotrans.xcellsize, self.geotrans.xparam,
+                self.geotrans.yorigin, self.geotrans.yparam, self.geotrans.ycellsize)
 
     @property
     def cellsize(self):
-        return (self.ycellsize, self.xcellsize)
+        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
 
     @property
     def coordinates(self):

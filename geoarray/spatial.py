@@ -132,7 +132,10 @@ class SpatialMixin(object):
 
         out = GeoArray(
             **self._getArgs(
-                data=data, yorigin=yorigin, xorigin=xorigin, mode="r", fobj=None))
+                # data=data, yorigin=yorigin, xorigin=xorigin, mode="r", fobj=None))
+                data=data,
+                geotrans=self.geotrans._replace(yorigin=yorigin, xorigin=xorigin),
+                mode="r", fobj=None))
 
         # the Ellipsis ensures that the function works
         # for arrays with more than two dimensions
