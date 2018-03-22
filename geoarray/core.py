@@ -100,7 +100,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     def __new__(
             cls, data, yorigin=0, xorigin=0, ycellsize=-1, xcellsize=1, yparam=0, xparam=0,
             proj=None, fill_value=None, fobj=None, color_mode=None,  # mask=None,
-            mode="r", *args, **kwargs):
+            yvalues=None, xvalues=None, mode="r", *args, **kwargs):
 
         # NOTE: The mask will always be calculated, even if its
         #       already present or not needed at all...
@@ -127,6 +127,8 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self.mode = mode
 
         self._fobj = fobj
+        self._yvalues = yvalues
+        self._xvalues = xvalues
 
         return self
 
@@ -137,57 +139,34 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         self._update_from(obj)
 
     def _update_from(self, obj):
+
         super(GeoArray, self)._update_from(obj)
+
+        # TODO: move into a datastructure
         self.yorigin = getattr(obj, "yorigin", None)
         self.xorigin = getattr(obj, "xorigin", None)
         self.ycellsize = getattr(obj, "ycellsize", None)
         self.xcellsize = getattr(obj, "xcellsize", None)
         self.yparam = getattr(obj, "yparam", None)
         self.xparam = getattr(obj, "xparam", None)
+
         self.proj = getattr(obj, "proj", None)
+
         self.color_mode = getattr(obj, "color_mode", None)
         self.mode = getattr(obj, "mode", None)
+
         self._fobj = getattr(obj, "_fobj", None)
- 
+        self._yvalues = getattr(obj, "_yvalues", None)
+        self._xvalues = getattr(obj, "_xvalues", None)
+
     @property
     def header(self):
-        """
-        Arguments
-        ---------
-        None
-
-        Returns
-        -------
-        dict
-
-        Purpose
-        -------
-        Return the basic definition of the grid. Together
-        with a numpy.ndarray this information
-        can be passed to any of the factory functions.
-        """
-
         out = self._getArgs()
         del out["data"]
         return out
 
     @property
     def nbands(self):
-        """
-        Arguments
-        ---------
-        None
-
-        Returns
-        -------
-        int
-
-        Purpose
-        -------
-        Return the number of bands in the dataset, i.e. the third last element
-        in the shape tuple.
-        """
-
         try:
             return self.shape[-3]
         except IndexError:
@@ -195,21 +174,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
     @property
     def nrows(self):
-        """
-        Arguments
-        ---------
-        None
-
-        Returns
-        -------
-        int
-
-        Purpose
-        -------
-        Return the number of rows in the dataset, i.e. the second last element
-        in the shape tuple.
-        """
-
         try:
             return self.shape[-2] or 1
         except IndexError:
@@ -217,21 +181,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
     @property
     def ncols(self):
-        """
-        Arguments
-        ---------
-        None
-
-        Returns
-        -------
-        int
-
-        Purpose
-        -------
-        Return the number of columns in the dataset, i.e. the last element
-        in the shape tuple.
-        """
-
         try:
             return self.shape[-1] or 1
         except IndexError:
@@ -248,7 +197,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
 
     def setFillValue(self, value):
         # change fill_value and update mask
-        # print "------------------------"
         super(GeoArray, self).set_fill_value(value)
         self.mask = self == value
         if value != self.fill_value:

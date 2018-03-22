@@ -41,11 +41,24 @@ class GeotransMixin(object):
 
     @property
     def coordinates(self):
-        # NOTE: rather costly, should be cached
-        xdata, ydata = np.meshgrid(
-            np.arange(self.ncols, dtype=float),
-            np.arange(self.nrows, dtype=float))
-        return self._calcCoordinate(ydata, xdata)
+        if self._yvalues is None or self._xvalues is None:
+            xdata, ydata = np.meshgrid(
+                np.arange(self.ncols, dtype=float),
+                np.arange(self.nrows, dtype=float))
+            self._yvalues, self._xvalues = self._calcCoordinate(ydata, xdata)
+        return self._yvalues, self._xvalues
+
+    @property
+    def yvalues(self):
+        if self._yvalues is None:
+            return self.coordinates[0]
+        return self._yvalues
+
+    @property
+    def xvalues(self):
+        if self._xvalues is None:
+            return self.coordinates[1]
+        return self._xvalues
 
     def getCorners(self):
         corners = [(0, 0), (self.nrows, 0),
