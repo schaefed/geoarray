@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import gdal, osr
 from .gdalspatial import _Projection
-from .trans import _Geotrans
+from .geotrans import _Geotrans
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -116,13 +116,13 @@ def _fromDataset(fobj, mode="r"):
     from .core import GeoArray
 
     def _parseGeotrans(geotrans):
-        return _Geotrans(**{
+        return {
             "yorigin": geotrans[3],
             "xorigin": geotrans[0],
             "ycellsize": geotrans[5],
             "xcellsize": geotrans[1],
             "yparam": geotrans[4],
-            "xparam": geotrans[2]})
+            "xparam": geotrans[2]}
 
     fill_values = tuple(
         fobj.GetRasterBand(i+1).GetNoDataValue() for i in range(fobj.RasterCount))
@@ -133,7 +133,7 @@ def _fromDataset(fobj, mode="r"):
             RuntimeWarning
         )
 
-    geotrans = _parseGeotrans(fobj.GetGeoTransform())
+    geotrans = _Geotrans(geoloc=False, **_parseGeotrans(fobj.GetGeoTransform()))
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
 
     return GeoArray(

@@ -15,7 +15,7 @@ import numpy as np
 from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
 from .gdalspatial import _Projection
-from .trans import _Geotrans
+from .geotrans import _Geotrans
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
@@ -68,8 +68,18 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     Create a GeoArray from data.
     """
 
-    if yvalues is not None or xvalues is not None:
-        pass
+    _geoloc = False
+
+    def _procGeolocArray(array, diffaxis):
+        array = np.asarray(array)
+        diff = np.diff(array, axis=diffaxis)
+
+        assert array.ndim == 2
+        assert array.shape == data.shape[-2:]
+        # strictly monotonically in/decreasing along diffaxis
+        assert len(np.unique(np.sign(diff))) == 1
+
+        return array, diff.mean()
 
 
     if ycellsize is None:
@@ -82,8 +92,17 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         if origin[1] == "r":
             xcellsize *= -1
 
+    if yvalues is not None and xvalues is not None:
+        yvalues, ycellsize = _procGeolocArray(yvalues, 0)
+        yorigin = yvalues[0 if origin[0] == "u" else -1, 0]
+        xvalues, xcellsize = _procGeolocArray(xvalues, 1)
+        xorigin = xvalues[0, 0 if origin[1] == "l" else -1]
+        _geoloc = True
+
     if geotrans is None:
-        geotrans = _Geotrans(yorigin, xorigin, ycellsize, xcellsize, yparam, xparam)
+        geotrans = _Geotrans(
+            yorigin, xorigin, ycellsize, xcellsize, yparam, xparam, _geoloc)
+
     proj = _Projection(proj)
 
     if isinstance(data, GeoArray):

@@ -6,7 +6,7 @@ from collections import namedtuple
 
 _Geotrans = namedtuple("_Geotrans",
                       ("yorigin", "xorigin", "ycellsize", "xcellsize",
-                       "yparam", "xparam"))
+                       "yparam", "xparam", "geoloc"))
 
 
 class GeotransMixin(object):

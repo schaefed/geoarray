@@ -20,7 +20,7 @@ from numpy.ma import MaskedArray
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdalspatial import _Projection
 from .gdalio import _getDataset, _toFile, _writeData
-from .trans import GeotransMixin
+from .geotrans import GeotransMixin
 from .spatial import SpatialMixin
 
 

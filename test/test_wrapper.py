@@ -85,6 +85,33 @@ class Test(unittest.TestCase):
         self.assertTrue(np.all(test == value))
         self.assertDictEqual(test.header, grid.header)
 
+    def test_geoloc(self):
+
+        data = np.arange(48).reshape(2, 4, 6)
+        xvals = np.array([4, 8, 8.5, 13, 14, 17])
+        yvals = np.array([18, 17, 14, 12])
+        xvalues, yvalues = np.meshgrid(xvals, yvals)
+
+        gridul = ga.array(
+            data=data, fill_value=-42,
+            yvalues=yvalues, xvalues=xvalues)
+
+        self.assertEqual(gridul.yorigin, yvals[0])
+        self.assertEqual(gridul.xorigin, xvals[0])
+        self.assertEqual(gridul.ycellsize, np.diff(yvals).mean())
+        self.assertEqual(gridul.xcellsize, np.diff(xvals).mean())
+
+
+        gridlr = ga.array(
+            data=data, fill_value=-42, origin="lr",
+            yvalues=yvalues, xvalues=xvalues)
+
+        self.assertEqual(gridlr.yorigin, yvals[-1])
+        self.assertEqual(gridlr.xorigin, xvals[-1])
+        self.assertEqual(gridlr.ycellsize, np.diff(yvals).mean())
+        self.assertEqual(gridlr.xcellsize, np.diff(xvals).mean())
+
+
 
 
 if __name__== "__main__":
