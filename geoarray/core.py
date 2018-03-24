@@ -249,43 +249,59 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     def __deepcopy__(self, memo):
         return GeoArray(**self._getArgs(data=self.data.copy()))
 
+
+    # def _getitemCoordinates(self, coords, slc):
+
+    #     yarr = np.array(
+    #         _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
+    #         copy=False, ndmin=2)
+
+    #     xarr = np.array(
+    #         _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
+    #         copy=False, ndmin=2)
+
+    #     return yarr, xarr
+
+    # def __getitem__(self, slc):
+
+    #     data = MaskedArray.__getitem__(self, slc)
+
+    #     # empty array
+    #     if data.size in (0, 1):
+    #         return data
+
+    #     yarr, xarr = self._getitemCoordinates(self, slc)
+
+    #     if self.geotrans.geoloc is False:
+    #         bbox = [(yarr[0].max(), yarr[-1].min()),
+    #                 (xarr[0].max(), xarr[-1].min())]
+    #         ystart, ystop = sorted(bbox[0], reverse=data.origin[0] == "u")
+    #         xstart, xstop = sorted(bbox[1], reverse=data.origin[1] == "r")
+
+    #         nrows, ncols = ((1, 1) + data.shape)[-2:]
+    #         ycellsize = float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2]
+    #         xcellsize = float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1]
+
+    #         return GeoArray(
+    #             **self._getArgs(
+    #                 data=data.data, geotrans=self.geotrans._replace(
+    #                     yorigin=ystart, xorigin=xstart,
+    #                     ycellsize=ycellsize, xcellsize=xcellsize)))
+
+    #     raise NotImplementedError
+
     def __getitem__(self, slc):
 
-        data = super(self.__class__, self).__getitem__(slc)
+        data = MaskedArray.__getitem__(self, slc)
 
         # empty array
-        if data.size == 0:
+        if data.size == 0 or np.isscalar(data):
             return data
 
-        y, x = self.coordinates
-        # x, y = _broadcastedMeshgrid(*self.coordinates[::-1])
+        geotrans = GeotransMixin.__getitem__(self, slc)
 
-        bbox = []
-        for arr, idx in zip((y, x), (-2, -1)):
-            arr = np.array(
-                _broadcastTo(arr, self.shape, (-2, -1))[slc],
-                copy=False, ndmin=abs(idx)
-            )
-            s = [0] * arr.ndim
-            s[idx] = slice(None, None, None)
-            bbox.append((arr[s][0], arr[s][-1]))
+        return GeoArray(**self._getArgs(data=data.data, geotrans=geotrans))
 
-        try:
-            ystart, ystop = sorted(bbox[0], reverse=data.origin[0] == "u")
-            xstart, xstop = sorted(bbox[1], reverse=data.origin[1] == "r")
-        except AttributeError:
-            # scalar
-            return data
-
-        nrows, ncols = ((1, 1) + data.shape)[-2:]
-        ycellsize = float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2]
-        xcellsize = float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1]
-
-        return GeoArray(
-            **self._getArgs(
-                data=data.data, geotrans=self.geotrans._replace(
-                    yorigin=ystart, xorigin=xstart,
-                    ycellsize=ycellsize, xcellsize=xcellsize)))
 
     def flush(self):
         fobj = self._fobj
