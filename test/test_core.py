@@ -65,6 +65,7 @@ class Test(unittest.TestCase):
 
         self.assertTupleEqual(grid[3:4].cellsize, (-10, 10))
         self.assertTupleEqual(grid[0::2, 0::4].cellsize, (-20, 40))
+
         self.assertTupleEqual(grid[0::3, 0::5].cellsize, (-30, 50))
         self.assertTupleEqual(grid[0::1, 0::7].cellsize, (-10, 70))
         # # # needs to be extended...
@@ -85,10 +86,10 @@ class Test(unittest.TestCase):
         grid = ga.ones((100,100), yorigin=1000, xorigin=1200, cellsize=10, origin="ur")
         self.assertTupleEqual(grid[3:4].cellsize, (-10, -10))
 
-        yvals = np.array(range(1000, 1100, 2) + range(1100, 1250, 3))[::-1]
-        xvals = np.array(range(0, 100, 2) + range(100, 250, 3))
-        xvalues, yvalues = np.meshgrid(yvals, xvals)
-        grid = ga.ones((100, 100), origin="ul", yvalues=yvalues, xvalues=xvalues)
+        # yvals = np.array(range(1000, 1100, 2) + range(1100, 1250, 3))[::-1]
+        # xvals = np.array(range(0, 100, 2) + range(100, 250, 3))
+        # xvalues, yvalues = np.meshgrid(yvals, xvals)
+        # grid = ga.ones((100, 100), origin="ul", yvalues=yvalues, xvalues=xvalues)
 
 
     def test_getitemOrigin(self):

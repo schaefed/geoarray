@@ -82,27 +82,23 @@ class GeotransMixin(object):
 
     def __getitem__(self, slc):
 
-        yarr = np.array(
+        yvalues = np.array(
             _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
-        xarr = np.array(
+        xvalues = np.array(
             _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
-        if self.geoloc is not False:
-            raise NotImplementedError
-        bbox = [(yarr[0].max(), yarr[-1].min()),
-                (xarr[0].max(), xarr[-1].min())]
-        ystart, ystop = sorted(bbox[0], reverse=self.origin[0] == "u")
-        xstart, xstop = sorted(bbox[1], reverse=self.origin[1] == "r")
+        # if self.geoloc is not False:
+        #     raise NotImplementedError
 
-        nrows, ncols = yarr.shape[-2:]
-        ycellsize = float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2]
-        xcellsize = float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1]
+        nrows, ncols = yvalues.shape[-2:]
+        ycellsize = np.diff(yvalues, axis=-2).mean() if nrows > 1 else self.ycellsize
+        xcellsize = np.diff(xvalues, axis=-1).mean() if ncols > 1 else self.xcellsize
 
         return self.geotrans._replace(
-            yorigin=ystart, xorigin=xstart,
+            yorigin=yvalues.max(), xorigin=xvalues.min(),
             ycellsize=ycellsize, xcellsize=xcellsize)
 
 
