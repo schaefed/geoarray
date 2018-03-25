@@ -75,7 +75,8 @@ class Test(unittest.TestCase):
 
     def test_full_like(self):
         grid = ga.array(
-            data=np.arange(48).reshape(2, 4, 6), fill_value=-42,
+            data=np.arange(48).reshape(2, 4, 6),
+            fill_value=-42,
             yorigin=-15, xorigin=72,
             ycellsize=33.33, xcellsize=33.33)
 

@@ -97,6 +97,15 @@ class _Geotrans(object):
             nrows=self.nrows if nrows is None else nrows,
             ncols=self.ncols if ncols is None else ncols)
 
+    def _todict(self):
+        return {
+            "yorigin": self.yorigin,
+            "xorigin": self.xorigin,
+            "ycellsize": self.ycellsize,
+            "xcellsize": self.xcellsize,
+            "yparam": self.yparam,
+            "xparam": self.xparam}
+
     def _getitem(self, shape, slc):
 
         yvalues = np.array(

@@ -30,7 +30,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
           xcellsize  = None,  # Optional[Union[int, float]]
           yparam     = 0,     # Optional[Union[int, float]]
           xparam     = 0,     # Optional[Union[int, float]]
-          geotrans   = None,  # Optional[_Geotrans]
+          # geotrans   = None,  # Optional[_Geotrans]
           yvalues    = None,  # Optional[np.ndarray]
           xvalues    = None,  # Optional[np.ndarray]
           proj       = None,  # type: Mapping[AnyStr, Union[AnyStr, float]]
@@ -99,14 +99,13 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         xorigin = xvalues[0, 0 if origin[1] == "l" else -1]
         _geoloc = True
 
-    if geotrans is None:
-        # NOTE: not to robust...
-        geotrans = _Geotrans(
-            yorigin, xorigin,
-            ycellsize, xcellsize,
-            yparam, xparam,
-            *((1, 1) + data.shape)[-2:]
-        )
+    # if geotrans is None:
+    # NOTE: not to robust...
+    geotrans = _Geotrans(
+        yorigin, xorigin,
+        ycellsize, xcellsize,
+        yparam, xparam,
+        *((1, 1) + data.shape)[-2:])
 
     proj = _Projection(proj)
 
@@ -223,7 +222,7 @@ def empty(shape, dtype=np.float64, *args, **kwargs):
 def _likeArgs(arr):
     if isinstance(arr, GeoArray):
         return arr.header
-    return out
+    return {}
 
 
 def zeros_like(arr, dtype=None):

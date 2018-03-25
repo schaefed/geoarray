@@ -107,7 +107,6 @@ class GeoArray(SpatialMixin, MaskedArray):
         mask = (np.zeros_like(data, np.bool)
                 if fill_value is None else data == fill_value)
 
-
         self = MaskedArray.__new__(
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         self.unshare_mask()
@@ -150,6 +149,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     @property
     def header(self):
         out = self._getArgs()
+        out.update(out.pop("geotrans")._todict())
         del out["data"]
         return out
 
