@@ -20,7 +20,7 @@ from numpy.ma import MaskedArray
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdalspatial import _Projection
 from .gdalio import _getDataset, _toFile, _writeData
-from .geotrans import GeotransMixin
+from .geotrans import _Geotrans
 from .spatial import SpatialMixin
 
 
@@ -71,7 +71,7 @@ class GeoArrayMeta(object):
         return type(name, bases, attrs)
 
 
-class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
+class GeoArray(SpatialMixin, MaskedArray):
     """
     Arguments
     ----------
@@ -249,47 +249,6 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
     def __deepcopy__(self, memo):
         return GeoArray(**self._getArgs(data=self.data.copy()))
 
-
-    # def _getitemCoordinates(self, coords, slc):
-
-    #     yarr = np.array(
-    #         _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
-    #         copy=False, ndmin=2)
-
-    #     xarr = np.array(
-    #         _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
-    #         copy=False, ndmin=2)
-
-    #     return yarr, xarr
-
-    # def __getitem__(self, slc):
-
-    #     data = MaskedArray.__getitem__(self, slc)
-
-    #     # empty array
-    #     if data.size in (0, 1):
-    #         return data
-
-    #     yarr, xarr = self._getitemCoordinates(self, slc)
-
-    #     if self.geotrans.geoloc is False:
-    #         bbox = [(yarr[0].max(), yarr[-1].min()),
-    #                 (xarr[0].max(), xarr[-1].min())]
-    #         ystart, ystop = sorted(bbox[0], reverse=data.origin[0] == "u")
-    #         xstart, xstop = sorted(bbox[1], reverse=data.origin[1] == "r")
-
-    #         nrows, ncols = ((1, 1) + data.shape)[-2:]
-    #         ycellsize = float(ystop-ystart)/(nrows-1) if nrows > 1 else self.cellsize[-2]
-    #         xcellsize = float(xstop-xstart)/(ncols-1) if ncols > 1 else self.cellsize[-1]
-
-    #         return GeoArray(
-    #             **self._getArgs(
-    #                 data=data.data, geotrans=self.geotrans._replace(
-    #                     yorigin=ystart, xorigin=xstart,
-    #                     ycellsize=ycellsize, xcellsize=xcellsize)))
-
-    #     raise NotImplementedError
-
     def __getitem__(self, slc):
 
         data = MaskedArray.__getitem__(self, slc)
@@ -298,7 +257,7 @@ class GeoArray(GeotransMixin, SpatialMixin, MaskedArray):
         if data.size == 0 or np.isscalar(data):
             return data
 
-        geotrans = GeotransMixin.__getitem__(self, slc)
+        geotrans = self.geotrans._getitem(self.shape, slc)
 
         return GeoArray(**self._getArgs(data=data.data, geotrans=geotrans))
 

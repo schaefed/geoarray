@@ -100,8 +100,13 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         _geoloc = True
 
     if geotrans is None:
+        # NOTE: not to robust...
         geotrans = _Geotrans(
-            yorigin, xorigin, ycellsize, xcellsize, yparam, xparam, _geoloc)
+            yorigin, xorigin,
+            ycellsize, xcellsize,
+            yparam, xparam,
+            *((1, 1) + data.shape)[-2:]
+        )
 
     proj = _Projection(proj)
 

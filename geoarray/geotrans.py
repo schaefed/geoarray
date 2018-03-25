@@ -2,20 +2,28 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from collections import namedtuple
 from .utils import _broadcastTo
 
-_Geotrans = namedtuple("_Geotrans",
-                      ("yorigin", "xorigin", "ycellsize", "xcellsize",
-                       "yparam", "xparam", "geoloc"))
 
+class _Geotrans(object):
+    def __init__(self, yorigin, xorigin, ycellsize, xcellsize,
+                 yparam, xparam, nrows, ncols):
+        self.yorigin = yorigin
+        self.xorigin = xorigin
+        self.ycellsize = ycellsize
+        self.xcellsize = xcellsize
+        self.yparam = yparam
+        self.xparam = xparam
+        self.nrows = nrows
+        self.ncols = ncols
+        self._yvalues = None
+        self._xvalues = None
 
-class GeotransMixin(object):
     @property
     def origin(self):
         return "".join(
-            ["l" if self.geotrans.ycellsize > 0 else "u",
-             "l" if self.geotrans.xcellsize > 0 else "r"])
+            ["l" if self.ycellsize > 0 else "u",
+             "l" if self.xcellsize > 0 else "r"])
 
     @property
     def bbox(self):
@@ -29,21 +37,21 @@ class GeotransMixin(object):
 
     def _calcCoordinate(self, row, col):
 
-        yval = (self.geotrans.yorigin
-                + col * self.geotrans.yparam
-                + row * self.geotrans.ycellsize)
-        xval = (self.geotrans.xorigin
-                + col * self.geotrans.xcellsize
-                + row * self.geotrans.xparam)
+        yval = (self.yorigin
+                + col * self.yparam
+                + row * self.ycellsize)
+        xval = (self.xorigin
+                + col * self.xcellsize
+                + row * self.xparam)
         return yval, xval
 
     def toGdal(self):
-        return (self.geotrans.xorigin, self.geotrans.xcellsize, self.geotrans.xparam,
-                self.geotrans.yorigin, self.geotrans.yparam, self.geotrans.ycellsize)
+        return (self.xorigin, self.xcellsize, self.xparam,
+                self.yorigin, self.yparam, self.ycellsize)
 
     @property
     def cellsize(self):
-        return (self.geotrans.ycellsize, self.geotrans.xcellsize)
+        return (self.ycellsize, self.xcellsize)
 
     @property
     def coordinates(self):
@@ -56,15 +64,11 @@ class GeotransMixin(object):
 
     @property
     def yvalues(self):
-        if self._yvalues is None:
-            return self.coordinates[0]
-        return self._yvalues
+        return self.coordinates[0]
 
     @property
     def xvalues(self):
-        if self._xvalues is None:
-            return self.coordinates[1]
-        return self._xvalues
+        return self.coordinates[1]
 
     def getCorners(self):
         corners = [(0, 0), (self.nrows, 0),
@@ -80,25 +84,38 @@ class GeotransMixin(object):
             bbox["ymax"] if corner[0] == "u" else bbox["ymin"],
             bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
 
-    def __getitem__(self, slc):
+    def _replace(self, yorigin=None, xorigin=None, ycellsize=None, xcellsize=None,
+                 yparam=None, xparam=None, nrows=None, ncols=None):
+
+        return _Geotrans(
+            yorigin=self.yorigin if yorigin is None else yorigin,
+            xorigin=self.xorigin if xorigin is None else xorigin,
+            ycellsize=self.ycellsize if ycellsize is None else ycellsize,
+            xcellsize=self.xcellsize if xcellsize is None else xcellsize,
+            yparam=self.yparam if yparam is None else yparam,
+            xparam=self.xparam if xparam is None else xparam,
+            nrows=self.nrows if nrows is None else nrows,
+            ncols=self.ncols if ncols is None else ncols)
+
+    def _getitem(self, shape, slc):
 
         yvalues = np.array(
-            _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
+            _broadcastTo(self.yvalues, shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
         xvalues = np.array(
-            _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
+            _broadcastTo(self.xvalues, shape, (-2, -1))[slc],
             copy=False, ndmin=2)
-
-        # if self.geoloc is not False:
-        #     raise NotImplementedError
 
         nrows, ncols = yvalues.shape[-2:]
         ycellsize = np.diff(yvalues, axis=-2).mean() if nrows > 1 else self.ycellsize
         xcellsize = np.diff(xvalues, axis=-1).mean() if ncols > 1 else self.xcellsize
 
-        return self.geotrans._replace(
+        out = _Geotrans(
+            yparam=self.yparam, xparam=self.xparam,
             yorigin=yvalues.max(), xorigin=xvalues.min(),
-            ycellsize=ycellsize, xcellsize=xcellsize)
+            ycellsize=ycellsize, xcellsize=xcellsize,
+            nrows=nrows, ncols=ncols)
+        return out
 
 
