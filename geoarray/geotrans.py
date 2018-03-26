@@ -119,7 +119,13 @@ class _Geolocation(_GeoBase):
         return self._replace(yvalues=yvalues, xvalues=xvalues)
 
     def toGdal(self):
-        raise NotImplementedError
+        return {
+            "X_BAND": None,  # need to be filled
+            "Y_BAND": None,  # need to be filled
+            "PIXEL_OFFSET": 0,
+            "LINE_OFFSET": 0,
+            "PIXEL_STEP": 1,
+            "LINE_STEP": 1}
 
 class _Geotrans(_GeoBase):
     def __init__(self, yorigin, xorigin, ycellsize, xcellsize,

@@ -164,7 +164,8 @@ def _getDataset(grid, mem=False):
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
-    out.SetGeoTransform(grid.toGdal())
+    if isinstance(grid.geotrans, _Geotrans):
+        out.SetGeoTransform(grid.toGdal())
 
     if grid.proj:
         out.SetProjection(grid.proj)
