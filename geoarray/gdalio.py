@@ -136,8 +136,7 @@ def _fromDataset(fobj, mode="r"):
 
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
     # NOTE: not to robust...
-    geotrans = _Geotrans(nrows=data.shape[-2], ncols=data.shape[-1],
-                         **_parseGeotrans(fobj.GetGeoTransform()))
+    geotrans = _Geotrans(shape=data.shape, **_parseGeotrans(fobj.GetGeoTransform()))
 
     return GeoArray(
         data       = data,

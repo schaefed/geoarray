@@ -45,9 +45,10 @@ class _GeoBase(object):
 
 
 class _Geolocation(_GeoBase):
-    def __init__(self, yvalues, xvalues, origin):
+    def __init__(self, yvalues, xvalues, shape, origin):
         self.yvalues = yvalues
         self.xvalues = xvalues
+        self.shape = shape
         self.origin = origin
 
     @property
@@ -90,24 +91,26 @@ class _Geolocation(_GeoBase):
         return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
 
 
-    def _replace(self, yvalues=None, xvalues=None):
+    def _replace(self, yvalues=None, xvalues=None, origin=None, shape=None):
         return _Geolocation(
             yvalues=self.yvalues if yvalues is None else yvalues,
-            xvalues=self.xvalues if xvalues is None else xvalues)
+            xvalues=self.xvalues if xvalues is None else xvalues,
+            shape=self.shape if shape is None else shape,
+            origin=self.origin if origin is None else origin)
 
     def _todict(self):
         return {
             "yvalues": self.yvalues,
             "xvalues": self.xvalues}
 
-    def _getitem(self, shape, slc):
+    def _getitem(self, slc):
 
         yvalues = np.array(
-            _broadcastTo(self.yvalues, shape, (-2, -1))[slc],
+            _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
         xvalues = np.array(
-            _broadcastTo(self.xvalues, shape, (-2, -1))[slc],
+            _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
         if yvalues.ndim > 2:
@@ -120,8 +123,8 @@ class _Geolocation(_GeoBase):
 
     def toGdal(self):
         return {
-            "X_BAND": None,  # need to be filled
-            "Y_BAND": None,  # need to be filled
+            "X_BAND": self.shape[0],  # need to be filled
+            "Y_BAND": self.shape[0] + 1,  # need to be filled
             "PIXEL_OFFSET": 0,
             "LINE_OFFSET": 0,
             "PIXEL_STEP": 1,
@@ -129,7 +132,7 @@ class _Geolocation(_GeoBase):
 
 class _Geotrans(_GeoBase):
     def __init__(self, yorigin, xorigin, ycellsize, xcellsize,
-                 yparam, xparam, origin, nrows, ncols):
+                 yparam, xparam, origin, shape):
         self.yorigin = yorigin
         self.xorigin = xorigin
         self.ycellsize = ycellsize
@@ -137,10 +140,23 @@ class _Geotrans(_GeoBase):
         self.yparam = yparam
         self.xparam = xparam
         self.origin = origin
-        self.nrows = nrows
-        self.ncols = ncols
+        self.shape = shape
         self._yvalues = None
         self._xvalues = None
+
+    @property
+    def nrows(self):
+        try:
+            return self.shape[-2]
+        except IndexError:
+            return 1
+
+    @property
+    def ncols(self):
+        try:
+            return self.shape[-1]
+        except IndexError:
+            return 1
 
     @property
     def bbox(self):
@@ -199,7 +215,7 @@ class _Geotrans(_GeoBase):
             bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
 
     def _replace(self, yorigin=None, xorigin=None, ycellsize=None, xcellsize=None,
-                 yparam=None, xparam=None, origin=None, nrows=None, ncols=None):
+                 yparam=None, xparam=None, origin=None, shape=None):
 
         return _Geotrans(
             yorigin=self.yorigin if yorigin is None else yorigin,
@@ -209,8 +225,7 @@ class _Geotrans(_GeoBase):
             yparam=self.yparam if yparam is None else yparam,
             xparam=self.xparam if xparam is None else xparam,
             origin=self.origin if origin is None else origin,
-            nrows=self.nrows if nrows is None else nrows,
-            ncols=self.ncols if ncols is None else ncols)
+            shape=self.shape if shape is None else shape)
 
     def _todict(self):
         return {
@@ -222,14 +237,14 @@ class _Geotrans(_GeoBase):
             "xparam": self.xparam,
             "origin": self.origin}
 
-    def _getitem(self, shape, slc):
+    def _getitem(self, slc):
 
         yvalues = np.array(
-            _broadcastTo(self.yvalues, shape, (-2, -1))[slc],
+            _broadcastTo(self.yvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
         xvalues = np.array(
-            _broadcastTo(self.xvalues, shape, (-2, -1))[slc],
+            _broadcastTo(self.xvalues, self.shape, (-2, -1))[slc],
             copy=False, ndmin=2)
 
         nrows, ncols = yvalues.shape[-2:]
@@ -239,5 +254,5 @@ class _Geotrans(_GeoBase):
         out = self._replace(
             yorigin=yvalues.max(), xorigin=xvalues.min(),
             ycellsize=ycellsize, xcellsize=xcellsize,
-            nrows=nrows, ncols=ncols)
+            shape=yvalues.shape)
         return out

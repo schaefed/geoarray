@@ -257,7 +257,7 @@ class GeoArray(SpatialMixin, MaskedArray):
         if data.size == 0 or np.isscalar(data):
             return data
 
-        geotrans = self.geotrans._getitem(self.shape, slc)
+        geotrans = self.geotrans._getitem(slc)
 
         return GeoArray(**self._getArgs(data=data.data, geotrans=geotrans))
 

@@ -82,7 +82,7 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     if yvalues is not None and xvalues is not None:
         yvalues = _checkGeolocArray(yvalues, 0)
         xvalues = _checkGeolocArray(xvalues, 1)
-        geotrans = _Geolocation(yvalues, xvalues, origin)
+        geotrans = _Geolocation(yvalues, xvalues, shape=data.shape, origin=origin)
 
     else:
         if ycellsize is None:
@@ -97,13 +97,11 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
 
         # if geotrans is None:
         # NOTE: not to robust...
-        shape = ((1, 1) + data.shape)[-2:]
         geotrans = _Geotrans(
             yorigin=yorigin, xorigin=xorigin,
             ycellsize=ycellsize, xcellsize=xcellsize,
             yparam=yparam, xparam=xparam,
-            origin=origin,
-            nrows = shape[-2], ncols=shape[-1])
+            origin=origin, shape=data.shape)
 
     proj = _Projection(proj)
 
