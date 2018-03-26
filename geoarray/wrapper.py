@@ -15,7 +15,7 @@ import numpy as np
 from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
 from .gdalspatial import _Projection
-from .geotrans import _Geotrans
+from .geotrans import _Geotrans, _Geolocation
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
@@ -68,44 +68,42 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
     Create a GeoArray from data.
     """
 
-    _geoloc = False
 
-    def _procGeolocArray(array, diffaxis):
+    def _checkGeolocArray(array, diffaxis):
         array = np.asarray(array)
         diff = np.diff(array, axis=diffaxis)
 
         assert array.ndim == 2
         assert array.shape == data.shape[-2:]
-        # strictly monotonically in/decreasing along diffaxis
         assert len(np.unique(np.sign(diff))) == 1
 
-        return array, diff.mean()
-
-
-    if ycellsize is None:
-        ycellsize = cellsize
-        if origin[0] == "u":
-            ycellsize *= -1
-
-    if xcellsize is None:
-        xcellsize = cellsize
-        if origin[1] == "r":
-            xcellsize *= -1
+        return array
 
     if yvalues is not None and xvalues is not None:
-        yvalues, ycellsize = _procGeolocArray(yvalues, 0)
-        yorigin = yvalues[0 if origin[0] == "u" else -1, 0]
-        xvalues, xcellsize = _procGeolocArray(xvalues, 1)
-        xorigin = xvalues[0, 0 if origin[1] == "l" else -1]
-        _geoloc = True
+        yvalues = _checkGeolocArray(yvalues, 0)
+        xvalues = _checkGeolocArray(xvalues, 1)
+        geotrans = _Geolocation(yvalues, xvalues, origin)
 
-    # if geotrans is None:
-    # NOTE: not to robust...
-    geotrans = _Geotrans(
-        yorigin, xorigin,
-        ycellsize, xcellsize,
-        yparam, xparam,
-        *((1, 1) + data.shape)[-2:])
+    else:
+        if ycellsize is None:
+            ycellsize = cellsize
+            if origin[0] == "u":
+                ycellsize *= -1
+
+        if xcellsize is None:
+            xcellsize = cellsize
+            if origin[1] == "r":
+                xcellsize *= -1
+
+        # if geotrans is None:
+        # NOTE: not to robust...
+        shape = ((1, 1) + data.shape)[-2:]
+        geotrans = _Geotrans(
+            yorigin=yorigin, xorigin=xorigin,
+            ycellsize=ycellsize, xcellsize=xcellsize,
+            yparam=yparam, xparam=xparam,
+            origin=origin,
+            nrows = shape[-2], ncols=shape[-1])
 
     proj = _Projection(proj)
 

@@ -121,6 +121,7 @@ def _fromDataset(fobj, mode="r"):
             "xorigin": geotrans[0],
             "ycellsize": geotrans[5],
             "xcellsize": geotrans[1],
+            "origin": "ul",            # is that always true?
             "yparam": geotrans[4],
             "xparam": geotrans[2]}
 

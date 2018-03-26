@@ -102,7 +102,6 @@ class Test(unittest.TestCase):
         self.assertEqual(gridul.ycellsize, np.diff(yvals).mean())
         self.assertEqual(gridul.xcellsize, np.diff(xvals).mean())
 
-
         gridlr = ga.array(
             data=data, fill_value=-42, origin="lr",
             yvalues=yvalues, xvalues=xvalues)

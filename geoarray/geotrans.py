@@ -3,27 +3,138 @@
 
 import numpy as np
 from .utils import _broadcastTo
+from abc import ABCMeta, abstractmethod, abstractproperty
+
+class _GeoBase(object):
+    __metaclass__ = ABCMeta
+
+    #@property
+    #def origin(self):
+    #    return "".join(
+    #        ["l" if self.ycellsize > 0 else "u",
+    #         "l" if self.xcellsize > 0 else "r"])
+
+    @property
+    def cellsize(self):
+        return (self.ycellsize, self.xcellsize)
+
+    @abstractproperty
+    def coordinates(self):
+        pass
+
+    @abstractproperty
+    def bbox(self):
+        pass
+
+    @abstractmethod
+    def _todict(self):
+        pass
+
+    @abstractmethod
+    def _replace(self):
+        pass
+
+    @abstractmethod
+    def _getitem(self):
+        pass
+
+    @abstractmethod
+    def toGdal(self):
+        raise NotImplementedError
+        pass
 
 
-class _Geotrans(object):
+class _Geolocation(_GeoBase):
+    def __init__(self, yvalues, xvalues, origin):
+        self.yvalues = yvalues
+        self.xvalues = xvalues
+        self.origin = origin
+
+    @property
+    def ycellsize(self):
+        return np.diff(self.yvalues, axis=-2).mean()
+
+    @property
+    def xcellsize(self):
+        return np.diff(self.xvalues, axis=-1).mean()
+
+    @property
+    def yorigin(self):
+        bbox = self.bbox
+        return self.bbox["ymax" if self.origin[0] == "u" else "ymin"]
+
+    @property
+    def xorigin(self):
+        return self.bbox["xmax" if self.origin[1] == "r" else "xmin"]
+
+    @property
+    def coordinates(self):
+        return self.yvalues, self.xvalues
+
+    @property
+    def bbox(self):
+
+        ymin, ymax = self.yvalues.min(), self.yvalues.max()
+        xmin, xmax = self.xvalues.min(), self.xvalues.max()
+
+        if self.origin[0] == "u":  # u
+            ymin += self.ycellsize
+        else:
+            ymax += self.ycellsize
+
+        if self.origin[1] == "l":
+            xmax += self.xcellsize
+        else:
+            xmin += self.xcellsize
+
+        return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
+
+
+    def _replace(self, yvalues=None, xvalues=None):
+        return _Geolocation(
+            yvalues=self.yvalues if yvalues is None else yvalues,
+            xvalues=self.xvalues if xvalues is None else xvalues)
+
+    def _todict(self):
+        return {
+            "yvalues": self.yvalues,
+            "xvalues": self.xvalues}
+
+    def _getitem(self, shape, slc):
+
+        yvalues = np.array(
+            _broadcastTo(self.yvalues, shape, (-2, -1))[slc],
+            copy=False, ndmin=2)
+
+        xvalues = np.array(
+            _broadcastTo(self.xvalues, shape, (-2, -1))[slc],
+            copy=False, ndmin=2)
+
+        if yvalues.ndim > 2:
+            yvalues = yvalues[..., 0, :, :]
+
+        if xvalues.ndim > 2:
+            xvalues = xvalues[..., 0, :, :]
+
+        return self._replace(yvalues=yvalues, xvalues=xvalues)
+
+    def toGdal(self):
+        raise NotImplementedError
+
+class _Geotrans(_GeoBase):
     def __init__(self, yorigin, xorigin, ycellsize, xcellsize,
-                 yparam, xparam, nrows, ncols):
+                 yparam, xparam, origin, nrows, ncols):
         self.yorigin = yorigin
         self.xorigin = xorigin
         self.ycellsize = ycellsize
         self.xcellsize = xcellsize
         self.yparam = yparam
         self.xparam = xparam
+        self.origin = origin
         self.nrows = nrows
         self.ncols = ncols
         self._yvalues = None
         self._xvalues = None
-
-    @property
-    def origin(self):
-        return "".join(
-            ["l" if self.ycellsize > 0 else "u",
-             "l" if self.xcellsize > 0 else "r"])
 
     @property
     def bbox(self):
@@ -46,12 +157,9 @@ class _Geotrans(object):
         return yval, xval
 
     def toGdal(self):
-        return (self.xorigin, self.xcellsize, self.xparam,
+        out = (self.xorigin, self.xcellsize, self.xparam,
                 self.yorigin, self.yparam, self.ycellsize)
-
-    @property
-    def cellsize(self):
-        return (self.ycellsize, self.xcellsize)
+        return out
 
     @property
     def coordinates(self):
@@ -85,7 +193,7 @@ class _Geotrans(object):
             bbox["xmax"] if corner[1] == "r" else bbox["xmin"],)
 
     def _replace(self, yorigin=None, xorigin=None, ycellsize=None, xcellsize=None,
-                 yparam=None, xparam=None, nrows=None, ncols=None):
+                 yparam=None, xparam=None, origin=None, nrows=None, ncols=None):
 
         return _Geotrans(
             yorigin=self.yorigin if yorigin is None else yorigin,
@@ -94,6 +202,7 @@ class _Geotrans(object):
             xcellsize=self.xcellsize if xcellsize is None else xcellsize,
             yparam=self.yparam if yparam is None else yparam,
             xparam=self.xparam if xparam is None else xparam,
+            origin=self.origin if origin is None else origin,
             nrows=self.nrows if nrows is None else nrows,
             ncols=self.ncols if ncols is None else ncols)
 
@@ -104,7 +213,8 @@ class _Geotrans(object):
             "ycellsize": self.ycellsize,
             "xcellsize": self.xcellsize,
             "yparam": self.yparam,
-            "xparam": self.xparam}
+            "xparam": self.xparam,
+            "origin": self.origin}
 
     def _getitem(self, shape, slc):
 
@@ -120,11 +230,8 @@ class _Geotrans(object):
         ycellsize = np.diff(yvalues, axis=-2).mean() if nrows > 1 else self.ycellsize
         xcellsize = np.diff(xvalues, axis=-1).mean() if ncols > 1 else self.xcellsize
 
-        out = _Geotrans(
-            yparam=self.yparam, xparam=self.xparam,
+        out = self._replace(
             yorigin=yvalues.max(), xorigin=xvalues.min(),
             ycellsize=ycellsize, xcellsize=xcellsize,
             nrows=nrows, ncols=ncols)
         return out
-
-
