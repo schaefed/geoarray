@@ -25,14 +25,20 @@ class _Projection(object):
     def _import(self, value):
         if isinstance(value, _Projection):
             self._srs = value._srs
-        elif isinstance(value, int):
-            self._srs.ImportFromProj4("+init=epsg:{:}".format(value))
-        elif isinstance(value, dict):
-            params =  "+{:}".format(" +".join(
-                ["=".join(map(str, pp)) for pp in value.items()]))
-            self._srs.ImportFromProj4(params)
-        elif isinstance(value, str):
-            self._srs.ImportFromWkt(value)
+        else:
+            if isinstance(value, int):
+                method = self._srs.ImportFromProj4
+                param = "+init=epsg:{:}".format(value)
+            elif isinstance(value, dict):
+                method = self._srs.ImportFromProj4
+                param =  "+{:}".format(" +".join(
+                    ["=".join(map(str, pp)) for pp in value.items()]))
+            elif isinstance(value, str):
+                method = self._srs.ImportFromWkt
+                param = value
+
+            if method(param):
+                raise RuntimeError("Failed to set projection")
 
         if value and self is None:
             warnings.warn("Projection not understood", RuntimeWarning)
@@ -70,8 +76,7 @@ class _Transformer(object):
         Encapsulates the osr Cordinate Transformation functionality
         """
         self._tx = osr.CoordinateTransformation(
-            sproj._srs, tproj._srs
-        )
+            sproj._srs, tproj._srs)
 
     def __call__(self, y, x):
         try:
