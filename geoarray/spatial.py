@@ -24,7 +24,7 @@ class SpatialMixin(object):
         """
 
         try:
-            y_idx, x_idx = np.where(self.data != self.fill_value)
+            y_idx, x_idx = np.where(self.data != self.fill_value)[-2:]
             return self.removeCells(
                 top=min(y_idx), bottom=self.nrows - max(y_idx) - 1,
                 left=min(x_idx), right=self.ncols - max(x_idx) - 1)
