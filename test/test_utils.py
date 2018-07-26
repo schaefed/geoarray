@@ -13,14 +13,18 @@ TMPPATH = os.path.join(PWD, "tmp")
 
 def testArray(shape):
     dinfo = dtypeInfo(np.int32)
-    return ga.array(
-        data = np.random.randint(dinfo["min"], high=dinfo["max"], size=shape, dtype=np.int32),
-        proj = 9001,
-        yorigin = 7235561,
-        xorigin = 3820288,
+    data = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+    out = ga.array(
+        # data = np.random.randint(dinfo["min"], high=dinfo["max"], size=shape, dtype=np.int32),
+        data = data,
+        proj = 32633,  # WGS 84 / UTM 33N
+        origin = "ul",
+        yorigin = 9000000,
+        xorigin = 170000,
         cellsize = 1000,
         fill_value = -9999,
         color_mode = "L")
+    return out
 
 def createDirectory(path):
     try:
