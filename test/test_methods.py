@@ -186,34 +186,53 @@ class Test(unittest.TestCase):
         >= 2.0, else with 0. The tested function behaves like the more recent versions
         of GDAL
         """
-        codes = (2062, 3857)
+        codes = (32632, 32634)
 
         if gdal.VersionInfo().startswith("1"):
             warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)
             return
 
         for fname, base in zip(self.fnames, self.grids):
+            # import ipdb; ipdb.set_trace()
+            # print base.proj
+            # print type(base.proj)
             # break
-            if base.proj:
-                for epsg in codes:
-                    # gdalwarp flips the warped image
-                    proj = ga.project(
-                        grid      = base[::-1],
-                        proj      = {"init":"epsg:{:}".format(epsg)},
-                        max_error = 0
-                    )
-                    # proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
-                    with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
-                        subprocess.check_output(
-                            "gdalwarp -r 'near' -et 0 -t_srs 'EPSG:{:}' {:} {:}".format(
-                                epsg, fname, tf.name
-                            ),
-                            shell=True
-                        )
-                        compare = ga.fromfile(tf.name)
-                        self.assertTrue(np.all(proj.data == compare.data))
-                        self.assertTrue(np.all(proj.mask == compare.mask))
-                        self.assertDictEqual(proj.bbox, compare.bbox)
+            # if base.proj:
+            base = base.copy()
+            base[:] = base[::-1]
+            for epsg in codes:
+                proj = ga.project(
+                    grid      = base,
+                    proj      = {"init":"epsg:{:}".format(epsg)},
+                    func      = "nearest",
+                    max_error = 0
+                )
+                # proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
+                with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
+                    subprocess.check_output(
+                        "gdalwarp -r 'near' -et 0 -s_srs 'EPSG:{:}' -t_srs 'EPSG:{:}' {:} {:}".format(
+                            32633, epsg, fname, tf.name
+                        ),
+                        shell=True)
+                    compare = ga.fromfile(tf.name)
+
+                    # import matplotlib.pyplot as plt
+                    # fig = plt.figure()
+                    # plt.imshow(proj)
+                    # plt.colorbar()
+                    # plt.show()
+
+                    # fig = plt.figure()
+                    # plt.imshow(compare)
+                    # plt.colorbar()
+                    # plt.show()
+
+
+                    idx = proj.data != compare.data
+                    # import ipdb; ipdb.set_trace()
+                    self.assertTrue(np.all(proj.data == compare.data))
+                    self.assertTrue(np.all(proj.mask == compare.mask))
+                    self.assertDictEqual(proj.bbox, compare.bbox)
             else:
                 self.assertRaises(AttributeError)
 

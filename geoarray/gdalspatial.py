@@ -25,7 +25,7 @@ class _Projection(object):
     def _import(self, value):
         if isinstance(value, _Projection):
             self._srs = value._srs
-        else:
+        elif value:
             if isinstance(value, int):
                 method = self._srs.ImportFromProj4
                 param = "+init=epsg:{:}".format(value)
@@ -36,20 +36,23 @@ class _Projection(object):
             elif isinstance(value, str):
                 method = self._srs.ImportFromWkt
                 param = value
+            else:
+                raise RuntimeError("Projection not understood")
 
             if method(param):
                 raise RuntimeError("Failed to set projection")
 
-        if value and self is None:
-            warnings.warn("Projection not understood", RuntimeWarning)
+    def toWkt(self):
+        return self._srs.ExportToPrettyWkt()
 
-    def _export(self):
-        out = self._srs.ExportToPrettyWkt()
-        return out or None
+    def toProj4(self):
+        out = self._srs.ExportToProj4()
+        out = dict(filter(lambda x: len(x) == 2, [p.strip().split("=") for p in out.split("+")]))
+        return out
 
     def __nonzero__(self):
         # is a an projection set?
-        return self._export() is not None
+        return bool(self.toWkt())
 
     def __get__(self, *args, **kwargs):
         return self
@@ -58,10 +61,10 @@ class _Projection(object):
         self._import(val)
 
     def __str__(self):
-        return str(self._export())
+        return self.toWkt()
 
     def __repr__(self):
-        return str(self._export())
+        return self.toWkt()
 
 
 class _Transformer(object):
