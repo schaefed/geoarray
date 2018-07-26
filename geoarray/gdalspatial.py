@@ -46,10 +46,16 @@ class _Projection(object):
         return self._export() is not None
 
     def __get__(self, *args, **kwargs):
-        return self._export()
+        return self
 
     def __set__(self, obj, val):
         self._import(val)
+
+    def __str__(self):
+        return str(self._export())
+
+    def __repr__(self):
+        return str(self._export())
 
 
 class _Transformer(object):

@@ -167,7 +167,7 @@ def _getDataset(grid, mem=False):
         out.SetGeoTransform(grid.toGdal())
 
     if grid.proj:
-        out.SetProjection(grid.proj)
+        out.SetProjection(str(grid.proj))
 
     for n in range(grid.nbands):
         band = out.GetRasterBand(n+1)
