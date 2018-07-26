@@ -204,7 +204,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     def __setattr__(self, key, value):
         "Make descriptors work"
         try:
-            object.__getattribute__(self, key).__set__(self, key, value)
+            object.__getattribute__(self, key).__set__(self, value)
         except AttributeError:
             object.__setattr__(self, key, value) 
 
