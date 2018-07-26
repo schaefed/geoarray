@@ -31,7 +31,13 @@ class _Projection(object):
             elif isinstance(value, str):
                 method = self._srs.ImportFromWkt
             elif isinstance(value, dict):
-                method = self._srs.ImportFromDict
+                try:
+                    method = self._srs.ImportFromDict
+                except AttributeError:
+                    method = self._srs.ImportFromProj4
+                    value =  "+{:}".format(
+                        " +".join(
+                            ["=".join(map(str, pp)) for pp in value.items()]))
             else:
                 raise RuntimeError("Projection not understood")
 
