@@ -27,27 +27,32 @@ class _Projection(object):
             self._srs = value._srs
         elif value:
             if isinstance(value, int):
-                method = self._srs.ImportFromProj4
-                param = "+init=epsg:{:}".format(value)
-            elif isinstance(value, dict):
-                method = self._srs.ImportFromProj4
-                param =  "+{:}".format(" +".join(
-                    ["=".join(map(str, pp)) for pp in value.items()]))
+                method = self._srs.ImportFromEPSG
             elif isinstance(value, str):
                 method = self._srs.ImportFromWkt
-                param = value
+            elif isinstance(value, dict):
+                method = self._srs.ImportFromDict
             else:
                 raise RuntimeError("Projection not understood")
 
-            if method(param):
+            if method(value):
                 raise RuntimeError("Failed to set projection")
+
+    def __eq__(self, other):
+        return bool(self._srs.IsSame(_Projection(other)._srs))
 
     def toWkt(self):
         return self._srs.ExportToPrettyWkt()
 
     def toProj4(self):
-        out = self._srs.ExportToProj4()
-        out = dict(filter(lambda x: len(x) == 2, [p.strip().split("=") for p in out.split("+")]))
+        return self._srs.ExportToProj4()
+
+    def toDict(self):
+        proj = self._srs.ExportToProj4()
+        out = dict(
+            filter(
+                lambda x: len(x) == 2,
+                [p.replace("+", "").split("=") for p in proj.split(" +")]))
         return out
 
     def __nonzero__(self):

@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
                 np.testing.assert_almost_equal(check_array, grid)
                 self.assertDictEqual(check_array.bbox, test_array.bbox)
                 self.assertEqual(check_array.cellsize, test_array.cellsize)
-                # self.assertDictEqual(check_array.proj.toProj4(), test_array.proj.toProj4())
+                self.assertEqual(check_array.proj, test_array.proj)
                 self.assertEqual(check_array.fill_value, fill_value)
                 self.assertEqual(check_array.color_mode, test_array.color_mode)
 
