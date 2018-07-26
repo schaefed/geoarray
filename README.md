@@ -5,7 +5,7 @@ This python GDAL wrapper module provides a numpy.ma.MaskedArray subclass and a n
 functions to facilitate the work with array-like data in a geographically explicit context.
 
 # Requirements
-- GDAL >= 1.11
+- GDAL >= 2.1
 - numpy >= 1.11
 
 # General
