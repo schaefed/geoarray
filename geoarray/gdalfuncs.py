@@ -28,32 +28,38 @@ _RESAMPLING = {
 def _warpTo(source, target, func, max_error=0.125):
 
     if func is None:
-        raise TypeError("Resampling method {} not available in your GDAL version".format(func))
+        raise TypeError("Resampling method {:} not available in your GDAL version".format(func))
 
     target = np.atleast_2d(target)
     if target.ndim < source.ndim:
         target = np.broadcast_to(
-            target, source.shape[:-len(target.shape)]+target.shape, subok=True
-        )
+            target, source.shape[:-len(target.shape)]+target.shape, subok=True)
 
     target = np.ma.array(
         target,
         mask  = target==target.fill_value,
         dtype = source.dtype,
         copy  = True,
-        subok = True
-    )
+        subok = True)
 
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
 
     out = _getDataset(target, True)
 
-    gdal.ReprojectImage(
-        _getDataset(source), out,
-        None, None,
-        _RESAMPLING[func],
-        0.0, max_error)
+    gdal.Warp(out, _getDataset(source),
+              resampleAlg=_RESAMPLING[func],
+              errorThreshold=max_error,
+              # geoloc=True,
+              # transformerOptions=["SRC_METHOD=NO_GEOTRANSFORM"]
+    )
+
+    # gdal.ReprojectImage(
+    #     _getDataset(source), out,
+    #     None, None,
+    #     _RESAMPLING[func],
+    #     0.0, max_error)
+    # print _fromDataset(out)
 
     return _fromDataset(out)
 
@@ -62,7 +68,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
 
     bbox = grid.bbox
     proj = _Projection(proj)
-    trans = _Transformer(grid._proj, proj)
+    trans = _Transformer(grid.proj, proj)
     uly, ulx = trans(bbox["ymax"], bbox["xmin"])
     lry, lrx = trans(bbox["ymin"], bbox["xmax"])
     ury, urx = trans(bbox["ymax"], bbox["xmax"])
@@ -86,7 +92,7 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         yorigin    = max(uly, ury, lly, lry),
         xorigin    = min(ulx, urx, llx, lrx),
         origin     = "ul",
-        cellsize   = (-cellsize, cellsize),
+        cellsize   = cellsize,
         proj       = proj,
         mode       = grid.mode,
     )
