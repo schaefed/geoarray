@@ -99,12 +99,11 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
 
 
 def resample(source, target, func="nearest", max_error=0.125):
-    return array(
-        **_warpTo(
-            source    = source,
-            target    = target,
-            func      = func,
-            max_error = max_error))
+    return _warpTo(
+        source=source,
+        target=target,
+        func=func,
+        max_error=max_error)
 
 
 def rescale(source, scaling_factor, func="nearest"):
