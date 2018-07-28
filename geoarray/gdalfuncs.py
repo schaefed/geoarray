@@ -3,6 +3,7 @@
 
 import gdal, osr
 import numpy as np
+from math import ceil
 from .wrapper import array, full
 from .gdalio import _getDataset, _fromDataset
 from .gdalspatial import _Projection, _Transformer
@@ -65,6 +66,7 @@ def _warpTo(source, target, func, max_error=0.125):
 
 
 def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
+    # type: (GeoArray, _Projection, Optional[float], str, float) -> GeoArray
 
     bbox = grid.bbox
     proj = _Projection(proj)
@@ -75,15 +77,14 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
     lly, llx = trans(bbox["ymin"], bbox["xmin"])
 
     # Calculate cellsize, i.e. same number of cells along the diagonal.
-    if not cellsize:
+    if cellsize is None:
         src_diag = np.sqrt(grid.nrows**2 + grid.ncols**2)
-        # trg_diag = np.sqrt((uly - lry)**2 + (lrx - ulx)**2)
         trg_diag = np.sqrt((lly - ury)**2 + (llx - urx)**2)
         cellsize = trg_diag/src_diag
 
     # number of cells
-    ncols = int(abs(round((max(urx, lrx) - min(ulx, llx))/cellsize)))
-    nrows = int(abs(round((max(ury, lry) - min(uly, lly))/cellsize)))
+    ncols = int(abs(ceil((max(urx, lrx, ulx, llx) - min(urx, lrx, ulx, llx))/cellsize)))
+    nrows = int(abs(ceil((max(ury, lry,  uly, lly) - min(ury, lry, uly, lly))/cellsize)))
 
     target = array(
         data       = np.full((grid.nbands, nrows, ncols), grid.fill_value, grid.dtype),
@@ -92,16 +93,19 @@ def project(grid, proj, cellsize=None, func="nearest", max_error=0.125):
         yorigin    = max(uly, ury, lly, lry),
         xorigin    = min(ulx, urx, llx, lrx),
         origin     = "ul",
-        cellsize   = cellsize,
+        ycellsize  = abs(cellsize) * -1,
+        xcellsize  = cellsize,
+        # cellsize   = cellsize,
         proj       = proj,
         mode       = grid.mode,
     )
 
-    return resample(
+    out = resample(
         source    = grid,
         target    = target,
         func      = func,
         max_error = max_error)
+    return out.trim()
 
 
 def resample(source, target, func="nearest", max_error=0.125):
