@@ -83,7 +83,6 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         yvalues = _checkGeolocArray(yvalues, 0)
         xvalues = _checkGeolocArray(xvalues, 1)
         geotrans = _Geolocation(yvalues, xvalues, shape=data.shape, origin=origin)
-
     else:
         if ycellsize is None:
             ycellsize = cellsize

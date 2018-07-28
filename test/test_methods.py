@@ -180,61 +180,42 @@ class Test(unittest.TestCase):
 
     def test_project(self):
 
-        """
-        This test fails for gdal versions below 2.0. The warping is correct, but
-        the void space around the original image is filled with fill_value in versions
-        >= 2.0, else with 0. The tested function behaves like the more recent versions
-        of GDAL
-        """
-        codes = (32632, 32634)
+        def assertGeoArrayEqual(ga1, ga2):
+            self.assertTrue(np.all(ga1.data == ga1.data))
+            self.assertTrue(np.all(ga2.mask == ga2.mask))
+            self.assertDictEqual(ga1.bbox, ga2.bbox)
+            self.assertEqual(ga1.proj, ga2.proj)
 
-        if gdal.VersionInfo().startswith("1"):
-            warnings.warn("Skipping incompatible warp test on GDAL versions < 2", RuntimeWarning)
-            return
+        epsgcodes = (32632, 32634)
+        error = 0
+        cellsize = 1000
+        warpcmd = "gdalwarp -r 'near' -tr {cellsize} {cellsize} -et {error} -s_srs '{sproj}' -t_srs 'EPSG:{tproj}' {sfname} {tfname}"
 
         for fname, base in zip(self.fnames, self.grids):
-            # import ipdb; ipdb.set_trace()
-            # print base.proj
-            # print type(base.proj)
-            # break
-            # if base.proj:
-            base = base.copy()
-            base[:] = base[::-1]
-            for epsg in codes:
+            for epsgcode in epsgcodes:
                 proj = ga.project(
                     grid      = base,
-                    proj      = {"init":"epsg:{:}".format(epsg)},
+                    proj      = {"init":"epsg:{:}".format(epsgcode)},
                     func      = "nearest",
-                    max_error = 0
-                )
-                # proj = base[::-1].warp({"init":"epsg:{:}".format(epsg)}, 0)
+                    cellsize  = cellsize,
+                    max_error = 0)
+
                 with tempfile.NamedTemporaryFile(suffix=".tif") as tf:
                     subprocess.check_output(
-                        "gdalwarp -r 'near' -et 0 -s_srs 'EPSG:{:}' -t_srs 'EPSG:{:}' {:} {:}".format(
-                            32633, epsg, fname, tf.name
-                        ),
-                        shell=True)
-                    compare = ga.fromfile(tf.name)
-
-                    # import matplotlib.pyplot as plt
-                    # fig = plt.figure()
-                    # plt.imshow(proj)
-                    # plt.colorbar()
-                    # plt.show()
-
-                    # fig = plt.figure()
-                    # plt.imshow(compare)
-                    # plt.colorbar()
-                    # plt.show()
-
-
-                    idx = proj.data != compare.data
-                    # import ipdb; ipdb.set_trace()
-                    self.assertTrue(np.all(proj.data == compare.data))
-                    self.assertTrue(np.all(proj.mask == compare.mask))
-                    self.assertDictEqual(proj.bbox, compare.bbox)
-            else:
-                self.assertRaises(AttributeError)
+                        warpcmd.format(error=error, cellsize=cellsize,
+                                       sproj=base.proj, tproj=epsgcode,
+                                       sfname=fname, tfname=tf.name),
+                    shell=True)
+                    compare = ga.fromfile(tf.name).trim()
+                    try:
+                        assertGeoArrayEqual(proj, compare)
+                    except AssertionError:
+                        if fname.endswith("png"):
+                            # the fill_vaue is not set correctly with the png-driver
+                            compare.fill_value = 0
+                            assertGeoArrayEqual(proj, compare.trim())
+                        else:
+                            raise
 
 
 if __name__== "__main__":
