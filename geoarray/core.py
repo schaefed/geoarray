@@ -111,15 +111,15 @@ class GeoArray(SpatialMixin, MaskedArray):
             cls, data=data, fill_value=fill_value, mask=mask, *args, **kwargs)
         self.unshare_mask()
 
-        self.geotrans = geotrans
-        self.proj = _Projection(proj)
+        self.__dict__["geotrans"] = geotrans
+        self.__dict__["proj"] = _Projection(proj)
 
-        self.color_mode = color_mode
-        self.mode = mode
+        self.__dict__["color_mode"] = color_mode
+        self.__dict__["mode"] = mode
 
-        self._fobj = fobj
-        self._yvalues = yvalues
-        self._xvalues = xvalues
+        self.__dict__["_fobj"] = fobj
+        self.__dict__["_yvalues"] = yvalues
+        self.__dict__["_xvalues"] = xvalues
 
         return self
 
@@ -133,18 +133,14 @@ class GeoArray(SpatialMixin, MaskedArray):
 
         super(GeoArray, self)._update_from(obj)
 
-        # TODO: move into a datastructure
-        self.geotrans = getattr(obj, "geotrans", None)
-
-        self.proj = getattr(obj, "proj", None)
-
-        self.color_mode = getattr(obj, "color_mode", None)
-        self.mode = getattr(obj, "mode", None)
-
-        self._fobj = getattr(obj, "_fobj", None)
-        self._yvalues = getattr(obj, "_yvalues", None)
-        self._xvalues = getattr(obj, "_xvalues", None)
-        self._geolocation = getattr(obj, "_geolocation", None)
+        self.__dict__["geotrans"] = getattr(obj, "geotrans", None)
+        self.__dict__["proj"] = getattr(obj, "proj", None)
+        self.__dict__["color_mode"] = getattr(obj, "color_mode", None)
+        self.__dict__["mode"] = getattr(obj, "mode", None)
+        self.__dict__["_fobj"] = getattr(obj, "_fobj", None)
+        self.__dict__["_yvalues"] = getattr(obj, "_yvalues", None)
+        self.__dict__["_xvalues"] = getattr(obj, "_xvalues", None)
+        self.__dict__["_geolocation"] = getattr(obj, "_geolocation", None)
 
     @property
     def header(self):
@@ -188,28 +184,35 @@ class GeoArray(SpatialMixin, MaskedArray):
         super(GeoArray, self).set_fill_value(value)
         self.mask = self == value
         if value != self.fill_value:
-            warnings.warn("Data types not compatible. New fill_value is: {:}"
-                          .format(self.fill_value))
+            warnings.warn(
+                "Data types not compatible. New fill_value is: {:}"
+                .format(self.fill_value))
 
     # decorating the methods did not work out...
     fill_value = property(fget=getFillValue, fset=setFillValue)
 
-    def __getattribute__(self, key):
-        "Make descriptors work"
-        v = object.__getattribute__(self, key)
-        if hasattr(v, '__get__'):
-            return v.__get__(None, self)
-        return v
+    # def __getattribute__(self, key):
+    #     "Make descriptors work"
+    #     v = object.__getattribute__(self, key)
+    #     if hasattr(v, '__get__'):
+    #         return v.__get__(None, self)
+    #     return v
+
+    # def __setattr__(self, key, value):
+    #     "Make descriptors work"
+    #     try:
+    #         object.__getattribute__(self, key).__set__(self, value)
+    #     except AttributeError:
+    #         object.__setattr__(self, key, value) 
 
     def __setattr__(self, key, value):
-        "Make descriptors work"
-        try:
-            object.__getattribute__(self, key).__set__(self, value)
-        except AttributeError:
-            object.__setattr__(self, key, value) 
+        instance = self.geotrans if hasattr(self.geotrans, key) else self
+        object.__setattr__(instance, key, value) 
+
 
     def __getattr__(self, key):
         try:
+            # return object.__getattribute__(self.geotrans, key)
             return getattr(self.geotrans, key)
         except AttributeError:
             raise AttributeError(
@@ -252,7 +255,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     def __getitem__(self, slc):
 
         data = MaskedArray.__getitem__(self, slc)
-
+        
         # empty array
         if data.size == 0 or np.isscalar(data):
             return data
