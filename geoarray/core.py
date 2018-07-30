@@ -149,26 +149,23 @@ class GeoArray(SpatialMixin, MaskedArray):
         del out["data"]
         return out
 
-    @property
-    def nbands(self):
+    def _getShapeProperty(self, idx):
         try:
-            return self.shape[-3]
+            return self.shape[idx] or 1
         except IndexError:
             return 1
+
+    @property
+    def nbands(self):
+        return self._getShapeProperty(-3)
 
     @property
     def nrows(self):
-        try:
-            return self.shape[-2] or 1
-        except IndexError:
-            return 1
+        return self._getShapeProperty(-2)
 
     @property
     def ncols(self):
-        try:
-            return self.shape[-1] or 1
-        except IndexError:
-            return 1
+        return self._getShapeProperty(-1)
 
     @property
     def fobj(self):
@@ -263,7 +260,6 @@ class GeoArray(SpatialMixin, MaskedArray):
         geotrans = self.geotrans._getitem(slc)
 
         return GeoArray(**self._getArgs(data=data.data, geotrans=geotrans))
-
 
     def flush(self):
         fobj = self._fobj

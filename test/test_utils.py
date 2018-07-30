@@ -7,9 +7,6 @@ import os
 
 PWD = os.path.abspath(os.path.dirname(__file__))
 TMPPATH = os.path.join(PWD, "tmp")
-# FILES = tuple(
-#     os.path.join(TMPPATH, "test{:}".format(e)) for e in ga._DRIVER_DICT
-# )
 
 def testArray(shape):
     dinfo = dtypeInfo(np.int32)
