@@ -99,8 +99,6 @@ class Test(unittest.TestCase):
 
         self.assertEqual(gridul.yorigin, yvals[0])
         self.assertEqual(gridul.xorigin, xvals[0])
-        self.assertEqual(gridul.ycellsize, np.diff(yvals).mean())
-        self.assertEqual(gridul.xcellsize, np.diff(xvals).mean())
 
         gridlr = ga.array(
             data=data, fill_value=-42, origin="lr",
@@ -108,10 +106,6 @@ class Test(unittest.TestCase):
 
         self.assertEqual(gridlr.yorigin, yvals[-1])
         self.assertEqual(gridlr.xorigin, xvals[-1])
-        self.assertEqual(gridlr.ycellsize, np.diff(yvals).mean())
-        self.assertEqual(gridlr.xcellsize, np.diff(xvals).mean())
-
-
 
 
 if __name__== "__main__":

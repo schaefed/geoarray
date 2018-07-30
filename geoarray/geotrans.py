@@ -14,10 +14,6 @@ class _GeoBase(object):
     #        ["l" if self.ycellsize > 0 else "u",
     #         "l" if self.xcellsize > 0 else "r"])
 
-    @property
-    def cellsize(self):
-        return (self.ycellsize, self.xcellsize)
-
     @abstractproperty
     def coordinates(self):
         pass
@@ -52,14 +48,6 @@ class _Geolocation(_GeoBase):
         self.origin = origin
 
     @property
-    def ycellsize(self):
-        return np.diff(self.yvalues, axis=-2).mean()
-
-    @property
-    def xcellsize(self):
-        return np.diff(self.xvalues, axis=-1).mean()
-
-    @property
     def yorigin(self):
         bbox = self.bbox
         return self.bbox["ymax" if self.origin[0] == "u" else "ymin"]
@@ -78,15 +66,17 @@ class _Geolocation(_GeoBase):
         ymin, ymax = self.yvalues.min(), self.yvalues.max()
         xmin, xmax = self.xvalues.min(), self.xvalues.max()
 
-        if self.origin[0] == "u":  # u
-            ymin += self.ycellsize
+        ydiff = np.abs(np.diff(self.yvalues, axis=-2))
+        xdiff = np.abs(np.diff(self.xvalues, axis=-1))
+        if self.origin[0] == "u":
+            ymin -= ydiff[-1].max()
         else:
-            ymax += self.ycellsize
+            ymax += ydiff[0].max()
 
         if self.origin[1] == "l":
-            xmax += self.xcellsize
+            xmax += xdiff[:,-1].max()
         else:
-            xmin += self.xcellsize
+            xmin -= xdiff[:,0].max()
 
         return {"ymin": ymin, "ymax": ymax, "xmin": xmin, "xmax": xmax}
 
@@ -130,6 +120,7 @@ class _Geolocation(_GeoBase):
             "PIXEL_STEP": 1,
             "LINE_STEP": 1}
 
+
 class _Geotrans(_GeoBase):
     def __init__(self, yorigin, xorigin, ycellsize, xcellsize,
                  yparam, xparam, origin, shape):
@@ -143,6 +134,10 @@ class _Geotrans(_GeoBase):
         self.shape = shape
         self._yvalues = None
         self._xvalues = None
+
+    @property
+    def cellsize(self):
+        return (self.ycellsize, self.xcellsize)
 
     @property
     def nrows(self):
