@@ -119,8 +119,8 @@ def resample(source, target, func="nearest", max_error=0.125):
 def rescale(source, scaling_factor, func="nearest"):
     shape = (list(source.shape[:-2]) +
              [int(s / scaling_factor) for s in source.shape[-2:]])
-    cellsize = [c * scaling_factor for c in source.cellsize]
-    scaled_grid = full(shape, source.fill_value,
+    cellsize = tuple(c * scaling_factor for c in source.cellsize)
+    scaled_grid = full(shape, source.fill_value, origin=source.origin,
                        xorigin=source.xorigin, yorigin=source.yorigin,
                        cellsize=cellsize, dtype=source.dtype)
     return resample(source, scaled_grid, func=func)
