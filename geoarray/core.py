@@ -179,7 +179,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     def setFillValue(self, value):
         # change fill_value and update mask
         super(GeoArray, self).set_fill_value(value)
-        self.mask = self == value
+        self.mask = self.data == value
         if value != self.fill_value:
             warnings.warn(
                 "Data types not compatible. New fill_value is: {:}"

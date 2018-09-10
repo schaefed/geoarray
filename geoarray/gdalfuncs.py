@@ -38,7 +38,7 @@ def _warpTo(source, target, func, max_error=0.125):
 
     target = np.ma.array(
         target,
-        mask  = target==target.fill_value,
+        mask  = target.data==target.fill_value,
         dtype = source.dtype,
         copy  = True,
         subok = True)
