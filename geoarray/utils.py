@@ -24,7 +24,7 @@ def _broadcastTo(array, shape, dims):
     # bring array to the desired dimensionality
     slc = [slice(None, None, None) if i in dims else None
            for i in range(len(shape))]
-    return np.broadcast_to(array[slc], shape)
+    return np.broadcast_to(array[tuple(slc)], shape)
 
 
 def _broadcastedMeshgrid(*arrays):

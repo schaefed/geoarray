@@ -37,7 +37,6 @@ class _GeoBase(object):
     @abstractmethod
     def toGdal(self):
         raise NotImplementedError
-        pass
 
 
 class _Geolocation(_GeoBase):
