@@ -16,6 +16,7 @@ from .core import GeoArray
 from .gdalio import _fromFile, _fromDataset
 from .gdalspatial import _Projection
 from .geotrans import _Geotrans, _Geolocation
+from .utils import _tupelize
 # from typing import Optional, Union, Tuple, Any, Mapping, AnyStr
 
 
@@ -84,14 +85,17 @@ def array(data,               # type: Union[np.ndarray, GeoArray]
         xvalues = _checkGeolocArray(xvalues, 1)
         geotrans = _Geolocation(yvalues, xvalues, shape=data.shape, origin=origin)
     else:
+
+        cellsize = _tupelize(cellsize)
+
         if ycellsize is None:
-            ycellsize = cellsize
-            if origin[0] == "u":
+            ycellsize = cellsize[0]
+            if (origin[0] == "u" and ycellsize > 0) or (origin[0] == "l" and ycellsize < 0):
                 ycellsize *= -1
 
         if xcellsize is None:
-            xcellsize = cellsize
-            if origin[1] == "r":
+            xcellsize = cellsize[-1]
+            if (origin[1] == "r" and xcellsize > 0) or (origin[0] == "l" and xcellsize < 0):
                 xcellsize *= -1
 
         # if geotrans is None:

@@ -5,6 +5,12 @@
 import numpy as np
 
 
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
 def _broadcastTo(array, shape, dims):
     """
     array, shape: see numpy.broadcast_to
@@ -43,4 +49,16 @@ def _broadcastedMeshgrid(*arrays):
         )
         # there should be a solution without transposing...
         out.append(tmp.T)
+    return out
+
+
+def _tupelize(arg):
+    out = arg
+    if isinstance(out, basestring):
+        out = (out, )
+    if not isinstance(out, tuple):
+        try:
+            out = tuple(out)
+        except TypeError:
+            out = (out, )
     return out
