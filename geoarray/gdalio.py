@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import gdal, osr
 from .gdalspatial import _Projection
-from .geotrans import _Geotrans
+from .geotrans import _Geotrans, _Geolocation
 
 gdal.UseExceptions()
 gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -227,10 +227,19 @@ def _toFile(geoarray, fname):
         otype  = max(tdict, key=lambda x: x[0])[-1]
         return np.dtype(_TYPEMAP[otype])
 
+    def _copyMetadata(source, target):
+        # driver.CreateCopy does *not* copy all the metadata, so do this manually
+        target_domains = set(target.GetMetadataDomainList())
+        for domain in source.GetMetadataDomainList():
+            if domain not in target_domains:
+                metadata = source.GetMetadata(domain)
+                target.SetMetadata(metadata, domain)
+
     source = _toDataset(geoarray)
     driver  = _getDriver(_fnameExtension(fname))
-    driver.CreateCopy(fname, dataset, 0)
     target = driver.CreateCopy(fname, source, 0)
+    _copyMetadata(source, target)
+
 
 def _writeData(grid):
 
