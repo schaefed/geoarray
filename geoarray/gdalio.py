@@ -131,8 +131,8 @@ def _fromDataset(fobj, mode="r"):
     if len(set(fill_values)) > 1:
         warnings.warn(
             "More then on fill value found. Only {:} will be used".format(fill_values[0]),
-            RuntimeWarning
-        )
+            RuntimeWarning)
+
 
     data = fobj.GetVirtualMemArray() if mode == "v" else fobj.ReadAsArray()
     # NOTE: not to robust...
@@ -158,13 +158,15 @@ def _toDataset(grid, mem=False):
     driver = gdal.GetDriverByName("MEM")
 
     try:
-        out = driver.Create(
-            "", grid.ncols, grid.nrows, grid.nbands, _TYPEMAP[str(grid.dtype)])
+        out = driver.Create("", grid.ncols, grid.nrows, grid.nbands,
+                            _TYPEMAP[str(grid.dtype)])
     except KeyError:
         raise RuntimeError("Datatype {:} not supported by GDAL".format(grid.dtype))
 
     if isinstance(grid.geotrans, _Geotrans):
         out.SetGeoTransform(grid.toGdal())
+    elif isinstance(grid.geotrans, _Geolocation):
+        out.SetMetadata(grid.toGdal(), "GEOLOCATION")
 
     if grid.proj:
         out.SetProjection(grid.proj.toWkt())
@@ -175,6 +177,14 @@ def _toDataset(grid, mem=False):
             band.SetNoDataValue(float(grid.fill_value))
         data = grid[n] if grid.ndim > 2 else grid
         band.WriteArray(data)
+
+    # if isinstance(grid.geotrans, _Geolocation):
+        # for i, data in enumerate([grid.yvalues, grid.xvalues]):
+        #     print (n + 1 + i, nbands)
+        #     band = out.GetRasterBand(n + 1 + i)
+        #     if grid.fill_value is not None:
+        #         band.SetNoDataValue(float(grid.fill_value))
+        #     band.WriteArray(data)
 
     return out
 
