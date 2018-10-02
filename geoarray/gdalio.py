@@ -148,7 +148,7 @@ def _fromDataset(fobj, mode="r"):
         geotrans   = geotrans)
 
 
-def _getDataset(grid, mem=False):
+def _toDataset(grid, mem=False):
 
     # Returns an gdal memory dataset created from the given grid
 
@@ -217,9 +217,10 @@ def _toFile(geoarray, fname):
         otype  = max(tdict, key=lambda x: x[0])[-1]
         return np.dtype(_TYPEMAP[otype])
 
-    dataset = _getDataset(geoarray)
+    source = _toDataset(geoarray)
     driver  = _getDriver(_fnameExtension(fname))
     driver.CreateCopy(fname, dataset, 0)
+    target = driver.CreateCopy(fname, source, 0)
 
 def _writeData(grid):
 

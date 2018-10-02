@@ -5,7 +5,7 @@ import gdal, osr
 import numpy as np
 from math import ceil
 from .wrapper import array, full
-from .gdalio import _getDataset, _fromDataset
+from .gdalio import _toDataset, _fromDataset
 from .gdalspatial import _Projection, _Transformer
 
 gdal.UseExceptions()
@@ -46,9 +46,9 @@ def _warpTo(source, target, func, max_error=0.125):
     target[target.mask] = source.fill_value
     target.fill_value = source.fill_value
 
-    out = _getDataset(target, True)
+    out = _toDataset(target, True)
 
-    gdal.Warp(out, _getDataset(source),
+    gdal.Warp(out, _toDataset(source),
               resampleAlg=_RESAMPLING[func],
               errorThreshold=max_error,
               # geoloc=True,
@@ -56,7 +56,7 @@ def _warpTo(source, target, func, max_error=0.125):
     )
 
     # gdal.ReprojectImage(
-    #     _getDataset(source), out,
+    #     _toDataset(source), out,
     #     None, None,
     #     _RESAMPLING[func],
     #     0.0, max_error)

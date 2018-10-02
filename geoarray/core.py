@@ -19,7 +19,7 @@ import warnings
 from numpy.ma import MaskedArray
 from .utils import _broadcastedMeshgrid, _broadcastTo
 from .gdalspatial import _Projection
-from .gdalio import _getDataset, _toFile, _writeData
+from .gdalio import _toDataset, _toFile, _writeData
 from .geotrans import _Geotrans
 from .spatial import SpatialMixin
 
@@ -170,7 +170,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     @property
     def fobj(self):
         if self._fobj is None:
-            self._fobj = _getDataset(self, mem=True)
+            self._fobj = _toDataset(self, mem=True)
         return self._fobj
 
     def getFillValue(self):
@@ -218,7 +218,7 @@ class GeoArray(SpatialMixin, MaskedArray):
     @property
     def fobj(self):
         if self._fobj is None:
-            self._fobj = _getDataset(self, mem=True)
+            self._fobj = _toDataset(self, mem=True)
         return self._fobj
 
     def _getArgs(self, data=None, fill_value=None,
