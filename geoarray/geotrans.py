@@ -110,14 +110,16 @@ class _Geolocation(_GeoBase):
 
         return self._replace(yvalues=yvalues, xvalues=xvalues)
 
+
     def toGdal(self):
+        shape = (1,) + self.shape if len(self.shape) < 3 else self.shape
         return {
-            "X_BAND": self.shape[0],  # need to be filled
-            "Y_BAND": self.shape[0] + 1,  # need to be filled
-            "PIXEL_OFFSET": 0,
-            "LINE_OFFSET": 0,
-            "PIXEL_STEP": 1,
-            "LINE_STEP": 1}
+            "X_BAND": str(shape[0]),  # need to be filled
+            "Y_BAND": str(shape[0] + 1),  # need to be filled
+            "PIXEL_OFFSET": "0",
+            "LINE_OFFSET": "0",
+            "PIXEL_STEP": "1",
+            "LINE_STEP": "1"}
 
 
 class _Geotrans(_GeoBase):
